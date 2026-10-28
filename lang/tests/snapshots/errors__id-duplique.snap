@@ -1,0 +1,10 @@
+---
+source: tests/errors.rs
+expression: out
+---
+error[duplicate-id]: identifier « a » is already used
+  ┌─ id-duplique.skemo:2:6
+  │
+2 │ card#a Deux
+  │      ^
+  = help: every card and zone needs a unique #id

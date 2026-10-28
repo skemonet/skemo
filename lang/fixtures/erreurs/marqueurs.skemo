@@ -1,0 +1,5 @@
+card#a A @1 @2
+card#b B @0
+card#c C @4-2
+card#d D @2:wiggle
+card#e(step=2) E @3

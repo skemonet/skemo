@@ -1,0 +1,27 @@
+---
+source: tests/errors_fr.rs
+expression: out
+---
+avertissement[icon-ignored] : « icon » est sans effet ici : seules les cartes et les zones ont une icône
+  ┌─ liens-icones.skemo:4:10
+  │
+4 │     to(b icon="cloud" href="javascript:alert(1)") go
+  │          ^^^^^^^^^^^^
+erreur[unsafe-href] : lien non sûr ou vide « javascript:alert(1) »
+  ┌─ liens-icones.skemo:4:23
+  │
+4 │     to(b icon="cloud" href="javascript:alert(1)") go
+  │                       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  = aide : autorisés : http:, https:, mailto:, un chemin relatif ou #id
+erreur[unsafe-href] : lien non sûr ou vide «  »
+  ┌─ liens-icones.skemo:5:10
+  │
+5 │   card#b(href="") B
+  │          ^^^^^^^
+  = aide : autorisés : http:, https:, mailto:, un chemin relatif ou #id
+erreur[unsafe-href] : lien non sûr ou vide «   data:text/html,x »
+  ┌─ liens-icones.skemo:6:10
+  │
+6 │   card#c(href="  data:text/html,x") C
+  │          ^^^^^^^^^^^^^^^^^^^^^^^^^
+  = aide : autorisés : http:, https:, mailto:, un chemin relatif ou #id

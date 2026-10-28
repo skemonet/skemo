@@ -1,0 +1,47 @@
+//- The language v0.8 in one diagram (FORMAT §3.2.3–§3.2.9): lines, Markdown, tables, category,
+//- states, legend, plain text, docking.
+diagram(dir="right")
+  title Shop — AWS production platform
+    | Account 123456789012 · eu-west-3 (Paris) · 106 resources
+    |.pill prod
+
+  card#users.ext Customers
+    | shop / www → CDN
+    to(alb).user HTTPS
+  zone#vpc.vpc(tag="module.network") VPC 10.20.0.0/16
+    | 3 availability zones · flow logs to CloudWatch
+    card#alb.app(label="Load balancer (ALB)" tag="module.app") shop-prod
+      | :443 HTTPS (**TLS 1.3**)
+      to(lambda).user :8080
+    card#lambda.fn.warn(label="Lambda (in VPC)" tag="module.functions") order_events
+      | `python3.12` · 256 MB
+      |.warn db SG has no rule for the lambda SG
+      to(db).data 5432
+    card#db.data(label="RDS PostgreSQL 16.4" tag="module.data") shop-prod-orders
+      | Multi-AZ · ==14-day backups==
+
+  card#flows.legend(at="ne") Flows
+    |.user user request
+    |.data data access
+
+  zone#sec(at="s") Security & identity
+    card#kms(label="KMS key") alias/shop-prod-data
+      | encrypts RDS, SQS, S3
+    card#sg(label="Security groups") Ingress
+      | Group  | Inbound                    | Attached to   |
+      |--------|----------------------------|---------------|
+      | alb    | 443, 80 from ==0.0.0.0/0== | load balancer |
+      | api    | 8080 from alb              | ECS api tasks |
+      | ^^     | 9090 from monitoring       | ECS api tasks |
+      | worker | no inbound rule           ||
+      |.error lambda | none                 | order_events  |
+  zone#ops(at="s") Monitoring & operations
+    card#alarms(label="CloudWatch alarms") 5-min average
+      | db_cpu > 80 % · ==.ok OK==
+      to(sns)
+    card#sns(label="SNS topic") shop-prod-alerts
+      | email: on-call
+
+  card.text.wide(at="s")
+    |.warn = finding worth reviewing
+    | Omitted for clarity: route tables (12), IAM policy attachments.

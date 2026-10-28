@@ -1,0 +1,205 @@
+{
+ "options": {
+  "dir": "right"
+ },
+ "nodes": [
+  {
+   "id": "rh",
+   "kind": "zone",
+   "parent": null,
+   "classes": [
+    "rh"
+   ],
+   "title": "Ressources humaines",
+   "tag": null,
+   "items": [],
+   "at": null,
+   "size": null,
+   "step": null,
+   "fx": null,
+   "date": null,
+   "start": null,
+   "end": null
+  },
+  {
+   "id": "offre",
+   "kind": "card",
+   "parent": "rh",
+   "classes": [
+    "etape"
+   ],
+   "title": "Publier l'offre",
+   "tag": null,
+   "items": [
+    "J+0"
+   ],
+   "at": null,
+   "size": null,
+   "step": null,
+   "fx": null,
+   "date": null,
+   "start": null,
+   "end": null
+  },
+  {
+   "id": "tri",
+   "kind": "card",
+   "parent": "rh",
+   "classes": [
+    "etape"
+   ],
+   "title": "Trier les CV",
+   "tag": null,
+   "items": [
+    "~120 candidatures"
+   ],
+   "at": null,
+   "size": null,
+   "step": null,
+   "fx": null,
+   "date": null,
+   "start": null,
+   "end": null
+  },
+  {
+   "id": "equipe",
+   "kind": "zone",
+   "parent": null,
+   "classes": [
+    "equipe"
+   ],
+   "title": "Équipe",
+   "tag": null,
+   "items": [],
+   "at": null,
+   "size": null,
+   "step": null,
+   "fx": null,
+   "date": null,
+   "start": null,
+   "end": null
+  },
+  {
+   "id": "entretien",
+   "kind": "card",
+   "parent": "equipe",
+   "classes": [
+    "etape"
+   ],
+   "title": "Entretiens",
+   "tag": null,
+   "items": [
+    "2 tours"
+   ],
+   "at": null,
+   "size": null,
+   "step": null,
+   "fx": null,
+   "date": null,
+   "start": null,
+   "end": null
+  },
+  {
+   "id": "decision",
+   "kind": "card",
+   "parent": "equipe",
+   "classes": [
+    "choix"
+   ],
+   "title": "Décision",
+   "tag": null,
+   "items": [
+    "comité"
+   ],
+   "at": null,
+   "size": null,
+   "step": null,
+   "fx": null,
+   "date": null,
+   "start": null,
+   "end": null
+  },
+  {
+   "id": "offre-envoi",
+   "kind": "card",
+   "parent": null,
+   "classes": [
+    "fin"
+   ],
+   "title": "Proposition envoyée",
+   "tag": "FIN",
+   "items": [
+    "J+30"
+   ],
+   "at": null,
+   "size": null,
+   "step": null,
+   "fx": null,
+   "date": null,
+   "start": null,
+   "end": null
+  }
+ ],
+ "edges": [
+  {
+   "id": "offre->tri",
+   "from": "offre",
+   "to": "tri",
+   "classes": [],
+   "label": "",
+   "via": null,
+   "side": null,
+   "step": null,
+   "fx": null
+  },
+  {
+   "id": "tri->entretien",
+   "from": "tri",
+   "to": "entretien",
+   "classes": [],
+   "label": "15 retenus",
+   "via": null,
+   "side": null,
+   "step": null,
+   "fx": null
+  },
+  {
+   "id": "entretien->decision",
+   "from": "entretien",
+   "to": "decision",
+   "classes": [],
+   "label": "",
+   "via": null,
+   "side": null,
+   "step": null,
+   "fx": null
+  },
+  {
+   "id": "decision->offre-envoi",
+   "from": "decision",
+   "to": "offre-envoi",
+   "classes": [
+    "ok"
+   ],
+   "label": "oui",
+   "via": null,
+   "side": null,
+   "step": null,
+   "fx": null
+  },
+  {
+   "id": "decision->tri",
+   "from": "decision",
+   "to": "tri",
+   "classes": [
+    "ko",
+    "dashed"
+   ],
+   "label": "non",
+   "via": null,
+   "side": null,
+   "step": null,
+   "fx": null
+  }
+ ]
+}

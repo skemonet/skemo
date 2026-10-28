@@ -1,0 +1,3 @@
+.milestone { --c: var(--ink); --on-c: var(--bg); --label: "MILESTONE"; }
+.work      { --c: #3E6FC4; }
+.lane      { --c: #8A93A3; }

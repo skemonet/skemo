@@ -1,0 +1,7 @@
+diagram(dir="right")
+  card#plain Plain card
+  card#typed.t2 Typed card
+    | first line
+    | 192.168.1.0/24 office
+  card#tagged.t1(tag="Owner: ops") With a tag
+    | the chip shows the tag

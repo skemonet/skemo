@@ -1,0 +1,4 @@
+card#svc Service
+  to(pod)
+card#pod(tag="8080 @1") pod-a
+  | 10.0.0.12 @2

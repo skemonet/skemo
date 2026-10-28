@@ -1,0 +1,412 @@
+{
+ "name": "timeline",
+ "provenance": "poc/reference/timeline.layout.json — tracés produits par libavoid-js 0.5.0-beta.5 (oracle de comportement, pas une cible au pixel)",
+ "units": "px, origine en haut à gauche, y vers le bas",
+ "params": {
+  "shapeBuffer": 8,
+  "idealNudging": 14,
+  "segmentPenalty": 50,
+  "crossingPenalty": 100
+ },
+ "obstacles": [
+  {
+   "id": "lancement",
+   "rect": [
+    52,
+    50,
+    184,
+    48
+   ],
+   "kind": "shape"
+  },
+  {
+   "id": "router",
+   "rect": [
+    -22,
+    124,
+    1196,
+    199
+   ],
+   "kind": "region"
+  },
+  {
+   "id": "r0",
+   "rect": [
+    60,
+    165,
+    222,
+    44
+   ],
+   "kind": "shape"
+  },
+  {
+   "id": "r1",
+   "rect": [
+    160,
+    231,
+    247,
+    70
+   ],
+   "kind": "shape"
+  },
+  {
+   "id": "r3",
+   "rect": [
+    492,
+    165,
+    236,
+    44
+   ],
+   "kind": "shape"
+  },
+  {
+   "id": "engine",
+   "rect": [
+    -22,
+    349,
+    1196,
+    259
+   ],
+   "kind": "region"
+  },
+  {
+   "id": "e0",
+   "rect": [
+    60,
+    390,
+    300,
+    64
+   ],
+   "kind": "shape"
+  },
+  {
+   "id": "e1",
+   "rect": [
+    160,
+    476,
+    194,
+    44
+   ],
+   "kind": "shape"
+  },
+  {
+   "id": "e2",
+   "rect": [
+    304,
+    542,
+    204,
+    44
+   ],
+   "kind": "shape"
+  },
+  {
+   "id": "e5",
+   "rect": [
+    492,
+    390,
+    356,
+    44
+   ],
+   "kind": "shape"
+  },
+  {
+   "id": "lang",
+   "rect": [
+    -22,
+    634,
+    1196,
+    173
+   ],
+   "kind": "region"
+  },
+  {
+   "id": "l1",
+   "rect": [
+    60,
+    675,
+    202,
+    44
+   ],
+   "kind": "shape"
+  },
+  {
+   "id": "l2",
+   "rect": [
+    204,
+    741,
+    164,
+    44
+   ],
+   "kind": "shape"
+  },
+  {
+   "id": "l3",
+   "rect": [
+    492,
+    675,
+    236,
+    44
+   ],
+   "kind": "shape"
+  },
+  {
+   "id": "produit",
+   "rect": [
+    -22,
+    833,
+    1196,
+    137
+   ],
+   "kind": "region"
+  },
+  {
+   "id": "valid",
+   "rect": [
+    156,
+    874,
+    246,
+    74
+   ],
+   "kind": "shape"
+  },
+  {
+   "id": "cli2",
+   "rect": [
+    492,
+    874,
+    256,
+    48
+   ],
+   "kind": "shape"
+  },
+  {
+   "id": "editeur",
+   "rect": [
+    856,
+    874,
+    221,
+    48
+   ],
+   "kind": "shape"
+  }
+ ],
+ "connectors": [
+  {
+   "id": "r0->valid",
+   "from": {
+    "shape": "r0",
+    "side": "right"
+   },
+   "to": {
+    "shape": "valid"
+   },
+   "passThrough": [
+    "engine",
+    "lang",
+    "produit",
+    "router"
+   ]
+  },
+  {
+   "id": "e0->valid",
+   "from": {
+    "shape": "e0",
+    "side": "right"
+   },
+   "to": {
+    "shape": "valid"
+   },
+   "passThrough": [
+    "engine",
+    "lang",
+    "produit",
+    "router"
+   ]
+  },
+  {
+   "id": "e1->e2",
+   "from": {
+    "shape": "e1",
+    "side": "right"
+   },
+   "to": {
+    "shape": "e2",
+    "side": "left"
+   },
+   "passThrough": [
+    "engine",
+    "lang",
+    "produit",
+    "router"
+   ]
+  },
+  {
+   "id": "e2->cli2",
+   "from": {
+    "shape": "e2",
+    "side": "right"
+   },
+   "to": {
+    "shape": "cli2"
+   },
+   "passThrough": [
+    "engine",
+    "lang",
+    "produit",
+    "router"
+   ]
+  },
+  {
+   "id": "e5->editeur",
+   "from": {
+    "shape": "e5",
+    "side": "right"
+   },
+   "to": {
+    "shape": "editeur"
+   },
+   "passThrough": [
+    "engine",
+    "lang",
+    "produit",
+    "router"
+   ]
+  }
+ ],
+ "expected": {
+  "r0->valid": [
+   [
+    282,
+    187.1
+   ],
+   [
+    290,
+    187.1
+   ],
+   [
+    290,
+    220
+   ],
+   [
+    52,
+    220
+   ],
+   [
+    52,
+    911
+   ],
+   [
+    156,
+    911
+   ]
+  ],
+  "e0->valid": [
+   [
+    360,
+    422.1
+   ],
+   [
+    376,
+    422.1
+   ],
+   [
+    376,
+    528.2
+   ],
+   [
+    282,
+    528.2
+   ],
+   [
+    282,
+    663.5
+   ],
+   [
+    410,
+    663.5
+   ],
+   [
+    410,
+    911
+   ],
+   [
+    402,
+    911
+   ]
+  ],
+  "e1->e2": [
+   [
+    354,
+    498.1
+   ],
+   [
+    362,
+    498.1
+   ],
+   [
+    362,
+    533.8
+   ],
+   [
+    296,
+    533.8
+   ],
+   [
+    296,
+    564.1
+   ],
+   [
+    304,
+    564.1
+   ]
+  ],
+  "e2->cli2": [
+   [
+    508,
+    564.1
+   ],
+   [
+    516,
+    564.1
+   ],
+   [
+    516,
+    630.5
+   ],
+   [
+    484,
+    630.5
+   ],
+   [
+    484,
+    898
+   ],
+   [
+    492,
+    898
+   ]
+  ],
+  "e5->editeur": [
+   [
+    848,
+    412.1
+   ],
+   [
+    966.5,
+    412.1
+   ],
+   [
+    966.5,
+    874
+   ]
+  ]
+ },
+ "checks": [
+  "aucun segment ne traverse un obstacle « shape » (hors extrémités)",
+  "aucun segment ne traverse une « region » absente de passThrough",
+  "les checkpoints sont traversés dans l'ordre",
+  "side respecté au départ et à l'arrivée",
+  "segments parallèles d'une même zone espacés ≥ 12 px",
+  "nombre de coudes ≤ expected + 1"
+ ]
+}

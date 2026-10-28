@@ -1,0 +1,10 @@
+---
+source: tests/errors_fr.rs
+expression: out
+---
+erreur[to-outside-card] : « to » doit être écrit dans sa carte de départ
+  ┌─ to-hors-carte.skemo:2:3
+  │
+2 │   to(a)
+  │   ^^
+  = aide : indenter to(...) sous la carte d'où part la flèche

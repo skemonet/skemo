@@ -1,0 +1,25 @@
+---
+source: tests/errors.rs
+expression: out
+---
+error[bad-date]: « date »: invalid date: « 2026-13-01 » (expected YYYY, YYYY-MM or YYYY-MM-DD)
+  ┌─ timeline-dates.skemo:2:10
+  │
+2 │   card#a(date="2026-13-01") A
+  │          ^^^^^^^^^^^^^^^^^
+error[missing-date]: card « b » has neither date= nor start= (timeline mode)
+  ┌─ timeline-dates.skemo:3:3
+  │
+3 │   card#b B
+  │   ^^^^
+  = help: date="2027-03-15" for a milestone, start="…" end="…" for a period
+error[end-before-start]: card « c »: end is before start
+  ┌─ timeline-dates.skemo:4:26
+  │
+4 │   card#c(start="2027-03" end="2027-01") C
+  │                          ^^^^^^^^^^^^^
+warning[at-ignored]: « at » has no effect in timeline mode: the position comes from the date
+  ┌─ timeline-dates.skemo:5:25
+  │
+5 │   card#d(date="2026-11" at="1,2") D
+  │                         ^^^^^^^^

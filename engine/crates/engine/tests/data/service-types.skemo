@@ -1,0 +1,47 @@
+diagram(dir="down" lang="fr" theme="dark" zones="stretch")
+
+  stack
+    zone#pods.reseau-pods(tag="172.30.0.0/16") Pods
+      card#f1.pod.col-front frontend-cjxbl
+        | 172.30.0.1
+        |.pill 8080 · http
+      card#f2.pod.col-front frontend-jkn87
+        | 172.30.0.2
+        |.pill 8080 · http
+
+      card#b1.pod.col-back backend-ac789
+        | 172.30.0.6
+        |.pill 9000 · back
+      card#b2.pod.col-back backend-p78f2
+        | 172.30.0.7
+        |.pill 9000 · back
+
+      card#pg.pod.col-db postgresql-0
+        | 172.30.0.5
+        |.pill 5432 · pgsql
+
+    zone#svcs.reseau-svc(tag="172.21.0.0/16") Services
+      card#s-front.service.col-front Frontend
+        | sélecteur : myapp-frontend
+        to(f1 f2 join="trunk")
+
+      card#s-back.service.col-back Backend
+        | sélecteur : myapp-backend
+        to(b1 b2 join="trunk")
+
+      card#s-db.service.col-db Database
+        | sélecteur : myapp-database
+        to(pg)
+
+    zone#noeuds.bare.wide
+      card#cp.noeud.col-front(icon="server") Control plane
+      card#w1.noeud.col-back(icon="server" tag=":80 @1") Worker
+        to(s-front constraint="false") @2
+      card#w2.noeud.col-db(icon="server" tag=":80 @1") Worker
+        to(s-front constraint="false") @2
+
+    card#bus.wide.reseau Réseau du cluster
+      to(cp w1 w2)
+
+    card#lb.wide.lb Load Balancer @3:up
+      to(bus)

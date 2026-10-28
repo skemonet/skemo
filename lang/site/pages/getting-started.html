@@ -1,0 +1,36 @@
+<h1>Getting started</h1>
+<p class="lead">Install the <code>skemo</code> binary, write a file, render it. Two minutes.</p>
+
+<h2>Install</h2>
+<p>On Linux (x86_64, ARM) and macOS (ARM):</p>
+<pre><code>curl -fsSL https://raw.githubusercontent.com/skemonet/skemo/main/cli/install.sh | sh</code></pre>
+<p>The script downloads the latest release, checks its SHA-256 and installs it into <code>~/.local/bin</code>
+  (<code>SKEMO_BIN</code> changes the folder, <code>SKEMO_VERSION</code> picks a version). On Windows, take
+  <code>skemo-&lt;version&gt;-x86_64-pc-windows-msvc.exe</code> from the releases page. skemo is a single executable: no Node, no browser, no Graphviz; fonts and theme are built in.</p>
+<pre><code>skemo --version</code></pre>
+
+<h2>A first diagram</h2>
+<p>Create <code>hello.skemo</code>:</p>
+<skemo name="first"></skemo>
+<p>and render it:</p>
+<pre><code>skemo hello.skemo                 # writes hello.png next to the source
+skemo hello.skemo -o hello.svg    # the extension picks the format: svg, webp, html, gif, apng</code></pre>
+<p>A card is <code>card#id Title</code>. An arrow is written <em>inside</em> the card it leaves: <code>to(b)</code> under
+  <code>card#a</code> draws <code>a → b</code>.</p>
+
+<h2>Start from a sample</h2>
+<pre><code>skemo init my-diagram     # example.skemo and a commented custom.css; overwrites nothing
+cd my-diagram
+skemo example.skemo --css custom.css
+skemo watch example.skemo --css custom.css   # live preview on http://127.0.0.1:8710</code></pre>
+<p><code>watch</code> re-renders on every save and the browser page reloads by itself.</p>
+
+<h2>Check before rendering</h2>
+<pre><code>skemo check example.skemo</code></pre>
+<p>Errors come with their line, their column and a hint, for instance <code>unknown target « databse »: did you mean
+  « database »?</code>. The exit code is 1 when there are errors. See <a href="diagnostics.html">Errors and warnings</a>.</p>
+
+<h2>Next steps</h2>
+<p>Read the <a href="syntax.html">syntax</a>, then <a href="cards-and-zones.html">cards and zones</a> and
+  <a href="arrows.html">arrows</a>. If you prefer to draw, the skemo editor shows the text and the drawing side by side and writes
+  your moves back into the file.</p>

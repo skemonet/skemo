@@ -1,0 +1,22 @@
+diagram(dir="right" lang="en")
+  title Shop platform
+    | Production · eu-west-3 · 106 resources
+    |.pill prod
+  card#users Customers
+    to(alb) HTTPS
+  zone#vpc.net VPC 10.20.0.0/16
+    | 3 availability zones
+    card#alb(label="Load balancer") shop-prod
+      to(api) :8080
+    card#api(label="ECS service") api
+  zone#sec(at="s") Security
+    card#kms(label="KMS key") alias/shop
+      | encrypts RDS, SQS, S3
+  zone#ops(at="s") Monitoring
+    card#alarms(label="CloudWatch") 3 alarms
+      to(sns)
+    card#sns(label="SNS topic") alerts
+  card#key.legend(at="ne") Key
+    |.net network
+  card.text.wide(at="s")
+    | Omitted for clarity: route tables, IAM policy attachments.

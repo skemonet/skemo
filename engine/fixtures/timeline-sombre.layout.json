@@ -1,0 +1,698 @@
+{
+ "model": {
+  "options": {
+   "layout": "timeline",
+   "from": "2026-10",
+   "to": "2027-06",
+   "scale": "month",
+   "today": "2026-10-15"
+  },
+  "nodes": [
+   {
+    "id": "lancement",
+    "kind": "card",
+    "parent": null,
+    "classes": [
+     "jalon"
+    ],
+    "title": "Specs livrées",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": null,
+    "fx": null,
+    "date": "2026-10-14",
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "router",
+    "kind": "zone",
+    "parent": null,
+    "classes": [
+     "lane"
+    ],
+    "title": "Routeur",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": 1,
+    "fx": "up",
+    "date": null,
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "r0",
+    "kind": "card",
+    "parent": "router",
+    "classes": [
+     "spike"
+    ],
+    "title": "R0 · spike hightower",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": null,
+    "fx": null,
+    "date": null,
+    "start": "2026-10-16",
+    "end": "2026-10-31"
+   },
+   {
+    "id": "r1",
+    "kind": "card",
+    "parent": "router",
+    "classes": [
+     "dev"
+    ],
+    "title": "R1 → R2 · routage + espacement",
+    "tag": null,
+    "items": [
+     "côtés, via, régions, nudging"
+    ],
+    "at": null,
+    "size": null,
+    "step": null,
+    "fx": null,
+    "date": null,
+    "start": "2026-11-10",
+    "end": "2026-12-20"
+   },
+   {
+    "id": "r3",
+    "kind": "card",
+    "parent": "router",
+    "classes": [
+     "dev"
+    ],
+    "title": "R3 · incrémental + WASM",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": null,
+    "fx": null,
+    "date": null,
+    "start": "2027-02",
+    "end": "2027-03"
+   },
+   {
+    "id": "engine",
+    "kind": "zone",
+    "parent": null,
+    "classes": [
+     "lane"
+    ],
+    "title": "Moteur",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": 2,
+    "fx": "up",
+    "date": null,
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "e0",
+    "kind": "card",
+    "parent": "engine",
+    "classes": [
+     "spike"
+    ],
+    "title": "E0 · spikes elk-rs, mesure, rendu",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": null,
+    "fx": null,
+    "date": null,
+    "start": "2026-10-16",
+    "end": "2026-11-07"
+   },
+   {
+    "id": "e1",
+    "kind": "card",
+    "parent": "engine",
+    "classes": [
+     "dev"
+    ],
+    "title": "E1 · mesure + placement",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": null,
+    "fx": null,
+    "date": null,
+    "start": "2026-11-10",
+    "end": "2026-12-15"
+   },
+   {
+    "id": "e2",
+    "kind": "card",
+    "parent": "engine",
+    "classes": [
+     "dev"
+    ],
+    "title": "E2 → E3 · routage + rendu",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": null,
+    "fx": null,
+    "date": null,
+    "start": "2026-12-16",
+    "end": "2027-01-31"
+   },
+   {
+    "id": "e5",
+    "kind": "card",
+    "parent": "engine",
+    "classes": [
+     "dev"
+    ],
+    "title": "E4 → E5 · étapes + WASM",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": null,
+    "fx": null,
+    "date": null,
+    "start": "2027-02",
+    "end": "2027-04"
+   },
+   {
+    "id": "lang",
+    "kind": "zone",
+    "parent": null,
+    "classes": [
+     "lane"
+    ],
+    "title": "Langage",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": 3,
+    "fx": "up",
+    "date": null,
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "l1",
+    "kind": "card",
+    "parent": "lang",
+    "classes": [
+     "dev"
+    ],
+    "title": "L1 · parseur + diagnostics",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": null,
+    "fx": null,
+    "date": null,
+    "start": "2026-10-16",
+    "end": "2026-11-20"
+   },
+   {
+    "id": "l2",
+    "kind": "card",
+    "parent": "lang",
+    "classes": [
+     "dev"
+    ],
+    "title": "L2 · styles",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": null,
+    "fx": null,
+    "date": null,
+    "start": "2026-11-21",
+    "end": "2026-12-31"
+   },
+   {
+    "id": "l3",
+    "kind": "card",
+    "parent": "lang",
+    "classes": [
+     "dev"
+    ],
+    "title": "L3 · édition chirurgicale",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": null,
+    "fx": null,
+    "date": null,
+    "start": "2027-02",
+    "end": "2027-03"
+   },
+   {
+    "id": "produit",
+    "kind": "zone",
+    "parent": null,
+    "classes": [
+     "lane"
+    ],
+    "title": "Livrables",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": 4,
+    "fx": "up",
+    "date": null,
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "valid",
+    "kind": "card",
+    "parent": "produit",
+    "classes": [
+     "decision"
+    ],
+    "title": "Validation des choix",
+    "tag": null,
+    "items": [
+     "D-005 · D-007 · option routeur"
+    ],
+    "at": null,
+    "size": null,
+    "step": null,
+    "fx": null,
+    "date": "2026-11-09",
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "cli2",
+    "kind": "card",
+    "parent": "produit",
+    "classes": [
+     "jalon"
+    ],
+    "title": "CLI : premier rendu PNG",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": null,
+    "fx": null,
+    "date": "2027-02-01",
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "editeur",
+    "kind": "card",
+    "parent": "produit",
+    "classes": [
+     "jalon"
+    ],
+    "title": "Démarrage éditeur",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": null,
+    "fx": null,
+    "date": "2027-05-03",
+    "start": null,
+    "end": null
+   }
+  ],
+  "edges": [
+   {
+    "id": "r0->valid",
+    "from": "r0",
+    "to": "valid",
+    "classes": [],
+    "label": "",
+    "via": null,
+    "side": null,
+    "step": null,
+    "fx": null
+   },
+   {
+    "id": "e0->valid",
+    "from": "e0",
+    "to": "valid",
+    "classes": [],
+    "label": "",
+    "via": null,
+    "side": null,
+    "step": null,
+    "fx": null
+   },
+   {
+    "id": "e1->e2",
+    "from": "e1",
+    "to": "e2",
+    "classes": [],
+    "label": "",
+    "via": null,
+    "side": null,
+    "step": null,
+    "fx": null
+   },
+   {
+    "id": "e2->cli2",
+    "from": "e2",
+    "to": "cli2",
+    "classes": [],
+    "label": "",
+    "via": null,
+    "side": null,
+    "step": null,
+    "fx": null
+   },
+   {
+    "id": "e5->editeur",
+    "from": "e5",
+    "to": "editeur",
+    "classes": [],
+    "label": "",
+    "via": null,
+    "side": null,
+    "step": null,
+    "fx": null
+   }
+  ]
+ },
+ "layout": {
+  "engine": "timeline",
+  "router": "avoid",
+  "sizes": {
+   "lancement": {
+    "w": 184,
+    "h": 48
+   },
+   "r0": {
+    "w": 222,
+    "h": 44
+   },
+   "r1": {
+    "w": 247,
+    "h": 70
+   },
+   "r3": {
+    "w": 236,
+    "h": 44
+   },
+   "e0": {
+    "w": 300,
+    "h": 64
+   },
+   "e1": {
+    "w": 194,
+    "h": 44
+   },
+   "e2": {
+    "w": 204,
+    "h": 44
+   },
+   "e5": {
+    "w": 356,
+    "h": 44
+   },
+   "l1": {
+    "w": 202,
+    "h": 44
+   },
+   "l2": {
+    "w": 164,
+    "h": 44
+   },
+   "l3": {
+    "w": 236,
+    "h": 44
+   },
+   "valid": {
+    "w": 246,
+    "h": 74
+   },
+   "cli2": {
+    "w": 256,
+    "h": 48
+   },
+   "editeur": {
+    "w": 221,
+    "h": 48
+   }
+  },
+  "nodes": {
+   "lancement": [
+    52,
+    50,
+    184,
+    48
+   ],
+   "r0": [
+    60,
+    165,
+    222,
+    44
+   ],
+   "r3": [
+    492,
+    165,
+    236,
+    44
+   ],
+   "r1": [
+    160,
+    231,
+    247,
+    70
+   ],
+   "router": [
+    -22,
+    124,
+    1196,
+    199
+   ],
+   "e0": [
+    60,
+    390,
+    300,
+    64
+   ],
+   "e5": [
+    492,
+    390,
+    356,
+    44
+   ],
+   "e1": [
+    160,
+    476,
+    194,
+    44
+   ],
+   "e2": [
+    304,
+    542,
+    204,
+    44
+   ],
+   "engine": [
+    -22,
+    349,
+    1196,
+    259
+   ],
+   "l1": [
+    60,
+    675,
+    202,
+    44
+   ],
+   "l3": [
+    492,
+    675,
+    236,
+    44
+   ],
+   "l2": [
+    204,
+    741,
+    164,
+    44
+   ],
+   "lang": [
+    -22,
+    634,
+    1196,
+    173
+   ],
+   "valid": [
+    156,
+    874,
+    246,
+    74
+   ],
+   "cli2": [
+    492,
+    874,
+    256,
+    48
+   ],
+   "editeur": [
+    856,
+    874,
+    221,
+    48
+   ],
+   "produit": [
+    -22,
+    833,
+    1196,
+    137
+   ]
+  },
+  "edges": {
+   "r0->valid": [
+    [
+     282,
+     187.1
+    ],
+    [
+     290,
+     187.1
+    ],
+    [
+     290,
+     220
+    ],
+    [
+     52,
+     220
+    ],
+    [
+     52,
+     911
+    ],
+    [
+     156,
+     911
+    ]
+   ],
+   "e0->valid": [
+    [
+     360,
+     422.1
+    ],
+    [
+     376,
+     422.1
+    ],
+    [
+     376,
+     528.2
+    ],
+    [
+     282,
+     528.2
+    ],
+    [
+     282,
+     663.5
+    ],
+    [
+     410,
+     663.5
+    ],
+    [
+     410,
+     911
+    ],
+    [
+     402,
+     911
+    ]
+   ],
+   "e1->e2": [
+    [
+     354,
+     498.1
+    ],
+    [
+     362,
+     498.1
+    ],
+    [
+     362,
+     533.8
+    ],
+    [
+     296,
+     533.8
+    ],
+    [
+     296,
+     564.1
+    ],
+    [
+     304,
+     564.1
+    ]
+   ],
+   "e2->cli2": [
+    [
+     508,
+     564.1
+    ],
+    [
+     516,
+     564.1
+    ],
+    [
+     516,
+     630.5
+    ],
+    [
+     484,
+     630.5
+    ],
+    [
+     484,
+     898
+    ],
+    [
+     492,
+     898
+    ]
+   ],
+   "e5->editeur": [
+    [
+     848,
+     412.1
+    ],
+    [
+     966.5,
+     412.1
+    ],
+    [
+     966.5,
+     874
+    ]
+   ]
+  }
+ }
+}

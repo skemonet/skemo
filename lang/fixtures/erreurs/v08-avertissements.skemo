@@ -1,0 +1,19 @@
+diagram(engine="dagre" elk='{"a":1}')
+  title Shop
+    | Account 123 · **eu-west-3**
+    |.pill prod
+  card#a(at="sw") A
+    | before
+    | lone cell |
+    | after
+    to(b)
+  zone#z(at="north") Z
+    | 3 floors
+    card#b(at="s") B
+      | ^^ | x |
+      |--|--|--|
+      || y |
+  card#t(at="se") T
+    | Group | Inbound |
+    | alb | 443 |
+    |---|---|

@@ -1,0 +1,9 @@
+diagram(dir="right")
+  card#user(icon="user") Customer
+    to(web)
+  zone#prod(icon="cloud") Production
+    card#web.t2(icon="globe" href="https://example.com") Storefront
+      | linked card
+      to(db)
+    card#db.t1(icon="database") Orders
+      | PostgreSQL

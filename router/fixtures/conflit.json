@@ -1,0 +1,301 @@
+{
+ "name": "conflit",
+ "provenance": "poc/reference/conflit.layout.json — tracés produits par libavoid-js 0.5.0-beta.5 (oracle de comportement, pas une cible au pixel)",
+ "units": "px, origine en haut à gauche, y vers le bas",
+ "params": {
+  "shapeBuffer": 14,
+  "idealNudging": 14,
+  "segmentPenalty": 50,
+  "crossingPenalty": 100
+ },
+ "obstacles": [
+  {
+   "id": "internet",
+   "rect": [
+    236,
+    24,
+    170,
+    48
+   ],
+   "kind": "shape"
+  },
+  {
+   "id": "fw",
+   "rect": [
+    211,
+    217,
+    220,
+    94
+   ],
+   "kind": "shape"
+  },
+  {
+   "id": "dmz",
+   "rect": [
+    214,
+    454,
+    538,
+    146.2
+   ],
+   "kind": "region"
+  },
+  {
+   "id": "web",
+   "rect": [
+    560,
+    500,
+    170,
+    74
+   ],
+   "kind": "shape"
+  },
+  {
+   "id": "mail",
+   "rect": [
+    236,
+    504.2,
+    170,
+    74
+   ],
+   "kind": "shape"
+  },
+  {
+   "id": "lan",
+   "rect": [
+    464,
+    458.2,
+    615,
+    266
+   ],
+   "kind": "region"
+  },
+  {
+   "id": "core",
+   "rect": [
+    526.8,
+    504.2,
+    177,
+    94
+   ],
+   "kind": "shape"
+  },
+  {
+   "id": "srv",
+   "rect": [
+    676,
+    628.2,
+    191,
+    74
+   ],
+   "kind": "shape"
+  },
+  {
+   "id": "users",
+   "rect": [
+    887,
+    628.2,
+    170,
+    74
+   ],
+   "kind": "shape"
+  },
+  {
+   "id": "voip",
+   "rect": [
+    486,
+    628.2,
+    170,
+    74
+   ],
+   "kind": "shape"
+  }
+ ],
+ "connectors": [
+  {
+   "id": "internet->fw",
+   "from": {
+    "shape": "internet"
+   },
+   "to": {
+    "shape": "fw"
+   },
+   "passThrough": []
+  },
+  {
+   "id": "fw->web",
+   "from": {
+    "shape": "fw"
+   },
+   "to": {
+    "shape": "web"
+   },
+   "passThrough": [
+    "dmz"
+   ]
+  },
+  {
+   "id": "fw->mail",
+   "from": {
+    "shape": "fw"
+   },
+   "to": {
+    "shape": "mail"
+   },
+   "passThrough": [
+    "dmz"
+   ]
+  },
+  {
+   "id": "fw->core",
+   "from": {
+    "shape": "fw"
+   },
+   "to": {
+    "shape": "core"
+   },
+   "passThrough": [
+    "lan"
+   ]
+  },
+  {
+   "id": "core->srv",
+   "from": {
+    "shape": "core"
+   },
+   "to": {
+    "shape": "srv"
+   },
+   "passThrough": [
+    "lan"
+   ]
+  },
+  {
+   "id": "core->users",
+   "from": {
+    "shape": "core"
+   },
+   "to": {
+    "shape": "users"
+   },
+   "passThrough": [
+    "lan"
+   ]
+  },
+  {
+   "id": "core->voip",
+   "from": {
+    "shape": "core"
+   },
+   "to": {
+    "shape": "voip"
+   },
+   "passThrough": [
+    "lan"
+   ]
+  }
+ ],
+ "expected": {
+  "internet->fw": [
+   [
+    321,
+    72
+   ],
+   [
+    321,
+    217
+   ]
+  ],
+  "fw->web": [
+   [
+    431,
+    264
+   ],
+   [
+    645,
+    264
+   ],
+   [
+    645,
+    500
+   ]
+  ],
+  "fw->mail": [
+   [
+    321,
+    311
+   ],
+   [
+    321,
+    504.2
+   ]
+  ],
+  "fw->core": [
+   [
+    431,
+    264
+   ],
+   [
+    615.3,
+    264
+   ],
+   [
+    615.3,
+    504.2
+   ]
+  ],
+  "core->srv": [
+   [
+    703.8,
+    558.2
+   ],
+   [
+    771.5,
+    558.2
+   ],
+   [
+    771.5,
+    628.2
+   ]
+  ],
+  "core->users": [
+   [
+    703.8,
+    544.2
+   ],
+   [
+    972,
+    544.2
+   ],
+   [
+    972,
+    628.2
+   ]
+  ],
+  "core->voip": [
+   [
+    526.8,
+    551.2
+   ],
+   [
+    420,
+    551.2
+   ],
+   [
+    420,
+    665.2
+   ],
+   [
+    486,
+    665.2
+   ]
+  ]
+ },
+ "checks": [
+  "aucun segment ne traverse un obstacle « shape » (hors extrémités)",
+  "aucun segment ne traverse une « region » absente de passThrough",
+  "les checkpoints sont traversés dans l'ordre",
+  "side respecté au départ et à l'arrivée",
+  "segments parallèles d'une même zone espacés ≥ 12 px",
+  "nombre de coudes ≤ expected + 1"
+ ]
+}

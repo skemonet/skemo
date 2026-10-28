@@ -1,0 +1,14 @@
+---
+source: tests/errors_fr.rs
+expression: out
+---
+erreur[bad-date] : « date » : « 0 » : il n'y a pas d'an 0 (1 av. J.-C. = -1, puis 1)
+  ┌─ frise-dates.skemo:2:10
+  │
+2 │   card#a(date="0") An zéro
+  │          ^^^^^^^^
+erreur[end-before-start] : carte « b » : end antérieur à start
+  ┌─ frise-dates.skemo:4:24
+  │
+4 │     card#b(start="-27" end="-509") B
+  │                        ^^^^^^^^^^

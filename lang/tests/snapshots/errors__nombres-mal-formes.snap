@@ -1,0 +1,22 @@
+---
+source: tests/errors.rs
+expression: out
+---
+error[bad-number]: « at » is malformed: « x,y » expected
+  ┌─ nombres-mal-formes.skemo:1:8
+  │
+1 │ card#a(at="12;40") A
+  │        ^^^^^^^^^^
+  = help: example: at="120,40"
+error[bad-number]: « size » is malformed: « largeur,hauteur » expected
+  ┌─ nombres-mal-formes.skemo:2:17
+  │
+2 │ zone#z(at="0,0" size="grand") Z
+  │                 ^^^^^^^^^^^^
+  = help: example: size="300,200"
+error[bad-number]: « via » is malformed: a list of points « x,y x,y » is expected
+  ┌─ nombres-mal-formes.skemo:4:8
+  │
+4 │   to(a via="1,2 x")
+  │        ^^^^^^^^^^^
+  = help: example: via="300,420 300,500"

@@ -1,0 +1,226 @@
+<!doctype html><meta charset="utf-8"><title>timeline-sombre</title><style>body{margin:0;background:rgb(15, 18, 24)}/* ============================================================
+   Thème par défaut — à surcharger dans un CSS perso
+   Principe : un type ne définit que son accent (--c) et son libellé (--label).
+   Fonds, bordures et encres sont DÉRIVÉS de --c avec color-mix() → clair et sombre gratuits.
+   ============================================================ */
+.stage {
+  --font: Inter, system-ui, sans-serif;
+  --mono: 'JetBrains Mono', 'DejaVu Sans Mono', monospace;
+  --bg: #F6F7F9;          /* fond de page */
+  --surface: #FFFFFF;     /* fond des cartes */
+  --ink: #1F2430;         /* texte principal */
+  --ink-2: #3B4250;       /* texte secondaire fort (IP…) */
+  --muted: #4A5262;       /* texte secondaire (contraste ≥ 4.5:1 sur --bg) */
+  --line: #6B7487;        /* flèches */
+  --card-border: #D3D8DF;
+  --on-c: #FFFFFF;        /* texte posé sur la couleur d'accent (badges, bandeaux, bandes) */
+  --fill-mix: 85%;        /* part de l'accent dans les aplats sous texte blanc (≥ 3:1) ; 68 % en print (≥ 4,5:1) */
+  --shadow: 0 1px 2px rgba(20,30,50,.06), 0 4px 14px rgba(20,30,50,.06);
+  --grid: rgba(110,120,140,.13);
+  --grid-major: rgba(110,120,140,.32);
+  --radius: 12px;
+  --zone-pad: 22px;      /* marge intérieure des zones (lue par le core) */
+  --zone-head: 30px;     /* hauteur réservée au titre de zone (lue par le core) */
+  position: relative; font: 14px/1.4 var(--font); color: var(--ink); background: var(--bg);
+}
+/* Thème sombre : seules les variables de base changent ; tout le reste en découle */
+.stage.theme-dark {
+  --bg: #0F1218; --surface: #181C24; --ink: #E6E9EF; --ink-2: #C9CFD9; --muted: #98A1B0; --line: #7D8799;
+  --card-border: #2A303B; --shadow: 0 1px 2px rgba(0,0,0,.35), 0 6px 18px rgba(0,0,0,.35);
+  --grid: rgba(160,170,190,.10); --grid-major: rgba(160,170,190,.26);
+}
+@media (prefers-color-scheme: dark) {
+  .stage.theme-auto {
+    --bg: #0F1218; --surface: #181C24; --ink: #E6E9EF; --ink-2: #C9CFD9; --muted: #98A1B0; --line: #7D8799;
+    --card-border: #2A303B; --shadow: 0 1px 2px rgba(0,0,0,.35), 0 6px 18px rgba(0,0,0,.35);
+    --grid: rgba(160,170,190,.10); --grid-major: rgba(160,170,190,.26);
+  }
+  body:has(> .stage.theme-auto) { background: #0F1218 !important; }
+}
+
+/* Thème « print » : impression, y compris en noir et blanc. Fond blanc, encre noire, pas d'ombre,
+   aplats d'accent assombris (le texte blanc reste lisible une fois converti en gris), traits plus foncés et épais. */
+.stage.theme-print {
+  --bg: #FFFFFF; --surface: #FFFFFF; --ink: #000000; --ink-2: #111111; --muted: #2E2E2E; --line: #222222;
+  --card-border: #4D4D4D; --shadow: none; --grid: rgba(0,0,0,.16); --grid-major: rgba(0,0,0,.45);
+  --fill-mix: 68%;
+}
+.stage.theme-print card { border-width: 1.5px; border-color: #4D4D4D; border-top-color: var(--accent-fill); }
+.stage.theme-print card.look-header { border-color: var(--accent-fill); }
+.stage.theme-print card.note, .stage.theme-print card.chip, .stage.theme-print card.info { border-color: color-mix(in srgb, var(--c) 55%, #000); }
+.stage.theme-print zone:not(.bare) { border: 1.5px solid #6B6B6B; background: color-mix(in srgb, var(--c, #888) 5%, #fff); }
+.stage.theme-print .edge .line { stroke: color-mix(in srgb, currentColor 45%, #000); stroke-width: 1.7; }
+.stage.theme-print .edge .head, .stage.theme-print .edge .tail, .stage.theme-print .edge .origin { fill: color-mix(in srgb, currentColor 45%, #000); }
+@media print {
+  .stage, .stage.theme-dark, .stage.theme-auto {
+    --bg: #FFFFFF; --surface: #FFFFFF; --ink: #000000; --ink-2: #111111; --muted: #2E2E2E; --line: #222222;
+    --card-border: #4D4D4D; --shadow: none; --grid: rgba(0,0,0,.16); --grid-major: rgba(0,0,0,.45);
+    --fill-mix: 68%;
+  }
+  body { background: #fff !important; }
+  .stage card { border-width: 1.5px; border-color: #4D4D4D; border-top-color: var(--accent-fill); }
+  .stage card.look-header { border-color: var(--accent-fill); }
+  .stage .edge .line { stroke: color-mix(in srgb, currentColor 45%, #000); stroke-width: 1.7; }
+}
+
+/* Aplat d'accent calculé sur CHAQUE élément (une variable définie sur .stage serait figée avec le --c de .stage) */
+.stage * { --accent-fill: color-mix(in srgb, var(--c, #6B7280) var(--fill-mix), #000); }
+
+/* ---------- Cartes : le texte direct = titre, les li = contenu ---------- */
+card { position: absolute; display: block; box-sizing: border-box; min-width: 170px; max-width: 280px;
+       padding: 11px 15px 13px; background: var(--surface); border-radius: var(--radius);
+       border: 1px solid var(--card-border); border-top: 3px solid var(--c, #9AA3B2);
+       box-shadow: var(--shadow); z-index: 2; }
+card .title { font-weight: 650; }
+card ul { margin: 8px 0 0; padding: 0; }
+card li { list-style: none; color: var(--muted); font-size: 12.5px; margin-top: 3px; }
+card .mono { font-family: var(--mono); font-size: 12px; color: var(--ink-2); margin-right: 2px; }
+
+/* Badge : texte donné par le type (--label) ou par tag="..." */
+card .title::before { content: var(--label); display: inline-block; margin-right: 8px;
+       padding: 1px 7px; border-radius: 999px; font-size: 10.5px; font-weight: 700; letter-spacing: .03em;
+       color: var(--on-c); background: var(--accent-fill, var(--c, #9AA3B2)); vertical-align: 1px; }
+card.no-tag .title::before { content: none; }   /* classe posée par le core si aucun badge */
+
+/* ---------- Style « en-tête » (--look: header) : bandeau type + pastille tag, nom centré ---------- */
+.stage.look-header card { --look: header; }       /* diagram(look="header") : pour tout le schéma */
+card.look-header { padding: 0; min-width: 190px; text-align: center; overflow: hidden; border-radius: 10px;
+       border: 1.5px solid var(--c, #9AA3B2); background: color-mix(in srgb, var(--c, #9AA3B2) 9%, var(--surface)); }
+card.look-header > .head { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+       padding: 6px 10px 6px 12px; background: var(--accent-fill, var(--c, #9AA3B2)); color: var(--on-c); font-size: 12.5px; font-weight: 700; text-align: left; }
+card.look-header > .head .tag { padding: 0 7px; border-radius: 999px; font-size: 10.5px; font-weight: 700; letter-spacing: .03em;
+       background: #fff; color: color-mix(in srgb, var(--c, #9AA3B2) 80%, #000); }
+card.look-header > .title { padding: 12px 16px 2px; font-size: 17px; font-weight: 750; letter-spacing: -.01em; }
+card.look-header > .title:last-child { padding-bottom: 13px; }
+card.look-header > .title::before { content: none; }
+card.look-header > ul { margin: 0; padding: 0 16px 12px; }
+card.look-header li { color: var(--ink-2); font-size: 13px; }
+
+/* ---------- Note, chip, encadré : cartes secondaires ---------- */
+.stage card.note, .stage card.chip, .stage card.info { --look: plain; }
+card.note { --c: #D4A017; min-width: 0; text-align: center; box-shadow: none;
+       border: 1.5px dashed color-mix(in srgb, var(--c) 75%, var(--surface));
+       background: color-mix(in srgb, var(--c) 12%, var(--surface)); }
+card.note .title { color: color-mix(in srgb, var(--c) 55%, var(--ink)); }
+card.note li { color: var(--ink-2); font-size: 13px; }
+card.chip { --c: #7B5CC4; min-width: 0; padding: 4px 18px; border-radius: 999px; text-align: center; box-shadow: none;
+       border: 1.5px solid var(--c); background: color-mix(in srgb, var(--c) 10%, var(--surface)); }
+card.info { --c: #D4A017; min-width: 0; padding: 7px 16px; border-radius: 8px; text-align: center; box-shadow: none;
+       border: 1.5px solid color-mix(in srgb, var(--c) 70%, var(--surface)); background: color-mix(in srgb, var(--c) 12%, var(--surface)); }
+card.chip .title, card.info .title { font-weight: 500; color: color-mix(in srgb, var(--c) 60%, var(--ink)); }
+card.chip .title::before, card.info .title::before, card.note .title::before { content: none; }
+
+/* ---------- Zones : teintes dérivées de --c (ou --z-bg / --z-border / --z-ink si fournis) ---------- */
+zone { position: absolute; display: block; box-sizing: border-box; border-radius: 16px; z-index: 0;
+       background: var(--z-bg, color-mix(in srgb, var(--c, #8A93A3) 8%, var(--bg)));
+       border: 1px solid var(--z-border, color-mix(in srgb, var(--c, #8A93A3) 40%, var(--bg))); }
+zone > .title { position: absolute; left: 16px; top: 9px; font-size: 12px; font-weight: 700;
+       letter-spacing: .06em; text-transform: uppercase; color: var(--z-ink, color-mix(in srgb, var(--c, var(--muted)) 70%, var(--ink))); }
+/* Zone « nue » : pas de cadre, légende en bas (ex. « Uplinks / VLAN » sous un groupe de chips) */
+zone.bare { background: transparent; border: 0; }
+zone.bare > .title { top: auto; bottom: 2px; left: 0; right: 0; text-align: center; text-transform: none; letter-spacing: 0;
+       font-style: italic; font-weight: 500; font-size: 12.5px; }
+
+/* ---------- Flèches ---------- */
+.edges { position: absolute; inset: 0; overflow: visible; z-index: 1; pointer-events: none; }
+.edge { color: var(--line); }
+.edge .line { fill: none; stroke: currentColor; stroke-width: 1.4; }
+.edge .head { fill: currentColor; }
+.edge-label { position: absolute; transform: translate(-50%, -50%); z-index: 3; white-space: nowrap;
+       font-size: 11.5px; color: var(--muted); background: var(--bg); padding: 0 5px; border-radius: 4px; }
+
+/* ---------- Types (une ligne chacun) ---------- */
+.t0    { --c: #C94A44; --label: "T0"; }
+.t1    { --c: #D9892B; --label: "T1"; }
+.t2    { --c: #3E6FC4; --label: "T2"; }
+.t3    { --c: #6B7280; --label: "T3"; }
+.cloud { --c: #A6AEBB; }
+.dmz   { --c: #D9892B; }
+.lan   { --c: #3E6FC4; }
+.edge .tail, .edge .origin { display: none; fill: currentColor; }
+
+/* Styles de flèches : des classes combinables sur to(...) ; une flèche porte aussi from-<type> et to-<type> */
+.edge.wan    { color: #C94A44; }
+.edge.wan .line { stroke-width: 2; }
+.edge.dashed .line, .edge.link .line { stroke-dasharray: 5 4; }
+.edge.dotted .line { stroke-dasharray: 1.5 4; stroke-linecap: round; }
+.edge.thick .line  { stroke-width: 3; }
+.edge.flow .line   { stroke-dasharray: 6 5; animation: flow 1s linear infinite; }   /* flux animé */
+.edge.both .tail   { display: inline; }        /* double pointe */
+.edge.nohead .head, .edge.link .head { display: none; }   /* simple trait ; .link = rattachement pointillé sans pointe */
+.edge.dot .origin  { display: inline; }        /* rond au départ */
+.edge.secure { color: #2E9E6B; }
+@keyframes flow { to { stroke-dashoffset: -11; } }
+
+/* ---------- Animations (mode présentation) ---------- */
+[data-step] { transition: opacity .45s ease, transform .45s ease; }
+.pending { opacity: 0 !important; }
+.pending[data-fx="up"]   { transform: translateY(12px); }
+.pending[data-fx="zoom"] { transform: scale(.92); }
+.edge.pending .line { stroke-dashoffset: var(--len); stroke-dasharray: var(--len); }
+.edge[data-step] .line { transition: stroke-dashoffset .6s ease; }
+
+/* ---------- Mode timeline ---------- */
+.tl-axis  { position: absolute; z-index: 0; border-bottom: 1px solid var(--grid-major); background: var(--bg); }
+.tl-tick  { position: absolute; z-index: 1; transform: translateX(4px); font-size: 11px; color: var(--muted); white-space: nowrap; }
+.tl-tick.major { font-weight: 700; color: var(--ink); }
+.tl-grid  { position: absolute; z-index: 1; width: 0; border-left: 1px solid var(--grid); pointer-events: none; }
+.tl-grid.major { border-left-color: var(--grid-major); }
+.tl-mark  { position: absolute; z-index: 3; width: 9px; height: 9px; margin-left: -4.5px; transform: rotate(45deg); background: var(--ink); border-radius: 1.5px; }
+.tl-today { position: absolute; z-index: 0; width: 0; border-left: 2px dashed #E03131; pointer-events: none; }
+.tl-today-label { position: absolute; z-index: 3; transform: translate(-50%, -100%); font-size: 10.5px; font-weight: 700; color: #fff;
+                  background: #E03131; padding: 1px 6px; border-radius: 999px; white-space: nowrap; }
+
+/* Jalon : bord gauche = la date, losange sur ce bord */
+card.milestone { min-width: 0; padding-left: 16px; }
+card.milestone::after { content: ""; position: absolute; left: -6px; top: 15px; width: 10px; height: 10px; transform: rotate(45deg);
+                        background: var(--c, #6B7280); border: 2px solid var(--bg); border-radius: 2px; }
+/* Période : carte qui commence à start ; barre du haut = durée exacte (--bar-w, posée par le moteur) */
+card.phase { min-width: 0; max-width: 300px; padding: 12px 13px 10px; border-top: 1px solid var(--card-border); overflow: hidden;
+             background: color-mix(in srgb, var(--c, #9AA3B2) 7%, var(--surface)); }
+card.phase::after { content: ""; position: absolute; left: 0; top: 0; height: 5px; width: var(--bar-w, 100%);
+                    background: var(--accent-fill, var(--c, #9AA3B2)); border-radius: 0 3px 3px 0; }
+
+/* ---------- Mode frise chronologique ---------- */
+.fr-axis  { position: absolute; z-index: 1; height: 4px; background: var(--ink); border-radius: 2px; }
+.fr-tick  { position: absolute; z-index: 1; width: 1px; height: 8px; background: var(--ink); }
+.fr-tick-label { position: absolute; z-index: 3; transform: translateX(-50%); font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+.fr-century { position: absolute; z-index: 3; transform: translateX(-50%); font-size: 10px; font-weight: 700; letter-spacing: .05em;
+              color: var(--muted); opacity: .6; white-space: nowrap; }
+.fr-stem  { position: absolute; z-index: 0; width: 0; border-left: 1.5px solid var(--line); margin-left: -0.75px; }
+.fr-dot   { position: absolute; z-index: 3; width: 10px; height: 10px; margin: -3px 0 0 -5px; border-radius: 50%;
+            background: var(--bg); border: 2.5px solid var(--ink); box-sizing: border-box; }
+/* Événement : carte centrée sur sa date, reliée à l'axe par une tige */
+card.event { min-width: 0; max-width: 210px; padding: 9px 12px 10px; text-align: center; }
+card.event .title { font-size: 13px; }
+card.event ul { margin-top: 4px; }
+/* Époque : bande colorée sur l'axe ; le titre est tronqué si la bande est courte */
+card.era { min-width: 0; padding: 5px 9px; border: 0; border-radius: 6px; box-shadow: none; overflow: hidden;
+           background: var(--accent-fill, var(--c, #6B7280)); color: var(--on-c); display: flex; align-items: center; }
+card.era .title { font-size: 12px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+card.era .title::before { content: none; }
+card.era ul { display: none; }
+card.era.outside { overflow: visible; }
+card.era.outside .title { position: absolute; left: calc(100% + 6px); overflow: visible; color: var(--c, #6B7280); }
+/* Thème perso de la feuille de route — uniquement des accents : clair, sombre et impression suivent seuls */
+.jalon    { --c: var(--ink); --on-c: var(--bg); --label: "JALON"; }
+.decision { --c: #E8590C; --label: "DÉCISION"; }
+.spike    { --c: #7A5AF8; --label: "SPIKE"; }
+.dev      { --c: #3E6FC4; }
+.lane     { --c: #8A93A3; }
+</style><div id="stage" class="stage theme-dark" style="width: 1252px; height: 1026px;"><card id="lancement" class="jalon milestone" style="left: 102px; top: 78px; width: 184px; height: 48px;"><div class="title">Specs livrées</div></card><zone id="router" class="lane" data-step="1" data-fx="up" style="left: 28px; top: 152px; width: 1196px; height: 199px;"><div class="title">Routeur</div></zone><card id="r0" class="spike phase" data-step="1" data-fx="up" style="--bar-w: 64px; max-width: none; left: 110px; top: 193px; width: 222px; height: 44px;"><div class="title">R0 · spike hightower</div></card><card id="r1" class="dev no-tag phase" data-step="1" data-fx="up" style="--bar-w: 164px; max-width: none; left: 210px; top: 259px; width: 247px; height: 70px;"><div class="title">R1 → R2 · routage + espacement</div><ul><li>côtés, via, régions, nudging</li></ul></card><card id="r3" class="dev no-tag phase" data-step="1" data-fx="up" style="--bar-w: 236px; max-width: none; left: 542px; top: 193px; width: 236px; height: 44px;"><div class="title">R3 · incrémental + WASM</div></card><zone id="engine" class="lane" data-step="2" data-fx="up" style="left: 28px; top: 377px; width: 1196px; height: 259px;"><div class="title">Moteur</div></zone><card id="e0" class="spike phase" data-step="2" data-fx="up" style="--bar-w: 92px; max-width: none; left: 110px; top: 418px; width: 300px; height: 64px;"><div class="title">E0 · spikes elk-rs, mesure, rendu</div></card><card id="e1" class="dev no-tag phase" data-step="2" data-fx="up" style="--bar-w: 144px; max-width: none; left: 210px; top: 504px; width: 194px; height: 44px;"><div class="title">E1 · mesure + placement</div></card><card id="e2" class="dev no-tag phase" data-step="2" data-fx="up" style="--bar-w: 188px; max-width: none; left: 354px; top: 570px; width: 204px; height: 44px;"><div class="title">E2 → E3 · routage + rendu</div></card><card id="e5" class="dev no-tag phase" data-step="2" data-fx="up" style="--bar-w: 356px; max-width: none; left: 542px; top: 418px; width: 356px; height: 44px;"><div class="title">E4 → E5 · étapes + WASM</div></card><zone id="lang" class="lane" data-step="3" data-fx="up" style="left: 28px; top: 662px; width: 1196px; height: 173px;"><div class="title">Langage</div></zone><card id="l1" class="dev no-tag phase" data-step="3" data-fx="up" style="--bar-w: 144px; max-width: none; left: 110px; top: 703px; width: 202px; height: 44px;"><div class="title">L1 · parseur + diagnostics</div></card><card id="l2" class="dev no-tag phase" data-step="3" data-fx="up" style="--bar-w: 164px; max-width: none; left: 254px; top: 769px; width: 164px; height: 44px;"><div class="title">L2 · styles</div></card><card id="l3" class="dev no-tag phase" data-step="3" data-fx="up" style="--bar-w: 236px; max-width: none; left: 542px; top: 703px; width: 236px; height: 44px;"><div class="title">L3 · édition chirurgicale</div></card><zone id="produit" class="lane" data-step="4" data-fx="up" style="left: 28px; top: 861px; width: 1196px; height: 137px;"><div class="title">Livrables</div></zone><card id="valid" class="decision milestone" data-step="4" data-fx="up" style="left: 206px; top: 902px; width: 246px; height: 74px;"><div class="title">Validation des choix</div><ul><li>D-005 · D-007 · option routeur</li></ul></card><card id="cli2" class="jalon milestone" data-step="4" data-fx="up" style="left: 542px; top: 902px; width: 256px; height: 48px;"><div class="title">CLI : premier rendu PNG</div></card><card id="editeur" class="jalon milestone" data-step="4" data-fx="up" style="left: 906px; top: 902px; width: 221px; height: 48px;"><div class="title">Démarrage éditeur</div></card><svg class="edges" viewBox="0 0 1252 1026" width="1252" height="1026"><g class="edge from-spike to-decision" data-id="r0-&gt;valid" data-step="4" style="--len: 1056.362548828125;"><path class="line" d="M332,215.088 L336,215.088 Q340,215.088 340,219.088 L340,240 Q340,248 332,248 L110,248 Q102,248 102,256 L102,931 Q102,939 110,939 L199,939"></path><path class="head" d="M206,939 L196.2,944.25 L196.2,933.75 Z"></path><path class="tail" d="M332,215.088 L341.8,220.338 L341.8,209.838 Z"></path><circle class="origin" cx="332" cy="215.088" r="3.5"></circle></g><g class="edge from-spike to-decision" data-id="e0-&gt;valid" data-step="4" style="--len: 712.6131591796875;"><path class="line" d="M410,450.128 L417.99999995999997,450.128 Q425.99999992,450.128 425.99999992,458.12799996 L425.99999992,548.1999999999999 Q425.99999992,556.1999999999999 417.99999992,556.1999999999999 L340.00000014000005,556.1999999999999 Q332.00000014000005,556.1999999999999 332.00000014000005,564.1999999999999 L332.00000014000005,683.5 Q332.00000014000005,691.5 340.00000014000005,691.5 L452,691.5 Q460,691.5 460,699.5 L460,938.5 Q460,939 459.5,939 L459,939"></path><path class="head" d="M452,939 L461.8,933.75 L461.8,944.25 Z"></path><path class="tail" d="M410,450.128 L419.8,455.378 L419.8,444.878 Z"></path><circle class="origin" cx="410" cy="450.128" r="3.5"></circle></g><g class="edge from-dev to-dev" data-id="e1-&gt;e2" data-step="2" style="--len: 133.27638244628906;"><path class="line" d="M404,526.088 L408,526.088 Q412,526.088 412,530.088 L412,553.8 Q412,561.8 404,561.8 L354,561.8 Q346,561.8 346,569.8 L346,591.588 Q346,592.088 346.5,592.088 L347,592.088"></path><path class="head" d="M354,592.088 L344.2,597.338 L344.2,586.838 Z"></path><path class="tail" d="M404,526.088 L413.8,531.338 L413.8,520.838 Z"></path><circle class="origin" cx="404" cy="526.088" r="3.5"></circle></g><g class="edge from-dev to-jalon" data-id="e2-&gt;cli2" data-step="4" style="--len: 367.1883850097656;"><path class="line" d="M558,592.088 L562,592.088 Q566,592.088 566,596.088 L566,650.5 Q566,658.5 558,658.5 L542,658.5 Q534,658.5 534,666.5 L534,925.5 Q534,926 534.5,926 L535,926"></path><path class="head" d="M542,926 L532.2,931.25 L532.2,920.75 Z"></path><path class="tail" d="M558,592.088 L567.8,597.338 L567.8,586.838 Z"></path><circle class="origin" cx="558" cy="592.088" r="3.5"></circle></g><g class="edge from-dev to-jalon" data-id="e5-&gt;editeur" data-step="4" style="--len: 570.3978881835938;"><path class="line" d="M898,440.088 L1008.5,440.088 Q1016.5,440.088 1016.5,448.088 L1016.5,895"></path><path class="head" d="M1016.5,902 L1011.25,892.2 L1021.75,892.2 Z"></path><path class="tail" d="M898,440.088 L907.8,445.338 L907.8,434.838 Z"></path><circle class="origin" cx="898" cy="440.088" r="3.5"></circle></g></svg><div class="tl-axis" style="left: 28px; top: 28px; width: 1196px; height: 40px;"></div><div class="tl-grid" style="left: 50px; top: 60px; height: 938px;"></div><div class="tl-tick" style="left: 50px; top: 36px;">oct.</div><div class="tl-grid" style="left: 174px; top: 60px; height: 938px;"></div><div class="tl-tick" style="left: 174px; top: 36px;">nov.</div><div class="tl-grid" style="left: 294px; top: 60px; height: 938px;"></div><div class="tl-tick" style="left: 294px; top: 36px;">déc.</div><div class="tl-grid major" style="left: 418px; top: 60px; height: 938px;"></div><div class="tl-tick major" style="left: 418px; top: 36px;">janv. 2027</div><div class="tl-grid" style="left: 542px; top: 60px; height: 938px;"></div><div class="tl-tick" style="left: 542px; top: 36px;">févr.</div><div class="tl-grid" style="left: 654px; top: 60px; height: 938px;"></div><div class="tl-tick" style="left: 654px; top: 36px;">mars</div><div class="tl-grid" style="left: 778px; top: 60px; height: 938px;"></div><div class="tl-tick" style="left: 778px; top: 36px;">avr.</div><div class="tl-grid" style="left: 898px; top: 60px; height: 938px;"></div><div class="tl-tick" style="left: 898px; top: 36px;">mai</div><div class="tl-grid" style="left: 1022px; top: 60px; height: 938px;"></div><div class="tl-tick" style="left: 1022px; top: 36px;">juin</div><div class="tl-grid" style="left: 1142px; top: 60px; height: 938px;"></div><div class="tl-tick" style="left: 1142px; top: 36px;">juil.</div><div class="tl-mark" data-for="lancement" style="left: 102px; top: 62px;"></div><div class="tl-mark" data-for="valid" style="left: 206px; top: 62px;" data-step="4" data-fx="up"></div><div class="tl-mark" data-for="cli2" style="left: 542px; top: 62px;" data-step="4" data-fx="up"></div><div class="tl-mark" data-for="editeur" style="left: 906px; top: 62px;" data-step="4" data-fx="up"></div><div class="tl-today" style="left: 106px; top: 60px; height: 938px;"></div><div class="tl-today-label" style="left: 106px; top: 64px;">aujourd’hui</div></div><script>// Lecteur d'étapes minimal : → / espace = suivant, ← = précédent
+(() => {
+  const els = [...document.querySelectorAll('[data-step]')];
+  const steps = [...new Set(els.map(e => +e.dataset.step))].sort((a, b) => a - b);
+  let i = new URLSearchParams(location.search).has('all') ? steps.length : 0;
+  const show = () => els.forEach(e => e.classList.toggle('pending', +e.dataset.step > (i ? steps[i - 1] : 0)));
+  addEventListener('keydown', ev => {
+    if (['ArrowRight', ' ', 'PageDown'].includes(ev.key)) i = Math.min(i + 1, steps.length);
+    else if (['ArrowLeft', 'PageUp'].includes(ev.key)) i = Math.max(i - 1, 0);
+    else return;
+    ev.preventDefault(); show();
+  });
+  addEventListener('click', () => { i = Math.min(i + 1, steps.length); show(); });
+  show();
+})();
+</script>

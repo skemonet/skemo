@@ -1,0 +1,41 @@
+diagram(dir="down" lang="fr" theme="dark" zones="stretch")
+
+  stack
+    zone#apps.bare.wide
+      card#a1.pod.col-a site-a-cjxbl
+      card#a2.pod.col-a site-a-jkn87
+      card#b1.pod.col-b site-b-ac789
+      card#b2.pod.col-b site-b-p78f2
+
+    zone#svcs.bare.wide
+      card#sa.service.col-a Site A
+        | ClusterIP
+        to(a1 a2 join="trunk")
+      card#ia.ingress.col-mid Ingress A @3
+        to(c1).link
+      card#ib.ingress.col-mid Ingress B @3
+        to(c2).link
+      card#sb.service.col-b Site B
+        | ClusterIP
+        to(b1 b2 join="trunk")
+
+    zone#ctrl.bare.wide
+      card#c1.pod.col-mid ingress-controller @2
+        to(sa constraint="false") @4
+      card#c2.pod.col-mid ingress-controller @2
+        to(sb constraint="false") @4
+
+    zone#ic-row.bare.wide
+      card#ic.service.col-mid Ingress controller @1
+        | NodePort
+        to(c1 c2 join="trunk")
+
+    zone#noeuds.bare.wide
+      card#cp.noeud(icon="server") Control plane
+      card#w1.noeud(icon="server" tag=":443") Worker
+        to(ic join="in" constraint="false") @1
+      card#w2.noeud(icon="server" tag=":443") Worker
+        to(ic join="in" constraint="false") @1
+
+    card#bus.wide.reseau Réseau du cluster
+      to(cp w1 w2)

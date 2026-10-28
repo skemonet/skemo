@@ -1,0 +1,10 @@
+diagram(lang="en")
+  card#sg(label="Security groups") Ingress
+    | All groups allow all egress.
+    | Group  | Inbound                    | Attached to   |
+    |--------|----------------------------|---------------|
+    | alb    | 443, 80 from ==0.0.0.0/0== | load balancer |
+    | api    | 8080 from alb              | ECS api tasks |
+    | ^^     | 9090 from monitoring       | ECS api tasks |
+    | worker | no inbound rule           ||
+    |.error lambda | none                 | order_events  |

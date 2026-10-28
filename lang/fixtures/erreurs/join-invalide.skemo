@@ -1,0 +1,4 @@
+card#a Root
+  to(b c join="bus")
+card#b One
+card#c Two

@@ -1,0 +1,9 @@
+diagram(dir="right")
+  card#browser.client Browser
+    to(api) HTTPS
+  zone#backend Backend
+    card#api.service API
+      | REST, JSON
+      to(db)
+    card#db.store Database
+      | PostgreSQL

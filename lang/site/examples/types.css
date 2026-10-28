@@ -1,0 +1,7 @@
+.step   { --c: #5B6CFF; --label: "STEP"; }
+.choice { --c: #E8590C; --label: "?"; }
+.end    { --c: #2B8A3E; }
+.hr     { --c: #7048E8; }
+.edge.ok { color: #2B8A3E; }
+.edge.ko { color: #E8590C; }
+.edge.ko .line { stroke-dasharray: 5 4; }

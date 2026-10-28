@@ -1,0 +1,8 @@
+diagram(dir="right")
+  zone#lan(href="#fw") LAN
+    card#fw(href="https://wiki.corp/firewall" icon="shield") Edge firewall
+      | 10.0.0.1/24
+      to(core href="https://wiki.corp/uplinks") uplink
+    card#core(href="docs/core.md" tag="L3") Core switch
+      to(fw)
+  card#free(href="mailto:ops@corp.example") Contact

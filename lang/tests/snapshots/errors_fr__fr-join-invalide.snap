@@ -1,0 +1,10 @@
+---
+source: tests/errors_fr.rs
+expression: out
+---
+avertissement[bad-join] : « join="bus" » : aucune autre flèche vers « b » ne le porte ; ignoré
+  ┌─ join-invalide.skemo:2:10
+  │
+2 │   to(b c join="bus")
+  │          ^^^^^^^^^^
+  = aide : "trunk" partage un tronc au départ ; un autre nom, un tronc d'arrivée partagé par plusieurs flèches

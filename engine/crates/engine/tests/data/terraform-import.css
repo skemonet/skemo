@@ -1,0 +1,29 @@
+/* Written by `skemo import`: one accent colour per family of resources, one per zone kind.
+   Change the colours here; the import writes this file only when it does not exist. */
+
+/* cards */
+.delivery      { --c: #7048E8; }  /* CDN, DNS, API gateways */
+.network       { --c: #5C677D; }  /* load balancers, gateways, endpoints */
+.compute       { --c: #3E6FC4; }  /* instances, containers, functions */
+.data          { --c: #2F9E44; }  /* databases, caches, search */
+.storage       { --c: #0C8599; }  /* buckets, file systems, registries */
+.messaging     { --c: #D9480F; }  /* queues, topics, event buses */
+.security      { --c: #C92A2A; }  /* firewalls, identity */
+.observability { --c: #9C6B00; }  /* alarms */
+.external      { --c: #495057; }  /* sources outside the infrastructure */
+.other         { --c: #868E96; }  /* types without a rule */
+
+/* zones */
+.region          { --c: #5C6573; }
+.vpc             { --c: #3E6FC4; }
+.subnet.public   { --c: #2F9E44; }
+.subnet.private  { --c: #7048E8; }
+.group           { --c: #5C6573; }
+.module          { --c: #6C757D; }
+.services        { --c: #6C757D; }
+
+/* plan: what Terraform is about to do (wins over the family colour) */
+.tf-create  { --c: #2B8A3E; }
+.tf-update  { --c: #B86E00; }
+.tf-replace { --c: #D2541A; }
+.tf-delete  { --c: #E5383B; }

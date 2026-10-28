@@ -1,0 +1,3 @@
+card#a A
+  to(b).dashed(side="left-top")
+card#b B

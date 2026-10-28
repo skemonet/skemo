@@ -1,0 +1,16 @@
+diagram(dir="right")
+  zone#vpc(icon="cloud") Production VPC
+    card#web.app(icon="globe" tag="App") Storefront
+      | Next.js
+      to(db)
+    card#db(icon="database") Orders
+      | PostgreSQL 16
+      to(q)
+    card#q(icon="list-ordered") Jobs queue
+  card#plain Plain card
+    to(web)
+  card#note.note(icon="info") A note
+  card#chip.chip(icon="user") A chip
+  card#info.info(icon="triangle-alert") An info
+  card#bad(icon="databse") Unknown icon
+  card#off(icon="none") No icon

@@ -1,0 +1,445 @@
+/* ============================================================
+   Thème par défaut — à surcharger dans un CSS perso
+   Principe : un type ne définit que son accent (--c) et son libellé (--label).
+   Fonds, bordures et encres sont DÉRIVÉS de --c avec color-mix() → clair et sombre gratuits.
+   ============================================================ */
+.stage {
+  --font: Inter, system-ui, sans-serif;
+  --mono: 'JetBrains Mono', 'DejaVu Sans Mono', monospace;
+  --bg: #F6F7F9;          /* fond de page */
+  --surface: #FFFFFF;     /* fond des cartes */
+  --ink: #1F2430;         /* texte principal */
+  --ink-2: #3B4250;       /* texte secondaire fort (IP…) */
+  --muted: #4A5262;       /* texte secondaire (contraste ≥ 4.5:1 sur --bg) */
+  --line: #6B7487;        /* flèches */
+  --card-border: #D3D8DF;
+  --on-c: #FFFFFF;        /* texte posé sur la couleur d'accent (badges, bandeaux, bandes) */
+  --fill-mix: 85%;        /* part de l'accent dans les aplats sous texte blanc (≥ 3:1) ; 68 % en print (≥ 4,5:1) */
+  --shadow: 0 1px 2px rgba(20,30,50,.06), 0 4px 14px rgba(20,30,50,.06);
+  --grid: rgba(110,120,140,.13);
+  --grid-major: rgba(110,120,140,.32);
+  --radius: 12px;
+  --zone-pad: 30px;      /* marge intérieure des zones (lue par le core) */
+  --zone-head: 30px;     /* hauteur réservée au titre de zone (lue par le core) */
+  --event-date: on;      /* frieze: the date of an event above its title (read by the engine) */
+  --event-anchor: edge;  /* frieze: an event card may hang by an edge of its stem to pack (read by the engine) */
+  --tl-gap-x: 4px;       /* timeline: gap between periods of one row (read by the engine; prototype 12px) */
+  --tl-gap-y: 12px;      /* timeline: gap between rows of a lane (read by the engine; prototype 22px) */
+  --tl-deps: drop;       /* timeline: dependencies drop straight from the end of a bar (read by the engine) */
+  position: relative; font: 14px/1.4 var(--font); color: var(--ink); background: var(--bg);
+  font-size: calc(14px * var(--font-scale, 1));   /* --font-scale: every text of the theme (1.4 for a projected slide) */
+}
+/* Thème sombre : seules les variables de base changent ; tout le reste en découle */
+.stage.theme-dark {
+  --bg: #0F1218; --surface: #181C24; --ink: #E6E9EF; --ink-2: #C9CFD9; --muted: #98A1B0; --line: #7D8799;
+  --card-border: #2A303B; --shadow: 0 1px 2px rgba(0,0,0,.35), 0 6px 18px rgba(0,0,0,.35);
+  --grid: rgba(160,170,190,.10); --grid-major: rgba(160,170,190,.26);
+}
+@media (prefers-color-scheme: dark) {
+  .stage.theme-auto {
+    --bg: #0F1218; --surface: #181C24; --ink: #E6E9EF; --ink-2: #C9CFD9; --muted: #98A1B0; --line: #7D8799;
+    --card-border: #2A303B; --shadow: 0 1px 2px rgba(0,0,0,.35), 0 6px 18px rgba(0,0,0,.35);
+    --grid: rgba(160,170,190,.10); --grid-major: rgba(160,170,190,.26);
+  }
+  body:has(> .stage.theme-auto) { background: #0F1218 !important; }
+}
+
+/* Thème « print » : impression, y compris en noir et blanc. Fond blanc, encre noire, pas d'ombre,
+   aplats d'accent assombris (le texte blanc reste lisible une fois converti en gris), traits plus foncés et épais. */
+.stage.theme-print {
+  --bg: #FFFFFF; --surface: #FFFFFF; --ink: #000000; --ink-2: #111111; --muted: #2E2E2E; --line: #222222;
+  --card-border: #4D4D4D; --shadow: none; --grid: rgba(0,0,0,.16); --grid-major: rgba(0,0,0,.45);
+  --fill-mix: 68%;
+}
+.stage.theme-print card { border-width: 1.5px; border-color: #4D4D4D; border-top-color: var(--accent-fill); }
+
+.stage.theme-print card.look-header, .stage.theme-print card.look-band { border-color: var(--accent-fill); }
+.stage.theme-print card.note, .stage.theme-print card.chip, .stage.theme-print card.info { border-color: color-mix(in srgb, var(--c) 55%, #000); }
+.stage.theme-print zone:not(.bare) { border: 1.5px solid #6B6B6B; background: color-mix(in srgb, var(--c, #888) 5%, #fff); }
+.stage.theme-print .edge .line { stroke: color-mix(in srgb, currentColor 45%, #000); stroke-width: 1.7; }
+.stage.theme-print .edge .head, .stage.theme-print .edge .tail, .stage.theme-print .edge .origin { fill: color-mix(in srgb, currentColor 45%, #000); }
+@media print {
+  .stage, .stage.theme-dark, .stage.theme-auto {
+    --bg: #FFFFFF; --surface: #FFFFFF; --ink: #000000; --ink-2: #111111; --muted: #2E2E2E; --line: #222222;
+    --card-border: #4D4D4D; --shadow: none; --grid: rgba(0,0,0,.16); --grid-major: rgba(0,0,0,.45);
+    --fill-mix: 68%;
+  }
+  body { background: #fff !important; }
+  .stage card { border-width: 1.5px; border-color: #4D4D4D; border-top-color: var(--accent-fill); }
+  .stage card.look-header, .stage card.look-band { border-color: var(--accent-fill); }
+  .stage .edge .line { stroke: color-mix(in srgb, currentColor 45%, #000); stroke-width: 1.7; }
+}
+
+/* Aplat d'accent calculé sur CHAQUE élément (une variable définie sur .stage serait figée avec le --c de .stage) */
+.stage * { --accent-fill: color-mix(in srgb, var(--c, #6B7280) var(--fill-mix), #000); }
+
+/* ---------- Cartes : le texte direct = titre, les li = contenu ---------- */
+card { position: absolute; display: block; box-sizing: border-box; min-width: 96px; max-width: 280px;
+       padding: 11px 15px 13px; background: var(--surface); border-radius: var(--radius);
+       border: 1px solid var(--card-border); border-top: 3px solid var(--c, #9AA3B2);
+       box-shadow: var(--shadow); z-index: 2; }
+card .title { font-weight: 650; }
+card ul { margin: 8px 0 0; padding: 0; }
+card li { list-style: none; color: var(--muted); font-size: calc(12.5px * var(--font-scale, 1)); margin-top: 3px; }
+card .mono { font-family: var(--mono); font-size: calc(12px * var(--font-scale, 1)); color: var(--ink-2); margin-right: 2px; }
+
+/* Badge : texte donné par le type (--label) ou par tag="..." */
+card .title::before { content: var(--label); display: inline-block; margin-right: 8px;
+       padding: 1px 7px; border-radius: 999px; font-size: calc(10.5px * var(--font-scale, 1)); font-weight: 700; letter-spacing: .03em;
+       color: var(--on-c); background: var(--accent-fill, var(--c, #9AA3B2)); vertical-align: 1px; }
+card.no-tag .title::before { content: none; }   /* classe posée par le core si aucun badge */
+
+/* ---------- Styles de carte (`--look`) : `band` (défaut), `header`, `classic` ----------
+   band    : bandeau de couleur qui porte le nom (et la pastille : tag, sinon libellé du type, à
+             droite), contenu sur fond teinté. C'est le style par défaut.
+   header  : ancien style en-tête : bandeau (libellé du type + pastille tag), nom centré dessous.
+   classic : ancien style de base : trait de couleur en haut, badge devant le nom.
+   Choix : `diagram(look="header")` pour tout le schéma, ou `--look: header` sur un type ;
+   la valeur se hérite de `.stage`. */
+.stage { --look: band; }
+.stage.look-band { --look: band; }
+.stage.look-header { --look: header; }
+.stage.look-classic { --look: classic; }
+/* a card without lines: its title is centred (the tag stays at the right of a band) */
+card.look-band.no-body > .head > .type { flex: 1; text-align: center; justify-content: center; }
+.stage.look-classic card.no-body > .title { text-align: center; }
+card.look-band { padding: 0; min-width: 96px; overflow: hidden; border-radius: 10px;
+       border: 1.5px solid var(--accent-fill, var(--c, #9AA3B2)); background: color-mix(in srgb, var(--c, #9AA3B2) 9%, var(--surface)); }
+card.look-band > .head { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+       padding: 7px 10px 7px 13px; background: var(--accent-fill, var(--c, #9AA3B2)); color: var(--on-c); font-size: calc(14px * var(--font-scale, 1)); font-weight: 700; text-align: left; }
+card.look-band > .head .tag { padding: 0 7px; border-radius: 999px; font-size: calc(10.5px * var(--font-scale, 1)); font-weight: 700; letter-spacing: .03em;
+       background: #fff; color: color-mix(in srgb, var(--c, #9AA3B2) 60%, #000); }
+card.look-band > ul { margin: 0; padding: 10px 14px 11px; }
+/* lines keep 20 px from frames in a graph (D-063); chronologies keep their tighter lanes */
+.stage.layout-timeline, .stage.layout-frieze, .stage.layout-frise { --zone-pad: 22px; }
+/* piles (`cards`): the ×N badge sits on the corner of the cards behind, in every look */
+card .count { display: inline-block; padding: 0 6px; border-radius: 999px; font-size: calc(10.5px * var(--font-scale, 1));
+       font-weight: 700; line-height: 17px; background: var(--accent-fill, var(--c, #9AA3B2)); color: var(--on-c, #fff); }
+card.deck { overflow: visible; }
+card.deck > .count { position: absolute; right: calc(-1 * var(--deck-m, 0px)); bottom: 0; transform: translateY(50%); z-index: 3; }
+card.deck.look-band > .head, card.deck.look-header > .head { border-radius: 8.5px 8.5px 0 0; }
+card.look-band li { color: var(--ink-2); font-size: calc(13px * var(--font-scale, 1)); }
+
+card.look-header { padding: 0; min-width: 120px; text-align: center; overflow: hidden; border-radius: 10px;
+       border: 1.5px solid var(--c, #9AA3B2); background: color-mix(in srgb, var(--c, #9AA3B2) 9%, var(--surface)); }
+card.look-header > .head { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+       padding: 6px 10px 6px 12px; background: var(--accent-fill, var(--c, #9AA3B2)); color: var(--on-c); font-size: calc(12.5px * var(--font-scale, 1)); font-weight: 700; text-align: left; }
+card.look-header > .head .tag { padding: 0 7px; border-radius: 999px; font-size: calc(10.5px * var(--font-scale, 1)); font-weight: 700; letter-spacing: .03em;
+       background: #fff; color: color-mix(in srgb, var(--c, #9AA3B2) 80%, #000); }
+card.look-header > .title { padding: 12px 16px 2px; font-size: calc(17px * var(--font-scale, 1)); font-weight: 750; letter-spacing: -.01em; }
+card.look-header > .title:last-child { padding-bottom: 13px; }
+card.look-header > .title::before { content: none; }
+card.look-header > ul { margin: 0; padding: 0 16px 12px; }
+card.look-header li { color: var(--ink-2); font-size: calc(13px * var(--font-scale, 1)); }
+
+/* A card without a type (no --c, class set by the engine) is drawn light: surface, ink, hairline.
+   Colour is left to the types that mean something. */
+card.look-band.no-type { border: 1px solid var(--card-border); background: var(--surface); }
+card.look-band.no-type > .head { background: transparent; color: var(--ink); font-weight: 650; }
+card.look-band.no-type > ul { padding-top: 0; }
+card.look-band.no-type > .head .tag, card.look-header.no-type > .head .tag { background: color-mix(in srgb, var(--muted) 14%, var(--surface)); color: var(--ink-2); }
+card.look-header.no-type { border: 1px solid var(--card-border); background: var(--surface); }
+card.look-header.no-type > .head { background: color-mix(in srgb, var(--muted) 8%, var(--surface)); color: var(--ink-2); }
+.stage.look-classic card.no-type { border-top: 1px solid var(--card-border); }
+
+/* `eyebrow` look: white card, the type as a small coloured label above the title, no band. */
+.stage.look-eyebrow { --look: eyebrow; }
+.stage.look-eyebrow card { border-top: 1px solid var(--card-border); }
+.stage.look-eyebrow card .title::before { display: block; margin: 0 0 3px; padding: 0; background: none; border-radius: 0;
+       color: color-mix(in srgb, var(--c, #6B7280) 80%, var(--ink)); font-size: calc(10px * var(--font-scale, 1)); font-weight: 700;
+       letter-spacing: .08em; text-transform: uppercase; vertical-align: 0; }
+.stage.look-eyebrow card.no-body > .title { text-align: left; }
+.stage.look-eyebrow card.no-tag.no-body > .title { text-align: center; }
+
+/* ---------- Note, chip, encadré : cartes secondaires ---------- */
+.stage card.note, .stage card.chip, .stage card.info { --look: plain; }   /* + cartes des modes chronologie et frise (forcées par le moteur) */
+card.note { --c: #D4A017; min-width: 0; text-align: left; box-shadow: none;
+       border: 1.5px dashed color-mix(in srgb, var(--c) 75%, var(--surface));
+       background: color-mix(in srgb, var(--c) 12%, var(--surface)); }
+card.note .title { color: color-mix(in srgb, var(--c) 55%, var(--ink)); font-size: calc(13px * var(--font-scale, 1)); }
+card.note { padding: 9px 14px 10px; }   /* D-049: a sticky note, compact */
+card.note ul { margin-top: 2px; }
+card.note li { margin-top: 0; }
+card.note li { color: color-mix(in srgb, var(--c) 45%, var(--ink-2)); font-size: calc(13px * var(--font-scale, 1)); }
+card.chip { --c: #7B5CC4; min-width: 0; padding: 4px 18px; border-radius: 999px; text-align: center; box-shadow: none;
+       border: 1.5px solid var(--c); background: color-mix(in srgb, var(--c) 10%, var(--surface)); }
+card.info { --c: #D4A017; min-width: 0; padding: 7px 16px; border-radius: 8px; text-align: center; box-shadow: none;
+       border: 1.5px solid color-mix(in srgb, var(--c) 70%, var(--surface)); background: color-mix(in srgb, var(--c) 12%, var(--surface)); }
+card.chip .title, card.info .title { font-weight: 500; color: color-mix(in srgb, var(--c) 60%, var(--ink)); }
+card.chip .title::before, card.info .title::before, card.note .title::before { content: none; }
+
+/* ---------- Zones : teintes dérivées de --c (ou --z-bg / --z-border / --z-ink si fournis) ---------- */
+zone { position: absolute; display: block; box-sizing: border-box; border-radius: 16px; z-index: 0;
+       background: var(--z-bg, color-mix(in srgb, var(--c, #8A93A3) 8%, var(--bg)));
+       border: 1px solid var(--z-border, color-mix(in srgb, var(--c, #8A93A3) 40%, var(--bg))); }
+zone > .title { position: absolute; left: 16px; top: 9px; font-size: calc(12px * var(--font-scale, 1)); font-weight: 700;
+       letter-spacing: .06em; text-transform: uppercase; color: var(--z-ink, color-mix(in srgb, var(--c, var(--muted)) 70%, var(--ink))); }
+/* Zone « nue » : pas de cadre, légende en bas (ex. « Uplinks / VLAN » sous un groupe de chips) */
+zone.bare { background: transparent; border: 0; }
+zone.bare > .title { top: auto; bottom: 2px; left: 0; right: 0; text-align: center; text-transform: none; letter-spacing: 0;
+       font-style: italic; font-weight: 500; font-size: calc(12.5px * var(--font-scale, 1)); }
+
+/* D-050: the pill of `tag=` after a zone title */
+zone > .title > .tag { display: inline-block; margin-left: 10px; padding: 1px 9px; border-radius: 999px; vertical-align: 1px;
+       border: 1px solid color-mix(in srgb, var(--c, #8A93A3) 45%, var(--bg)); background: var(--surface);
+       font-family: var(--mono); font-size: calc(11.5px * var(--font-scale, 1)); font-weight: 600; font-style: normal;
+       letter-spacing: 0; text-transform: none; color: var(--z-ink, color-mix(in srgb, var(--c, var(--muted)) 70%, var(--ink))); }
+
+/* D-050: a line as a pill (`li.pill`), tinted with the card's accent */
+card li.pill { display: inline-block; margin-top: 8px; padding: 2px 11px; border-radius: 999px;
+       background: color-mix(in srgb, var(--c, #6B7280) 13%, var(--surface)); color: color-mix(in srgb, var(--c, #6B7280) 80%, var(--ink));
+       font-family: var(--mono); font-size: calc(12px * var(--font-scale, 1)); font-weight: 600; }
+
+/* D-050: where the badge goes, by class on the card or the zone (read by the engine; rules for the HTML) */
+card.tag-right > .title { display: flex; align-items: baseline; }
+card.tag-right > .title::before { order: 2; margin: 0 0 0 auto; }
+card.look-band.tag-left > .head { justify-content: flex-start; }
+card.look-band.tag-left > .head .tag { order: -1; }
+zone.tag-right > .title { right: 16px; display: flex; align-items: center; }
+zone.tag-right > .title > .tag { margin-left: auto; }
+
+/* D-050: the diagram's title (`title`), its `li` as pills on the right */
+.diagram-title { position: absolute; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+.diagram-title > .text { font-size: calc(22px * var(--font-scale, 1)); font-weight: 700; letter-spacing: -.01em; color: var(--ink); white-space: nowrap; }
+.diagram-title > ul { display: flex; margin: 0; padding: 0; }
+.diagram-title li { list-style: none; margin-left: 8px; padding: 3px 12px; border-radius: 999px; white-space: nowrap;
+       border: 1px solid var(--card-border); background: var(--surface); font-size: calc(12.5px * var(--font-scale, 1)); color: var(--muted); }
+
+/* D-050: a `.wide` card spans its group (a network, a bus bar); its arrows plug in straight, with a dot on the bar */
+.stage card.wide { --look: plain; }
+card.wide { min-width: 0; padding: 9px 18px; text-align: left; box-shadow: none; border-radius: 10px;
+       background: color-mix(in srgb, var(--c, #6B7280) 10%, var(--surface)); border: 1px solid color-mix(in srgb, var(--c, #6B7280) 35%, var(--surface)); }
+card.wide .title { font-size: calc(11.5px * var(--font-scale, 1)); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+card.wide .title::before { content: none; }
+.stage card.wide.no-body > .title { text-align: left; }
+.edge.from-wide .origin { display: inline; }
+.edge.from-wide .head { display: none; }
+.edge.to-wide .head { --shape: dot; }
+
+/* ---------- Flèches ---------- */
+.edges { position: absolute; inset: 0; overflow: visible; z-index: 1; pointer-events: none; }
+.edge { color: var(--line); }
+.edge .line { fill: none; stroke: currentColor; stroke-width: 1.4; }
+.edge .head, .edge .junction { fill: currentColor; }
+.edge-label { position: absolute; transform: translate(-50%, -50%); z-index: 3; white-space: nowrap;
+       font-size: calc(11px * var(--font-scale, 1)); font-weight: 600; padding: 0 7px; border-radius: 999px;
+       /* D-049: tinted with its arrow's colour (the label sits inside its arrow: `.edge.ok` reaches it) */
+       color: color-mix(in srgb, currentColor 60%, var(--ink));
+       background: color-mix(in srgb, currentColor 13%, var(--surface)); }
+
+/* ---------- Types (une ligne chacun) ---------- */
+.t0    { --c: #C94A44; --label: "T0"; }
+.t1    { --c: #D9892B; --label: "T1"; }
+.t2    { --c: #3E6FC4; --label: "T2"; }
+.t3    { --c: #6B7280; --label: "T3"; }
+.cloud { --c: #A6AEBB; }
+.dmz   { --c: #D9892B; }
+.lan   { --c: #3E6FC4; }
+.edge .tail, .edge .origin { display: none; fill: currentColor; }
+
+/* Styles de flèches : des classes combinables sur to(...) ; une flèche porte aussi from-<type> et to-<type> */
+.edge.wan    { color: #C94A44; }
+.edge.wan .line { stroke-width: 2; }
+.edge.dashed .line { stroke-dasharray: 5 4; }
+/* D-049: a note's link is a dotted line in the note's colour (round dots, no head) */
+.edge.link .line { stroke-dasharray: 0 5; stroke-linecap: round; stroke-width: 1.6; }
+.edge.link.from-note { color: color-mix(in srgb, #D4A017 80%, var(--ink)); }
+.edge.dotted .line { stroke-dasharray: 1.5 4; stroke-linecap: round; }
+.edge.thick .line  { stroke-width: 3; }
+.edge.flow .line   { stroke-dasharray: 6 5; animation: flow 1s linear infinite; }   /* flux animé */
+.edge.both .tail   { display: inline; }        /* double pointe */
+.edge.nohead .head, .edge.link .head { display: none; }   /* simple trait ; .link = rattachement pointillé sans pointe */
+.edge.dot .origin  { display: inline; }        /* rond au départ */
+.edge.secure { color: #2E9E6B; }
+@keyframes flow { to { stroke-dashoffset: -11; } }
+
+/* ---------- Animations (mode présentation) ---------- */
+[data-step] { transition: opacity .45s ease, transform .45s ease; }
+.pending { opacity: 0 !important; }
+.pending[data-fx="up"]   { transform: translateY(12px); }
+.pending[data-fx="zoom"] { transform: scale(.92); }
+.edge.pending .line { stroke-dashoffset: var(--len); stroke-dasharray: var(--len); }
+.edge[data-step] .line { transition: stroke-dashoffset .6s ease; }
+
+/* ---------- Mode timeline ---------- */
+.tl-axis  { position: absolute; z-index: 0; border-bottom: 1px solid var(--grid-major); background: var(--bg); }
+.tl-tick  { position: absolute; z-index: 1; transform: translateX(4px); font-size: calc(11px * var(--font-scale, 1)); color: var(--muted); white-space: nowrap; }
+.tl-tick.major { font-weight: 700; color: var(--ink); }
+.tl-grid  { position: absolute; z-index: 1; width: 0; border-left: 1px solid var(--grid); pointer-events: none; }
+.tl-grid.major { border-left-color: var(--grid-major); }
+.tl-mark  { position: absolute; z-index: 3; width: 9px; height: 9px; margin-left: -4.5px; transform: rotate(45deg); background: var(--ink); border-radius: 1.5px; }
+.tl-today { position: absolute; z-index: 0; width: 0; border-left: 1.5px solid #E8590C; pointer-events: none; }
+.tl-today-label { position: absolute; z-index: 3; transform: translate(-50%, -100%); font-size: calc(10.5px * var(--font-scale, 1)); font-weight: 700; color: #fff;
+                  background: #E8590C; text-transform: uppercase; letter-spacing: .05em; padding: 1px 6px; border-radius: 999px; white-space: nowrap; }
+
+/* Jalon : bord gauche = la date, losange sur ce bord */
+card.milestone { min-width: 0; padding-left: 16px; }
+card.milestone::after { content: ""; position: absolute; left: -6px; top: 15px; width: 10px; height: 10px; transform: rotate(45deg);
+                        background: var(--c, #6B7280); border: 2px solid var(--bg); border-radius: 2px; }
+/* Période : carte qui commence à start ; barre du haut = durée exacte (--bar-w, posée par le moteur) */
+card.phase { min-width: 0; max-width: 300px; padding: 12px 13px 10px; border-top: 1px solid var(--card-border); overflow: hidden;
+             background: color-mix(in srgb, var(--c, #9AA3B2) 7%, var(--surface)); }
+card.phase::after { content: ""; position: absolute; left: 0; top: 0; height: 5px; width: var(--bar-w, 100%);
+                    background: var(--accent-fill, var(--c, #9AA3B2)); border-radius: 0 3px 3px 0; }
+
+/* D-048: drawn like a hand-made roadmap. A period is a thin bar under its label (the label may run
+   past the bar's end); a milestone is one diamond with its name, no card and no axis twin;
+   dependencies are thin dashed lines. */
+card.phase { padding: 0 0 13px; border: 0; border-radius: 0; box-shadow: none; background: transparent; overflow: visible; }
+card.phase::after { top: auto; bottom: 0; height: 8px; border-radius: 4px; }
+card.phase .title { font-size: calc(12.5px * var(--font-scale, 1)); }
+card.phase .title::before { content: none; }
+card.phase ul { margin-top: 1px; }
+card.phase li { font-size: calc(11.5px * var(--font-scale, 1)); margin-top: 1px; }
+card.milestone { border: 0; box-shadow: none; background: transparent; padding: 4px 0 4px 20px; }
+card.milestone::after { left: 2px; top: 8px; border: 0; }
+card.milestone .title { font-size: calc(12.5px * var(--font-scale, 1)); }
+card.milestone .title::before { content: none; }
+.tl-mark { display: none; }
+.stage.layout-timeline .edge .line { stroke-dasharray: 3 3; stroke-width: 1.2; }
+.stage.layout-timeline .edge { color: color-mix(in srgb, var(--line) 75%, var(--bg)); }
+
+/* ---------- Mind map (D-048): a dark root pill, tinted branch pills, plain-text leaves with a dot,
+   curved branches without heads, one colour per branch (classes set by the engine). */
+.mm-b0 { --b: #5B6CFF; } .mm-b1 { --b: #2F9E44; } .mm-b2 { --b: #E8590C; } .mm-b3 { --b: #7048E8; }
+.mm-b4 { --b: #D6336C; } .mm-b5 { --b: #0B7285; } .mm-b6 { --b: #64748B; }
+card.mm-root { min-width: 0; padding: 11px 26px; border: 0; border-radius: 999px; background: var(--ink); text-align: center; }
+card.mm-root .title { color: var(--bg); font-size: calc(16px * var(--font-scale, 1)); font-weight: 700; }
+card.mm-root li { color: color-mix(in srgb, var(--bg) 70%, var(--ink)); }
+card.mm-branch { min-width: 0; padding: 7px 16px; border: 1.5px solid var(--b); border-radius: 999px; text-align: center;
+       background: color-mix(in srgb, var(--b) 10%, var(--surface)); }
+card.mm-branch .title { color: color-mix(in srgb, var(--b) 70%, var(--ink)); }
+card.mm-branch ul { margin-top: 1px; }
+card.mm-branch li { font-family: var(--mono); font-size: calc(11px * var(--font-scale, 1)); color: color-mix(in srgb, var(--b) 80%, var(--ink)); margin-top: 0; }
+card.mm-leaf { min-width: 0; padding: 2px 8px; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
+card.mm-leaf .title { font-weight: 500; font-size: calc(13px * var(--font-scale, 1)); }
+card.mm-leaf ul { margin-top: 0; }
+card.mm-leaf li { font-size: calc(11px * var(--font-scale, 1)); margin-top: 0; }
+card.mm-root .title::before, card.mm-branch .title::before, card.mm-leaf .title::before { content: none; }
+.stage.layout-mindmap .edge .line { --curve: on; stroke-width: 2; }
+.stage.layout-mindmap .edge.to-mm-leaf .line { stroke-width: 1.5; }
+.stage.layout-mindmap .edge .head { display: none; }
+.stage.layout-mindmap .edge.to-mm-leaf .head { display: inline; --shape: dot; }
+.edge.to-mm-b0 { color: #5B6CFF; } .edge.to-mm-b1 { color: #2F9E44; } .edge.to-mm-b2 { color: #E8590C; } .edge.to-mm-b3 { color: #7048E8; }
+.edge.to-mm-b4 { color: #D6336C; } .edge.to-mm-b5 { color: #0B7285; } .edge.to-mm-b6 { color: #64748B; }
+
+/* ---------- Mode frise chronologique ---------- */
+.fr-axis  { position: absolute; z-index: 1; height: 4px; background: var(--ink); border-radius: 2px; }
+.fr-tick  { position: absolute; z-index: 1; width: 1px; height: 5px; background: var(--ink); }   /* short: clear of the year below */
+.fr-tick-label { position: absolute; z-index: 3; transform: translateX(-50%); font-size: calc(10.5px * var(--font-scale, 1)); color: var(--muted); white-space: nowrap; }
+.fr-century { position: absolute; z-index: 3; transform: translateX(-50%); font-size: calc(10px * var(--font-scale, 1)); font-weight: 700; letter-spacing: .05em;
+              color: var(--muted); opacity: .6; white-space: nowrap; display: none; }   /* one row of labels: the years (show with display: block) */
+.fr-stem  { position: absolute; z-index: 0; width: 0; border-left: 1.5px solid var(--line); margin-left: -0.75px; }
+.fr-dot   { position: absolute; z-index: 3; width: 10px; height: 10px; margin: -3px 0 0 -5px; border-radius: 50%;
+            background: var(--bg); border: 2.5px solid var(--ink); box-sizing: border-box; }
+/* Événement : carte centrée sur sa date, reliée à l'axe par une tige */
+card.event { min-width: 0; max-width: 210px; padding: 9px 12px 10px; text-align: center; }
+/* the date of an event, above its title (the engine sets it as the badge, `--event-date: on`) */
+card.event .title::before { display: block; margin: 0 0 2px; padding: 0; background: none; border-radius: 0; vertical-align: 0;
+       color: var(--muted); font-size: calc(9.5px * var(--font-scale, 1)); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.event .title { font-size: calc(13px * var(--font-scale, 1)); }
+.event ul { margin-top: 4px; }
+/* Époque : bande colorée sur l'axe ; le titre est tronqué si la bande est courte */
+card.era { min-width: 0; padding: 5px 9px; border: 0; border-radius: 6px; box-shadow: none; overflow: hidden;
+           background: var(--accent-fill, var(--c, #6B7280)); color: var(--on-c); display: flex; align-items: center; }
+.era .title { font-size: calc(12px * var(--font-scale, 1)); font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+card.era .title::before { content: none; }
+card.era ul { display: none; }
+card.era.outside { overflow: visible; }
+card.era.outside .title { position: absolute; left: calc(100% + 6px); overflow: visible; color: var(--c, #6B7280); }
+
+/* ---------- Icônes et liens (FORMAT §3.2.1) : valeurs par défaut, selon le look ---------- */
+card { --icon-size: 16px; --icon-gap: 6px; --icon-color: var(--accent-fill, var(--c, #9AA3B2)); --link-mark: auto; }
+zone { --icon-size: 16px; --icon-gap: 6px; --icon-color: currentColor; --link-mark: auto; }
+card.look-band { --icon-color: currentColor; }
+card.look-header { --icon-size: 14px; --icon-color: currentColor; }
+.stage card.note, .stage card.chip, .stage card.info { --icon-size: 14px; }
+a.href { color: inherit; text-decoration: none; cursor: pointer; }
+a.href:hover { text-decoration: underline; }
+svg.icon { flex: none; width: var(--icon-size, 16px); height: var(--icon-size, 16px); margin-right: var(--icon-gap, 6px); vertical-align: -0.2em;
+           stroke: var(--icon-color, currentColor); }
+svg.link-mark { flex: none; width: 12px; height: 12px; margin-left: 4px; vertical-align: -0.1em; stroke: var(--icon-color, currentColor); }
+.head .type > svg.icon { vertical-align: middle; }
+a.href.cover { position: absolute; inset: 0; z-index: 4; }
+card:has(> a.href.cover:hover) .title, card:has(> a.href.cover:hover) .head .type { text-decoration: underline; }
+.edges a.href .line { pointer-events: stroke; cursor: pointer; }
+
+/* ---------- v0.8 (FORMAT §3.2.4–§3.2.9): states, emphasis, tables, category, legends, plain text ---------- */
+.stage { --ok: #1E7F46; --warn: #A75207; --error: #BE3228; --dock-gap: 32px; }
+.stage.theme-dark { --ok: #4FC38B; --warn: #F2A541; --error: #F47A6F; }
+.stage.theme-print { --ok: #0B5E2E; --warn: #6E3400; --error: #8E1B12; }
+@media (prefers-color-scheme: dark) { .stage.theme-auto { --ok: #4FC38B; --warn: #F2A541; --error: #F47A6F; } }
+
+/* emphasis inside lines and cells: **bold** *italic* `mono` ==mark== ==.class mark== */
+card strong { font-weight: 700; color: var(--ink); }
+card em { font-style: italic; }
+card code { font-family: var(--mono); font-size: calc(12px * var(--font-scale, 1)); padding: 0 4px; border-radius: 4px;
+       background: color-mix(in srgb, var(--c, #6B7280) 11%, var(--surface)); color: var(--ink-2); }
+card mark { font-weight: 600; padding: 0 3px; border-radius: 3px; color: var(--error);
+       background: color-mix(in srgb, var(--error) 12%, var(--surface)); }
+
+/* states on lines (a mark before the line) and cells; on cards, a ring and the mark before the name */
+card li > svg.state-mark { --icon-size: 13px; --icon-gap: 5px; --icon-color: currentColor; }
+.stage card li.ok, .stage card td.ok { color: var(--ok); }
+.stage card li.warn, .stage card td.warn { color: var(--warn); font-weight: 500; }
+.stage card li.error, .stage card td.error { color: var(--error); font-weight: 500; }
+card td.ok { background: color-mix(in srgb, var(--ok) 10%, var(--surface)); }
+card td.warn { background: color-mix(in srgb, var(--warn) 10%, var(--surface)); }
+card td.error { background: color-mix(in srgb, var(--error) 10%, var(--surface)); }
+card li.ok mark, card td.ok mark, card mark.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, var(--surface)); }
+card li.warn mark, card td.warn mark, card mark.warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, var(--surface)); }
+card mark.error { color: var(--error); background: color-mix(in srgb, var(--error) 12%, var(--surface)); }
+card.ok { --icon: "circle-check"; outline: 2.5px solid var(--ok); outline-offset: 3px; }
+card.warn { --icon: "triangle-alert"; outline: 2.5px solid var(--warn); outline-offset: 3px; }
+card.error { --icon: "circle-x"; outline: 2.5px solid var(--error); outline-offset: 3px; }
+
+/* tables: a Markdown table in a card (rows `| a | b |`) */
+card li.table { margin-top: 6px; }
+card table { border-collapse: collapse; }
+card th, card td { padding: 3px 10px; text-align: left; white-space: nowrap; font-size: calc(12.5px * var(--font-scale, 1));
+       color: var(--ink-2); border-top: 1px solid color-mix(in srgb, var(--card-border) 85%, var(--surface));
+       border-left: 1px solid color-mix(in srgb, var(--card-border) 85%, var(--surface)); }
+card th { font-size: calc(10px * var(--font-scale, 1)); font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+       color: var(--muted); border-top: 0; }
+card td[data-col="0"], card th[data-col="0"] { border-left: 0; }
+card tr:first-child > td { border-top: 0; }
+
+/* the category (`label=` or the type's `--label`): a small capitalised line above the name */
+card.look-band > .head .kind { display: block; margin-bottom: 1px; font-size: calc(9.5px * var(--font-scale, 1)); font-weight: 600;
+       letter-spacing: .07em; text-transform: uppercase; color: color-mix(in srgb, var(--on-c) 82%, var(--accent-fill, var(--c, #9AA3B2))); }
+card.look-band.no-type > .head .kind { color: var(--muted); }
+card > .kind { margin-bottom: 2px; font-size: calc(9.5px * var(--font-scale, 1)); font-weight: 700; letter-spacing: .07em;
+       text-transform: uppercase; color: color-mix(in srgb, var(--c, #6B7280) 75%, var(--ink)); }
+
+/* subtitle lines of the diagram's title, description lines under a zone's title (`|`) */
+.diagram-title { flex-wrap: wrap; row-gap: 0; }
+.diagram-title > .sub { flex: 0 0 100%; order: 3; margin-top: 3px; font-size: calc(13px * var(--font-scale, 1)); color: var(--muted); white-space: nowrap; }
+zone > .title > .sub { display: block; margin-top: 2px; font-size: calc(11.5px * var(--font-scale, 1)); font-weight: 400; letter-spacing: 0;
+       text-transform: none; font-style: normal; white-space: nowrap; color: color-mix(in srgb, var(--c, var(--muted)) 45%, var(--ink-2)); }
+
+/* `card.legend` (each line shows a sample of the class it names) and `card.text` (plain text) */
+.stage card.legend, .stage card.text { --look: plain; }
+card.legend { min-width: 0; padding: 10px 14px 11px; box-shadow: none; border: 1px solid var(--card-border); background: var(--surface); }
+card.legend .title { font-size: calc(12.5px * var(--font-scale, 1)); font-weight: 700; color: var(--ink); }
+card.legend .title::before, card.text .title::before { content: none; }
+card.legend ul { margin-top: 4px; }
+card.legend li { color: var(--ink-2); font-size: calc(12.5px * var(--font-scale, 1)); margin-top: 5px; --sample-w: 34px; --sample-gap: 8px; }
+card.legend .swatch { display: inline-block; width: 22px; height: 12px; margin-right: 8px; vertical-align: -1px; border-radius: 999px;
+       background: var(--accent-fill, var(--c, #9AA3B2)); }
+/* a zone type's sample: a small frame, tinted and edged like the zone (v0.8) */
+card.legend .swatch.zone-sample { border-radius: 4px; box-sizing: border-box;
+       background: var(--z-bg, color-mix(in srgb, var(--c, #8A93A3) 8%, var(--bg)));
+       border: 1.5px solid var(--z-border, color-mix(in srgb, var(--c, #8A93A3) 40%, var(--bg))); }
+/* a class with an icon (--icon): the icon, in the type's accent */
+card.legend svg.sample-icon { display: inline-block; width: 14px; height: 14px; margin: 0 12px 0 4px; vertical-align: -2px;
+       --icon-color: var(--c, currentColor); }
+card.legend svg.sample { display: inline-block; width: 34px; height: 10px; margin-right: 8px; vertical-align: 0; overflow: visible; }
+card.text { min-width: 0; max-width: none; padding: 0; border: 0; box-shadow: none; background: transparent; }
+card.text .title { font-size: calc(13px * var(--font-scale, 1)); font-weight: 700; }
+card.text ul { margin-top: 2px; }
+card.text li { color: var(--muted); font-size: calc(12px * var(--font-scale, 1)); margin-top: 2px; }
+.stage card.legend.no-body > .title, .stage card.text.no-body > .title { text-align: left; }
+/* HTML: the category takes a row of its own in the band (the engine lays it out the same) */
+card.look-band > .head { flex-wrap: wrap; row-gap: 0; }
+card.look-band > .head .kind { flex: 0 0 100%; }
+card.look-band.no-body > .head .kind { text-align: center; }

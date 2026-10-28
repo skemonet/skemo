@@ -1,0 +1,5 @@
+.service { --c: #3E6FC4; --label: "Service"; }
+.store   { --c: #B45309; --label: "Data store"; }
+.edge.user   { color: #3E6FC4; --label: "user request"; }
+.edge.events { color: #D97706; --label: "events"; }
+.edge.events .line { stroke-dasharray: 5 4; }

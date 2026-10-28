@@ -1,0 +1,73 @@
+<h1>Command line</h1>
+<p class="lead"><code>skemo</code> is a single executable. Rendering is its default command: <code>skemo f.skemo</code> writes
+  <code>f.png</code>.</p>
+
+<h2>Commands</h2>
+<table>
+  <tr><th>Command</th><th>Role</th></tr>
+  <tr><td><code>skemo f.skemo</code></td><td>same as <code>skemo render f.skemo</code>: writes <code>f.png</code> next to the source</td></tr>
+  <tr><td><code>skemo render f.skemo -o out.ext</code></td><td>the extension picks the format: <code>png</code> <code>svg</code>
+    <code>webp</code> <code>html</code> <code>gif</code> <code>apng</code></td></tr>
+  <tr><td><code>skemo check f.skemo…</code></td><td>diagnostics only (exit code 1 on errors); <code>--contrast</code> adds the
+    legibility check</td></tr>
+  <tr><td><code>skemo fmt f.skemo… [--check]</code></td><td>canonical formatting</td></tr>
+  <tr><td><code>skemo watch f.skemo</code></td><td>live preview on <code>http://127.0.0.1:8710</code>, reloaded on every save</td></tr>
+  <tr><td><code>skemo layout f.skemo --json</code></td><td>model, positions and routes as JSON</td></tr>
+  <tr><td><code>skemo fit f.skemo [--target 16:9] [--write]</code></td><td>settings (<code>dir</code>, <code>wrap</code>) that
+    bring the diagram to a target aspect ratio; <code>--write</code> applies the best one (<em>preview</em>)</td></tr>
+  <tr><td><code>skemo extract image.png [-o folder]</code></td><td>gives back the source and stylesheets embedded in an
+    image rendered by skemo, to edit them (<code>--stdout</code>: the source only)</td></tr>
+  <tr><td><code>skemo icons [query]</code></td><td>the built-in icons, filtered by name or tag</td></tr>
+  <tr><td><code>skemo theme --print</code></td><td>the default theme, a starting point for your own</td></tr>
+  <tr><td><code>skemo init [folder]</code></td><td>a sample diagram and a commented CSS file; overwrites nothing</td></tr>
+</table>
+
+<h2>Render options</h2>
+<table>
+  <tr><th>Option</th><th>Effect</th></tr>
+  <tr><td><code>-o FILE</code></td><td>output file; <code>-</code> = standard output (with <code>--format</code>)</td></tr>
+  <tr><td><code>--format FMT</code></td><td><code>html</code> <code>svg</code> <code>png</code> <code>gif</code> <code>apng</code>
+    <code>webp</code>, when the extension is not enough</td></tr>
+  <tr><td><code>--css FILE</code></td><td>custom stylesheet, after the theme (repeatable)</td></tr>
+  <tr><td><code>--base-theme FILE</code></td><td>a theme that replaces the default one</td></tr>
+  <tr><td><code>--theme T</code></td><td><code>light</code> <code>dark</code> <code>print</code> <code>auto</code>, overriding the file</td></tr>
+  <tr><td><code>--scale N</code></td><td>resolution of raster outputs (<code>--scale 2</code> for high-density screens)</td></tr>
+  <tr><td><code>--transparent</code></td><td>no background (SVG, PNG, APNG)</td></tr>
+  <tr><td><code>--contrast high</code></td><td>texts below the WCAG threshold are darkened or lightened, layout unchanged</td></tr>
+  <tr><td><code>--step N</code></td><td>render one animation state</td></tr>
+  <tr><td><code>--animated</code>, <code>--board</code></td><td>one PNG per state, or a contact sheet of the states</td></tr>
+  <tr><td><code>--hold</code>, <code>--transition</code>, <code>--fps</code>, <code>--final-hold</code>, <code>--no-loop</code></td>
+    <td>timing of GIF and APNG</td></tr>
+  <tr><td><code>--no-fonts</code></td><td>HTML: do not embed the fonts (much smaller file)</td></tr>
+  <tr><td><code>--embed-fonts</code></td><td>SVG: embed the fonts used, for viewers without Inter (about 0.8 MB per weight)</td></tr>
+  <tr><td><code>--font-scale K</code></td><td>multiply every text size of the theme (<code>1.4</code> for a slide)</td></tr>
+  <tr><td><code>--no-source</code></td><td>do not embed the source and stylesheets in the output (below)</td></tr>
+  <tr><td><code>--deny-warnings</code></td><td>fail on any warning (useful in CI)</td></tr>
+</table>
+<p>The input <code>-</code> reads standard input:
+  <code>cat f.skemo | skemo render - --format svg -o - &gt; f.svg</code>.</p>
+
+<h2>Images that reopen</h2>
+<p>Like draw.io, every file skemo renders carries its source and its stylesheets (PNG, APNG, SVG, WebP, GIF and HTML),
+  in metadata that viewers ignore. The image can be shared alone and edited later:</p>
+<pre><code>skemo extract diagram.png          # writes diagram.skemo and its stylesheets next to the image
+skemo render diagram.png -o new.svg # any command also takes the image instead of the source</code></pre>
+<p>The editor opens such an image directly. The embedded text is readable by anyone who gets the file: render with
+  <code>--no-source</code> when the source must not travel with the image.</p>
+
+<h2>Exit codes</h2>
+<table>
+  <tr><td><code>0</code></td><td>success</td></tr>
+  <tr><td><code>1</code></td><td>errors in the file</td></tr>
+  <tr><td><code>2</code></td><td>wrong usage</td></tr>
+  <tr><td><code>3</code></td><td>internal error</td></tr>
+</table>
+
+<h2>Language</h2>
+<p>Help, diagnostics and messages follow the system language (<code>LANG</code>, <code>LC_ALL</code>… as usual; English and French
+  today). <code>--lang en|fr</code> or <code>SKEMO_LANG=fr</code> overrides it. Labels the engine draws (months, centuries) follow it
+  too, unless the diagram pins them with <code>diagram(lang="en")</code>.</p>
+
+<h2>Determinism</h2>
+<p>Fonts and theme are embedded: the same file gives the same image on every machine, which makes rendered files safe to commit and
+  compare. <code>watch</code> only listens on <code>127.0.0.1</code>.</p>

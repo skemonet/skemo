@@ -1,0 +1,34 @@
+<h1>AI agents</h1>
+<p class="lead">skemo is a good target for coding agents: the agent writes a short structural description, and the expensive part —
+  coordinates, routing, rendering — runs on your CPU.</p>
+
+<h2>Why it saves tokens</h2>
+<p>To draw a diagram directly, a model has to write every coordinate, path and colour of the picture. Measured on the gallery
+  examples, the SVG of a diagram is about <strong>17 times</strong> longer, in tokens, than the skemo source it is rendered from.
+  Every output token is a pass of the model on a GPU: fewer tokens means less time, less cost and less energy. Edits shrink even
+  more: renaming a card or adding one is a single changed line, where a drawn picture has to be regenerated.</p>
+
+<h2>The skemo skill</h2>
+<p>The skill is a <code>SKILL.md</code> file that teaches an agent the workflow (write, check, render), the syntax and the rules that
+  keep diagrams short and correct. It works with Claude Code and with any agent that loads skills in this format.</p>
+<pre><code>mkdir -p ~/.claude/skills/skemo/references
+curl -fsSL https://skemo.net/skill/skemo/SKILL.md -o ~/.claude/skills/skemo/SKILL.md
+curl -fsSL https://skemo.net/skill/skemo/references/format.md -o ~/.claude/skills/skemo/references/format.md</code></pre>
+<p>For a single project, put the folder in <code>.claude/skills/skemo/</code> at the root of the repository instead. The agent also
+  needs the <code>skemo</code> binary on its <code>PATH</code> (<a href="getting-started.html">install</a>).</p>
+
+<h2>What the agent does</h2>
+<ol>
+  <li>Writes <code>name.skemo</code> (and a small <code>name.css</code> for its types) — no coordinates.</li>
+  <li>Runs <code>skemo check name.skemo</code> and fixes the reported lines.</li>
+  <li>Renders with <code>skemo name.skemo</code> (PNG) or <code>-o name.svg</code>, and looks at the image at most once.</li>
+  <li>Later changes are line edits to the same file.</li>
+</ol>
+
+<h2>Tips for prompts</h2>
+<ul>
+  <li>Say what the diagram is for and its direction: <em>"a left-to-right skemo diagram of our deployment pipeline"</em>.</li>
+  <li>Ask for types in CSS rather than colours on each card.</li>
+  <li>Keep the <code>.skemo</code> file in the repository next to the docs it illustrates, and re-render it in CI with
+    <code>skemo check --deny-warnings</code> or <code>skemo render --deny-warnings</code>.</li>
+</ul>

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>skemo — drag a card</title>
+<style>
+  body { margin: 0; font: 14px system-ui; display: grid; grid-template-columns: 1fr 360px; height: 100vh; }
+  #view { overflow: auto; background: #F6F7F9; cursor: default; }
+  #view.dragging { cursor: grabbing; }
+  #src { font: 12px/1.5 ui-monospace, monospace; border: 0; border-left: 1px solid #ddd; padding: 10px; resize: none; }
+  #info { position: fixed; left: 8px; bottom: 8px; background: #fff; padding: 4px 8px; border-radius: 6px; box-shadow: 0 1px 4px #0002; }
+</style></head>
+<body>
+<div id="view"></div>
+<textarea id="src" spellcheck="false" readonly></textarea>
+<div id="info">drag a card · double click: release it</div>
+<script type="module">
+  import init, { Editor } from './pkg/skemo_engine_wasm.js';
+  await init();
+  const source = await (await fetch('./reseau.skemo')).text();
+  let ed = new Editor(source, '', '{}');
+  const view = document.getElementById('view'), src = document.getElementById('src'), info = document.getElementById('info');
+  const show = () => { view.innerHTML = ed.svg(); src.value = ed.source(); };
+  show();
+  const toFile = ev => {
+    const f = JSON.parse(ed.frame()), svg = view.querySelector('svg'), r = svg.getBoundingClientRect();
+    return [ev.clientX - r.left - f.ox, ev.clientY - r.top - f.oy];
+  };
+  const cardAt = ([x, y]) => {
+    const boxes = JSON.parse(ed.boxes());
+    // the smallest box holding the point that is a card (element <g class="card">)
+    const cards = [...view.querySelectorAll('g.card')].map(g => g.dataset.id);
+    return cards.filter(id => { const [bx, by, bw, bh] = boxes[id]; return x >= bx && x <= bx + bw && y >= by && y <= by + bh; }).pop();
+  };
+  let drag = null;
+  view.addEventListener('mousedown', ev => {
+    const p = toFile(ev), id = cardAt(p);
+    if (!id) return;
+    const [bx, by] = JSON.parse(ed.boxes())[id];
+    drag = { id, dx: p[0] - bx, dy: p[1] - by, frame: ed.frame() };
+    view.classList.add('dragging');
+  });
+  addEventListener('mousemove', ev => {
+    if (!drag) return;
+    // while dragging, the framing stays the initial one (or the diagram would slip under the mouse)
+    const f = JSON.parse(drag.frame), r = view.querySelector('svg').getBoundingClientRect();
+    const x = ev.clientX - r.left - f.ox - drag.dx, y = ev.clientY - r.top - f.oy - drag.dy;
+    const t0 = performance.now();
+    ed.drag(drag.id, Math.round(x), Math.round(y));
+    info.textContent = `${drag.id} → ${Math.round(x)},${Math.round(y)} · ${(performance.now() - t0).toFixed(1)} ms`;
+    view.innerHTML = ed.svg();
+  });
+  addEventListener('mouseup', () => {
+    if (!drag) return;
+    view.classList.remove('dragging');
+    drag = null;
+    ed.commit();
+    show();
+  });
+  view.addEventListener('dblclick', ev => {
+    const id = cardAt(toFile(ev));
+    if (id) { ed.release(id); show(); }
+  });
+</script>
+</body></html>

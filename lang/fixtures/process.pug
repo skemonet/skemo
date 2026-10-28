@@ -1,0 +1,22 @@
+//- Exemple non réseau : un processus, de gauche à droite
+diagram(dir="right")
+
+  zone#rh.rh Ressources humaines
+    card#offre.etape Publier l'offre
+      li J+0
+      to(tri)
+    card#tri.etape Trier les CV
+      li ~120 candidatures
+      to(entretien) 15 retenus
+
+  zone#equipe.equipe Équipe
+    card#entretien.etape Entretiens
+      li 2 tours
+      to(decision)
+    card#decision.choix Décision
+      li comité
+      to(offre-envoi).ok oui
+      to(tri).ko.dashed non
+
+  card#offre-envoi.fin(tag="FIN") Proposition envoyée
+    li J+30

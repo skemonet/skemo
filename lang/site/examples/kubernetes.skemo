@@ -1,0 +1,48 @@
+//- Kubernetes application architecture
+diagram(dir="down" look="classic" zones="stretch")
+  title Kubernetes application architecture
+    |.pill namespace mon_namespace
+
+  stack
+    zone#pods.podz(tag="172.30.0.0/16") Pods
+      card#fe1.pod.fe.col-w1 frontend-…-cjxbl
+        | 172.30.0.1
+        |.pill 8080 · http
+        to(svc-be join="http" constraint="false").dep HTTP → :9000
+      card#fe2.pod.fe.col-w1 frontend-…-jkn87
+        | 172.30.0.2
+        |.pill 8080 · http
+        to(svc-be join="http" constraint="false").dep
+      card#be1.pod.be.col-w2 backend-…-ac789
+        | 172.30.0.6
+        |.pill 9000 · back
+        to(svc-db join="sql" constraint="false").dep SQL → :5432
+      card#be2.pod.be.col-w2 backend-…-p78f2
+        | 172.30.0.7
+        |.pill 9000 · back
+        to(svc-db join="sql" constraint="false").dep
+      card#pg.pod.db.col-w3 postgresql-0
+        | 172.30.0.5
+        |.pill 5432 · pgsql
+
+    zone#svcs.svcz(tag="172.21.0.0/16") Services
+      card#svc-fe.svc.fe.col-w1 Frontend
+        | selector: app=myapp-frontend
+        to(fe1 fe2)
+      card#svc-be.svc.be.col-w2 Backend
+        | selector: app=myapp-backend
+        to(be1 be2)
+      card#svc-db.svc.db.col-w3 Database
+        | selector: app=myapp-database
+        to(pg)
+
+    zone#nodes.bare.wide
+      card#w0.k8snode.col-w1(icon="server") Worker 1
+        | Worker node
+      card#w1.k8snode.col-w2(icon="server") Worker 2
+        | Worker node
+      card#w2.k8snode.col-w3(icon="server") Worker 3
+        | Worker node
+
+    card#net.wide.network Cluster network
+      to(w0 w1 w2)

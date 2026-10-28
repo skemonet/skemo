@@ -1,0 +1,81 @@
+<h1>Layout and positions</h1>
+<p class="lead">skemo places the cards; you choose a direction, and pin only what you care about.</p>
+
+<h2>Direction</h2>
+<div class="example">
+  <div><skemo name="dir-down" figure></skemo><p class="muted">dir="down" (default)</p></div>
+  <div><skemo name="dir-right" figure></skemo><p class="muted">dir="right"</p></div>
+</div>
+<p><code>diagram(dir="…")</code> sets the main direction of the arrows: <code>down</code> (default), <code>right</code>,
+  <code>up</code> or <code>left</code>. <code>right</code> suits pipelines and processes, <code>down</code> hierarchies and networks.
+  Cards are arranged in layers along that direction and aligned in columns inside zones. Cards of the same row keep the
+  order you wrote them in, inside zones too; an arrow written after its target still points in the main direction.</p>
+
+<h2>Tidy layers <em>(preview)</em></h2>
+<p>A card sits centred over the cards it leads to when it is their only parent, or over the card in its column. Arrows leave and
+  enter in the direction of the diagram, rows inside a zone are as far apart as outside, and two arrows never share a line where
+  they meet a card.</p>
+
+<h2>Rows in a zone <em>(preview)</em></h2>
+<skemo name="wrap"></skemo>
+<p><code>wrap="N"</code> on a zone puts at most N children per row (per column with <code>dir="right"</code>), on a grid, in
+  writing order. Useful when a zone of many unconnected cards would otherwise make one very long row; <em>(preview)</em> a
+  zone of four cards or more that have no arrow at all (an inventory) is laid as such a grid by itself, about as many
+  columns as rows. When a card ends up behind
+  another as seen from the card it is linked to, a warning says so; not with <code>wrap="1"</code>, a single file of cards (a server
+  and its stack) whose arrows come in by the free sides. When an arrow from outside reaches a card beyond the first row, the
+  zone's rows (and those of the zones beside it) are spread to leave a corridor between them, which other arrows may cross,
+  so that the line does not go round the zone.</p>
+
+<h2>Stacks <em>(preview)</em></h2>
+<skemo name="stack"></skemo>
+<p>With <code>wrap="1"</code>, a zone is a stack: its cards share one width, the widest one's, on a common left edge. Sibling zones
+  side by side start on the same line.</p>
+
+<h2>Layers of the same width <em>(preview)</em></h2>
+<skemo name="stretch"></skemo>
+<p><code>diagram(zones="stretch")</code> gives zones stacked along the direction the width of the widest one, like layers drawn by
+  hand. Only the frames grow: no card moves, no number is written in the file.</p>
+
+<h2>Groups in order: <code>stack</code> <em>(preview)</em></h2>
+<skemo name="kubernetes" wide></skemo>
+<p>A <code>stack</code> draws nothing: it lays its children, zones or cards, one after the other in writing order along the
+  direction (here pods, services, nodes, then the network), whatever the arrows between them. Arrows still align what they
+  link (each service sits under its pods); one going back up the stack leaves by the top and enters by the bottom. A
+  <code>.bare</code> zone without a title groups cards without drawing anything (the three nodes). A card belongs to one group
+  only: zones and stacks form a tree. The zones of a stack share one width, like layers. A card of a zone whose arrows all
+  leave the zone, with none coming in, sits on the zone's first row. Classes <code>.col-w1</code>, <code>.col-w2</code>… line up each service and its pods over
+  the worker that hosts them, across zones; the workers' <code>.wide</code> zone spreads them over the full width and gives the
+  columns their place: each worker is as wide as the widest group of its column, so two pods never straddle two workers.</p>
+
+<h2>Target box <em>(preview)</em></h2>
+<p><code>diagram(fit="16:9")</code> states where the diagram will be shown (a slide; <code>8:9</code> for half a slide), or
+  its size in pixels: <code>fit="1280x720"</code>. What matters is how large the text ends up once the diagram is fitted in that
+  box, not only its proportions: a layout with the right ratio but twice as big shows smaller text. skemo never changes the layout
+  by itself for it, so the drawing stays stable while you edit: when a setting such as <code>zone#ns(wrap="3")</code> or
+  <code>diagram(dir="right")</code> would show the text at least 15 % larger, it warns and names it (with a box in pixels, the
+  text size before and after). <code>skemo fit f.skemo</code> lists the candidates, each one laid out for real, with the gain in
+  text size, and <code>--write</code> puts the best one in the file. When the proportions are more than 15 % off the target and
+  no setting helps, the warning says so: the layout itself has to change.</p>
+
+<h2>Pinned positions</h2>
+<skemo name="pinned"></skemo>
+<p><code>at="x,y"</code> pins the top-left corner of a card or zone, in pixels. Cards without <code>at</code> keep their automatic
+  place; every arrow is routed either way. The graphical editor writes <code>at=</code> for you when you drag a card.</p>
+
+<h2>Adjusting an arrow</h2>
+<p><code>side="start-end"</code> forces the sides an arrow leaves and enters by; <code>via="x,y"</code> makes it pass through
+  waypoints. In the example above, <code>fw → web</code> leaves by the left side and <code>fw → db</code> passes through
+  <code>440,200</code>.</p>
+
+<h2>Stability</h2>
+<p>Editing one card only moves the arrows attached to it: positions do not shift around when you add a line or rename a title.
+  Pinning a card exactly where the layout put it changes nothing in the drawing. This is what makes text and drag-and-drop editing
+  safe to mix.</p>
+
+<h2>Overlaps</h2>
+<p>A card pinned on top of another is never moved: the file shows exactly what you wrote. skemo emits a warning that names both
+  cards instead, and the editor offers to separate them.</p>
+
+<div class="note"><p>In timeline, frieze and mind map modes, positions come from the dates or from the tree: <code>at=</code> has
+  no effect there (warning).</p></div>

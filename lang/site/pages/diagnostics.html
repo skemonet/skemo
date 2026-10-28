@@ -1,0 +1,51 @@
+<h1>Errors and warnings</h1>
+<p class="lead"><code>skemo check</code> and every render report problems with the file, the line, the column, a caret under the
+  culprit and, often, a hint.</p>
+<pre><code>error[unknown-target]: unknown target « b »
+  ┌─ diagram.skemo:2:6
+  │
+2 │   to(b) go
+  │      ^
+  = help: did you mean « a »?</code></pre>
+<p>Errors stop the rendering (exit code 1). Warnings never do, unless <code>--deny-warnings</code> is given. Codes are stable: you
+  can rely on them in scripts. Messages follow the system language.</p>
+
+<h2>Errors</h2>
+<table>
+  <tr><th>Code</th><th>Cause</th></tr>
+  <tr><td><code>unknown-target</code></td><td><code>to(x)</code> names an id that does not exist</td></tr>
+  <tr><td><code>no-target</code></td><td><code>to()</code> without a target</td></tr>
+  <tr><td><code>duplicate-id</code></td><td>two cards or zones share an id</td></tr>
+  <tr><td><code>to-outside-card</code></td><td>an arrow that is not inside a card</td></tr>
+  <tr><td><code>nested-in-card</code></td><td>a card or zone indented inside a card (only lines <code>|</code> and <code>to</code> are allowed)</td></tr>
+  <tr><td><code>multiple-attr-groups</code></td><td>two pairs of parentheses on one tag</td></tr>
+  <tr><td><code>mixed-indent</code></td><td>tabs and spaces in the same file</td></tr>
+  <tr><td><code>bad-number</code></td><td>malformed <code>at</code>, <code>size</code> or <code>via</code></td></tr>
+  <tr><td><code>bad-marker</code>, <code>multiple-appear</code></td><td>malformed animation marker (<code>@0</code>, <code>@4-2</code>,
+    unknown effect), or two appearance markers on one element</td></tr>
+  <tr><td><code>legacy-and-marker</code></td><td>old <code>step=</code> notation and an <code>@</code> marker on the same element</td></tr>
+  <tr><td><code>unsafe-href</code></td><td>a link with a forbidden scheme, or empty</td></tr>
+  <tr><td><code>missing-date</code>, <code>bad-date</code>, <code>end-before-start</code></td><td>timeline and frieze dates (including
+    year 0)</td></tr>
+  <tr><td><code>zone-in-frise</code>, <code>zone-in-mindmap</code></td><td>zones in a mode that does not support them</td></tr>
+  <tr><td><code>bad-root</code></td><td>mind map <code>root</code> that is not a card id</td></tr>
+</table>
+
+<h2>Warnings</h2>
+<table>
+  <tr><th>Code</th><th>Cause</th></tr>
+  <tr><td><code>unknown-tag</code></td><td>a tag other than the four (ignored with its content)</td></tr>
+  <tr><td><code>line-misplaced</code>, <code>orphan-text</code>, <code>ignored-child</code></td><td>content in a place where it has
+    no meaning (ignored)</td></tr>
+  <tr><td><code>bad-side</code>, <code>bad-join</code></td><td>unknown value of <code>side</code>, empty <code>join</code>, or a <code>join</code> name no other arrow to the same card carries (ignored)</td></tr>
+  <tr><td><code>at-ignored</code></td><td><code>at=</code> in a mode where positions are computed</td></tr>
+  <tr><td><code>draw-on-node</code></td><td>the <code>draw</code> effect on something other than an arrow (<code>fade</code> is used)</td></tr>
+  <tr><td><code>unknown-icon</code>, <code>icon-ignored</code></td><td>an icon name that does not exist, or an icon on an arrow or a line</td></tr>
+  <tr><td><code>legacy-step</code></td><td>old <code>step=</code>/<code>fx=</code> notation: <code>skemo fmt</code> converts it</td></tr>
+  <tr><td><code>unknown-attribute</code></td><td><code>diagram(engine=…)</code>, <code>router=…</code> or <code>elk=…</code>: options of the prototype, no longer read</td></tr>
+  <tr><td><code>bad-table</code> <em>(preview)</em></td><td>a table row that cannot be read as written: <code>^^</code> in the first row, a row starting with <code>||</code>, a separator out of place or with another number of columns, a one-cell table between lines of text (write <code>\|</code> for a final bar)</td></tr>
+  <tr><td><code>bad-at</code> <em>(preview)</em></td><td><code>at=</code> that is neither coordinates nor a compass point, or a compass point on an element that is not at the top level</td></tr>
+  <tr><td><code>docked-arrow</code> <em>(preview)</em></td><td>an arrow between a docked element (<code>at="s"</code>…) and the rest of the drawing: not drawn</td></tr>
+</table>
+<p>The engine adds a few warnings of its own: two pinned cards that overlap (both are named), an animation marker earlier than its
+  parent allows, a mind map card that the root cannot reach, a contrast below the threshold with <code>--contrast</code>.</p>

@@ -1,0 +1,32 @@
+//- Positions manuelles + flèches retouchées (via=, side=) + styles de flèches + étapes d'animation
+diagram(dir="down")
+
+  card#internet.cloud(at="380,20" step=1) Internet
+    to(fw).wan.thick WAN
+
+  card#fw.t0(at="355,150" step=1) Pare-feu périmétrique
+    li 203.0.113.10/29
+    li 10.0.0.1/24
+    to(web side="left-top").secure.dot HTTPS
+    to(mail side="left-top" via="300,420").secure.dotted SMTP
+    to(core).flow transit
+
+  zone#dmz.dmz(step=2 fx="up") DMZ
+    card#web.t1(at="40,330") Serveur Web
+      li 172.16.0.10
+    card#mail.t1(at="40,470") Serveur Mail
+      li 172.16.0.20
+
+  zone#lan.lan(step=3 fx="up") LAN interne
+    card#core.t1(at="560,360") Switch cœur
+      li 10.10.0.0/16 VLAN 10
+      li 10.20.0.0/16 VLAN 20
+      to(srv).both
+      to(users)
+      to(voip side="right-top").dashed.nohead
+    card#srv.t2(at="380,560" step=4 fx="zoom") Serveurs internes
+      li 10.30.0.0/24
+    card#users.t3(at="620,560" step=4 fx="zoom") Postes
+      li ~400 postes
+    card#voip.t3(at="840,560" step=4 fx="zoom") Téléphonie IP
+      li ~150 postes

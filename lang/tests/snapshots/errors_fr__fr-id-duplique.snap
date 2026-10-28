@@ -1,0 +1,10 @@
+---
+source: tests/errors_fr.rs
+expression: out
+---
+erreur[duplicate-id] : identifiant « a » déjà utilisé
+  ┌─ id-duplique.skemo:2:6
+  │
+2 │ card#a Deux
+  │      ^
+  = aide : chaque carte et chaque zone doit avoir un #id unique

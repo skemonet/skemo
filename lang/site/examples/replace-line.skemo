@@ -1,0 +1,5 @@
+card#svc Service
+  | type: NodePort    @0-1
+  | type: ClusterIP   @2
+card#pod Pod           @1
+  to(svc)

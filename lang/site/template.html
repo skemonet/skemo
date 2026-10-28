@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{title}} · skemo docs</title>
+<meta name="description" content="Documentation of skemo, the text diagram language: syntax, styling, layout modes, animation and command line.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="logo" href="index.html"><img src="favicon.svg" width="26" height="26" alt=""> skemo <span>docs</span></a>
+  <span class="version">{{version}}</span>
+  <nav aria-label="Site">
+    <a href="https://skemo.net/">skemo.net</a>
+    <a href="https://github.com/skemonet/skemo/tree/main/lang">GitHub</a>
+  </nav>
+</header>
+<div class="layout">
+  <details class="sidebar" open>
+    <summary>Menu</summary>
+    <nav aria-label="Documentation">{{nav}}</nav>
+  </details>
+  <main id="content">
+    <article>
+{{body}}
+    </article>
+    {{pager}}
+  </main>
+  <aside>{{toc}}</aside>
+</div>
+<footer>skemo {{version}} · Fonts: Inter, JetBrains Mono (SIL OFL 1.1) · Icons: Lucide (ISC) · Every diagram on these pages is rendered by skemo from the source shown next to it.</footer>
+</body>
+</html>

@@ -1,0 +1,54 @@
+---
+source: tests/errors_fr.rs
+expression: out
+---
+avertissement[unknown-attribute] : « engine » n'est plus lu : ignoré
+  ┌─ v08-avertissements.skemo:1:9
+  │
+1 │ diagram(engine="dagre" elk='{"a":1}')
+  │         ^^^^^^^^^^^^^^
+avertissement[unknown-attribute] : « elk » n'est plus lu : ignoré
+  ┌─ v08-avertissements.skemo:1:24
+  │
+1 │ diagram(engine="dagre" elk='{"a":1}')
+  │                        ^^^^^^^^^^^^^
+avertissement[bad-table] : un tableau d'une seule cellule entre des lignes de texte : si cette ligne finit seulement par « | », écrire « \| »
+  ┌─ v08-avertissements.skemo:7:5
+  │
+7 │     | lone cell |
+  │     ^^^^^^^^^^^^^
+avertissement[docked-arrow] : flèche « a->b » : un élément ancré (at="s"…) et le reste du dessin ne sont pas reliés ; non dessinée
+  ┌─ v08-avertissements.skemo:9:5
+  │
+9 │     to(b)
+  │     ^^^^^
+avertissement[bad-at] : « at="north" » : coordonnées « x,y » ou point cardinal (n s e w ne nw se sw) attendu ; ignoré
+   ┌─ v08-avertissements.skemo:10:10
+   │
+10 │   zone#z(at="north") Z
+   │          ^^^^^^^^^^
+avertissement[bad-at] : « at="s" » n'ancre qu'un élément de premier niveau : ignoré
+   ┌─ v08-avertissements.skemo:12:12
+   │
+12 │     card#b(at="s") B
+   │            ^^^^^^
+avertissement[bad-table] : « ^^ » dans la première rangée d'un tableau : aucune cellule au-dessus
+   ┌─ v08-avertissements.skemo:13:7
+   │
+13 │       | ^^ | x |
+   │       ^^^^^^^^^^
+avertissement[bad-table] : la ligne de séparation a 3 colonnes, l'en-tête 2
+   ┌─ v08-avertissements.skemo:14:7
+   │
+14 │       |--|--|--|
+   │       ^^^^^^^^^^
+avertissement[bad-table] : une rangée commence par « || » : aucune cellule à gauche à joindre
+   ┌─ v08-avertissements.skemo:15:7
+   │
+15 │       || y |
+   │       ^^^^^^
+avertissement[bad-table] : une ligne de séparation « |---| » ne compte que juste après la première rangée d'un tableau : ignorée
+   ┌─ v08-avertissements.skemo:19:5
+   │
+19 │     |---|---|
+   │     ^^^^^^^^^

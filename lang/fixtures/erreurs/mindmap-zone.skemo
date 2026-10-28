@@ -1,0 +1,5 @@
+diagram(layout="mindmap" root="inconnu")
+  zone#z Group
+    card#a(at="10,10") Root
+      to(b)
+    card#b Child

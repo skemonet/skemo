@@ -1,0 +1,24 @@
+---
+source: tests/title_stack_fr.rs
+expression: out
+---
+avertissement[title-content] : un « title » ne contient que des lignes « | » : « card » est ignoré
+  ┌─ bad.skemo:3:5
+  │
+3 │     card#x X
+  │     ^^^^
+avertissement[title-twice] : un deuxième « title » : ignoré
+  ┌─ bad.skemo:4:3
+  │
+4 │   title Two
+  │   ^^^^^
+avertissement[stack-text] : un « stack » n'a pas de titre : « Named » est ignoré
+  ┌─ bad.skemo:5:9
+  │
+5 │   stack Named
+  │         ^^^^^
+avertissement[title-misplaced] : « title » s'écrit directement sous « diagram » : ignoré
+  ┌─ bad.skemo:7:7
+  │
+7 │       title Inside
+  │       ^^^^^

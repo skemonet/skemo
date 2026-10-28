@@ -1,0 +1,10 @@
+//- A comment: not rendered
+diagram(dir="down")
+
+  card#fw.t0(tag="Edge") Firewall
+    | 10.0.0.1/24
+    to(core).dashed transit
+
+  zone#lan.lan Internal LAN
+    card#core.t1 Core switch
+      | (stack of two)

@@ -1,0 +1,6 @@
+diagram(dir="right" look="header")
+  card#seg.segment(tag="DHCP") seg-k8s-01
+    | 10.1.20.0/28
+    to(gw)
+  card#gw.gateway Tier-0
+    | edge cluster

@@ -1,0 +1,4 @@
+diagram(layout="frieze" start="-800" end="600")
+  card#a(date="0") An zéro
+  zone#z Registre
+    card#b(start="-27" end="-509") B

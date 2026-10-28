@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Routeur en WebAssembly</title>
+<style>
+  body { font: 14px/1.4 system-ui, sans-serif; margin: 16px; color: #1f2937; background: #fff; }
+  svg { border: 1px solid #d1d5db; background: #fafafa; max-width: 100%; height: auto; touch-action: none; }
+  .shape { fill: #e0e7ff; stroke: #4f46e5; cursor: grab; }
+  .region { fill: #fef3c7; fill-opacity: .5; stroke: #d97706; stroke-dasharray: 6 4; }
+  .route { fill: none; stroke: #111827; stroke-width: 1.6; marker-end: url(#tip); }
+  text { font-size: 12px; pointer-events: none; }
+  #info { color: #6b7280; }
+</style>
+</head>
+<body>
+<p>
+  Scene: <select id="pick"></select>
+  — drag a shape to move it: everything is routed again at each move.
+  <span id="info"></span>
+</p>
+<svg id="view"></svg>
+<script type="module">
+  import init, { route } from './pkg/router_wasm_demo.js';
+  await init();
+  const names = ['manuel-via', 'manuel-avoid', 'conflit', 'deux-pins', 'design', 'timeline'];
+  const pick = document.getElementById('pick');
+  for (const n of names) pick.add(new Option(n, n));
+  const svg = document.getElementById('view');
+  const info = document.getElementById('info');
+  const NS = 'http://www.w3.org/2000/svg';
+  let scene = null;
+
+  function el(name, attrs, parent) {
+    const e = document.createElementNS(NS, name);
+    for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+    parent.appendChild(e);
+    return e;
+  }
+
+  function draw() {
+    const t = performance.now();
+    const out = JSON.parse(route(JSON.stringify(scene)));
+    const ms = performance.now() - t;
+    svg.textContent = '';
+    const defs = el('defs', {}, svg);
+    const m = el('marker', { id: 'tip', viewBox: '0 0 10 10', refX: 10, refY: 5,
+      markerWidth: 8, markerHeight: 8, orient: 'auto-start-reverse' }, defs);
+    el('path', { d: 'M0,0 L10,5 L0,10 z', fill: '#111827' }, m);
+    let [x0, y0, x1, y1] = [Infinity, Infinity, -Infinity, -Infinity];
+    const grow = (x, y) => { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); };
+    for (const o of [...scene.obstacles].sort((a, b) => (a.kind === 'region' ? -1 : 1) - (b.kind === 'region' ? -1 : 1))) {
+      const [x, y, w, h] = o.rect;
+      grow(x, y); grow(x + w, y + h);
+      const r = el('rect', { x, y, width: w, height: h, rx: 6, class: o.kind === 'region' ? 'region' : 'shape' }, svg);
+      if (o.kind !== 'region') {
+        r.dataset.id = o.id;
+        el('text', { x: x + 8, y: y + 18 }, svg).textContent = o.id;
+      }
+    }
+    for (const pts of Object.values(out.routes)) {
+      for (const [x, y] of pts) grow(x, y);
+      el('polyline', { points: pts.map(p => p.join(',')).join(' '), class: 'route' }, svg);
+    }
+    const pad = 30;
+    svg.setAttribute('viewBox', `${x0 - pad} ${y0 - pad} ${x1 - x0 + 2 * pad} ${y1 - y0 + 2 * pad}`);
+    svg.setAttribute('width', x1 - x0 + 2 * pad);
+    info.textContent = `${Object.keys(out.routes).length} routes in ${ms.toFixed(1)} ms` +
+      (out.diagnostics.length ? ` — ${out.diagnostics.length} diagnostic(s)` : '');
+  }
+
+  // dragging a shape
+  let drag = null;
+  const local = ev => {
+    const p = svg.createSVGPoint();
+    p.x = ev.clientX; p.y = ev.clientY;
+    return p.matrixTransform(svg.getScreenCTM().inverse());
+  };
+  svg.addEventListener('pointerdown', ev => {
+    const id = ev.target.dataset?.id;
+    if (!id) return;
+    const o = scene.obstacles.find(o => o.id === id);
+    const p = local(ev);
+    drag = { o, dx: p.x - o.rect[0], dy: p.y - o.rect[1], view: svg.getAttribute('viewBox') };
+    svg.setPointerCapture(ev.pointerId);
+  });
+  svg.addEventListener('pointermove', ev => {
+    if (!drag) return;
+    const p = local(ev);
+    drag.o.rect[0] = Math.round(p.x - drag.dx);
+    drag.o.rect[1] = Math.round(p.y - drag.dy);
+    draw();
+    svg.setAttribute('viewBox', drag.view); // framing fixed during the gesture
+  });
+  svg.addEventListener('pointerup', () => { drag = null; draw(); });
+
+  async function load(name) {
+    scene = await (await fetch(`fixtures/${name}.json`)).json();
+    draw();
+  }
+  pick.addEventListener('change', () => load(pick.value));
+  load(names[0]);
+</script>
+</body>
+</html>

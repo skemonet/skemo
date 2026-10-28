@@ -1,0 +1,31 @@
+<h1>Themes and contrast</h1>
+<p class="lead">Every diagram comes in four themes. Since types only define an accent, switching theme needs no change to your
+  CSS.</p>
+
+<h2>The themes</h2>
+<table>
+  <tr><th>Theme</th><th>Use</th></tr>
+  <tr><td><code>light</code></td><td>default; secondary texts, arrows and borders keep a contrast of at least 4.5:1</td></tr>
+  <tr><td><code>dark</code></td><td>dark screens: only the base colours change, tints are recomputed from <code>--c</code></td></tr>
+  <tr><td><code>print</code></td><td>paper, including black and white: white background, black ink, no shadow, darker fills and thicker
+    strokes. Applied automatically when the HTML output is printed</td></tr>
+  <tr><td><code>auto</code></td><td>HTML only: follows the reader's system setting. PNG and SVG render as <code>light</code></td></tr>
+</table>
+<p>Choose with <code>diagram(theme="dark")</code> or, overriding the file, <code>skemo render --theme dark</code>.</p>
+
+<h2>Dark</h2>
+<skemo name="themes" theme="dark" figure></skemo>
+
+<h2>Print</h2>
+<skemo name="themes" theme="print" figure></skemo>
+<p>The print theme may change dimensions slightly (thicker borders): the layout is computed for the theme you ask for.</p>
+
+<h2>Contrast</h2>
+<pre><code>skemo check --contrast diagram.skemo           # reports texts below the WCAG threshold
+skemo render --contrast high diagram.skemo     # darkens (or lightens) those texts, layout unchanged</code></pre>
+<p>The threshold is 4.5:1 for text, 3:1 for text on an accent fill and for icons. A custom accent that is too light is reported,
+  with the element and the measured ratio.</p>
+
+<h2>Never colour alone</h2>
+<p>Readers who do not see colours, and printers, still need to tell types apart: give types a <code>--label</code>, and arrows whose
+  meaning matters a line style (<code>.dashed</code>, <code>.dotted</code>, <code>.thick</code>, <code>.link</code>).</p>

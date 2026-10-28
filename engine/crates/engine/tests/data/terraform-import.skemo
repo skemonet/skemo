@@ -1,0 +1,100 @@
+//- Written by `skemo import` from shop.show.json (terraform show -json, Terraform 1.9.8).
+//- Import again rather than edit by hand; style it in the stylesheet next to it.
+diagram(dir="down" lang="en" zones="stretch")
+  title shop
+    |.pill AWS 123456789012
+    |.pill 106 resources
+  card#shop.delivery(tag="CloudFront" icon="globe") shop
+    | shop.example.com, www.shop.example.com
+    to(cdn)
+    to(assets constraint="false")
+    to(shop-prod)
+  card#shop-example-com.delivery(tag="Route 53" icon="signpost") shop.example.com
+    to(shop).dotted shop.example.com
+    to(shop-prod).dotted api.shop.example.com
+  card#internet.external(icon="globe") Internet
+    | 0.0.0.0/0
+    to(shop-prod).dashed 80, 443
+  card#cdn.security(tag="WAF" icon="shield") cdn
+    | global
+  zone#region-eu-west-3.region(tag="AWS") eu-west-3
+    zone#services-eu-west-3.services(wrap="2") managed services
+      card#assets.storage(tag="S3" icon="archive") assets
+      card#uploads.storage(tag="S3" icon="archive") uploads
+        to(thumbnails) events
+      card#thumbnails.compute(tag="Lambda" icon="zap") thumbnails
+        | python3.12
+        | 1024 MB
+        to(assets)
+      card#orders-dlq.messaging(tag="SQS" icon="inbox") orders dlq
+      card#api-ecr.storage(tag="ECR" icon="package") api
+      card#orders-sqs.messaging(tag="SQS" icon="inbox") orders
+        to(orders-dlq).dashed dead letters
+        to(order-events constraint="false")
+      card#logs.storage(tag="S3" icon="archive") logs
+      card#nightly.messaging(tag="EventBridge" icon="calendar-clock") nightly
+        | cron(0 2 * * ? *)
+        to(order-events constraint="false")
+      card#db-cpu.observability(tag="Alarm" icon="siren") db cpu
+        | AWS/RDS
+        to(alerts)
+      card#api-5xx.observability(tag="Alarm" icon="siren") api 5xx
+        | AWS/ApplicationELB
+        to(alerts)
+      card#alerts.messaging(tag="SNS" icon="bell") alerts
+      card#orders-dlq-alarm.observability(tag="Alarm" icon="siren") orders dlq
+        | AWS/SQS
+        to(alerts)
+    zone#vpc-main.vpc(tag="10.20.0.0/16") shop-prod
+      zone#subnet-public.subnet.public(tag="3 × /24") public subnets
+        card#shop-prod.network(tag="ALB" icon="split") shop-prod
+          to(api) HTTPS 443
+          to(backoffice) /admin/*
+        card#bastion.compute(tag="EC2" icon="server") bastion
+          | t4g.micro
+          | 10.20.0.12
+          | 5432 → orders
+          | 5432 → orders replica
+          | 22 → backoffice
+        card#shop-prod-nat.network(tag="NAT" icon="arrow-left-right") shop-prod-nat
+          | 203.0.113.17
+      zone#subnet-data.subnet.private(tag="3 × /24") data subnets
+        card#orders.data(tag="RDS" icon="database") orders
+          | PostgreSQL 16.4
+          | db.r6g.large
+          | Multi-AZ
+          to(orders-replica constraint="false").dashed replica
+        cards#sessions.data(count="2" tag="ElastiCache" icon="database-zap") sessions
+          | Redis 7.1
+          | cache.t4g.medium
+        card#orders-replica.data(tag="RDS" icon="database") orders replica
+          | PostgreSQL 16.4
+          | db.r6g.large
+      zone#subnet-private.subnet.private(tag="3 × /24") private subnets
+        card#order-events.compute(tag="Lambda" icon="zap") order events
+          | python3.12
+          | 256 MB
+          to(orders)
+        cards#worker.compute(count="2" tag="ECS" icon="container") worker
+          | 2 tasks
+          | Fargate
+          to(orders join="5432") 5432
+          to(orders-sqs constraint="false")
+        cards#api.compute(count="4" tag="ECS" icon="container") api
+          | 4 tasks
+          | Fargate
+          to(orders join="5432") 5432
+          to(orders-replica) 5432
+          to(sessions) 6379
+          to(orders-sqs constraint="false")
+          to(uploads constraint="false")
+        cards#backoffice.compute(count="2" tag="EC2" icon="server") backoffice
+          | t3.large
+          to(orders).dashed 5432
+          to(orders-replica).dashed 5432
+      card#shop-prod-igw.network(tag="IGW" icon="globe") shop-prod-igw
+      card#s3.network(tag="Endpoint" icon="plug") s3
+        | gateway
+  card#office.external(icon="globe") office
+    | 198.51.100.0/24
+    to(bastion).dashed 22

@@ -1,0 +1,56 @@
+<h1>Step-by-step animation</h1>
+<p class="lead">Markers at the end of a line make a diagram unfold step by step, for a talk or a tutorial.</p>
+
+<skemo-source name="animation"></skemo-source>
+<skemo name="animation" steps="1 2 2.5 3 4" figure></skemo>
+
+<h2>Markers</h2>
+<table>
+  <tr><th>Write</th><th>Meaning</th></tr>
+  <tr><td><code>@2</code></td><td>appears at step 2 (effect <code>fade</code>; <code>draw</code> for an arrow)</td></tr>
+  <tr><td><code>@2:up</code></td><td>appears at step 2 with the effect <code>up</code>; effects: <code>fade</code> <code>up</code>
+    <code>zoom</code> <code>draw</code></td></tr>
+  <tr><td><code>@2-4</code></td><td>visible from step 2 to step 4 included, then hidden</td></tr>
+  <tr><td><code>@0-2</code> <em>(preview)</em></td><td>visible from the start to step 2 included, then hidden</td></tr>
+  <tr><td><code>@4:focus</code>, <code>@4-6:focus</code></td><td>highlighted at step 4 (or from 4 to 6): the rest is dimmed</td></tr>
+</table>
+<p>Markers go at the end of a <code>card</code>, <code>zone</code>, <code>|</code> or <code>to(…)</code> line, after at least one
+  space, and are removed from the displayed text. Steps are ordered values, not a count: <code>@2.5</code> slots between 2 and 3
+  without renumbering anything.</p>
+
+<h2>Replacing a line <em>(preview)</em></h2>
+<skemo name="replace-line" steps="0 1 2" figure></skemo>
+<skemo-source name="replace-line"></skemo-source>
+<p><code>@0-1</code> shows a line from the start and hides it after step 1; the next line appears at step 2. Lines that are never
+  visible together share one place: the card is one line tall and the text changes in place.</p>
+
+<h2>Animating a chip <em>(preview)</em></h2>
+<skemo name="tag-step" steps="1 2" figure></skemo>
+<skemo-source name="tag-step"></skemo-source>
+<p>Markers at the end of a <code>tag="…"</code> value animate the chip alone: <code>tag="8080 @1"</code> shows the port at
+  step 1. In HTML, this works with the <code>band</code> (default) and <code>header</code> looks.</p>
+
+<h2>Rules</h2>
+<ul>
+  <li>At most one appearance marker per element; as many <code>:focus</code> as you like.</li>
+  <li>A child never appears before its parent nor outlives it (a card in a zone, a line in a card).</li>
+  <li>An arrow without a marker appears with the later of its two ends, drawn progressively.</li>
+  <li>Only the final tokens of a line are markers: <code>meet @3 tomorrow</code> stays text. <code>\@2</code> writes a literal
+    <code>@2</code>; <code>admin@example.com</code> needs no escaping.</li>
+  <li>An inconsistent marker (earlier than its parent, a range with no later step) gives a warning and is adjusted.</li>
+</ul>
+
+<h2>Outputs</h2>
+<table>
+  <tr><th>Command</th><th>Result</th></tr>
+  <tr><td><code>skemo talk.skemo -o talk.html</code></td><td>standalone page with a step reader: arrow keys, space or PageDown</td></tr>
+  <tr><td><code>-o talk.gif</code>, <code>-o talk.apng</code>, <code>-o talk.webp</code></td><td>animation with the effects
+    (<code>--hold</code>, <code>--transition</code>, <code>--fps</code>, <code>--final-hold</code>, <code>--no-loop</code>)</td></tr>
+  <tr><td><code>--step 2 -o s2.png</code></td><td>one state</td></tr>
+  <tr><td><code>--animated -o talk.png</code></td><td>one PNG per state (<code>talk.00.png</code>…)</td></tr>
+  <tr><td><code>--board -o board.png</code></td><td>a contact sheet of every state</td></tr>
+</table>
+<p>In SVG, skemo animates nothing itself: it marks elements with <code>data-step</code>, <code>data-fx</code>,
+  <code>data-until</code> and <code>data-focus</code>, for your own player. The root <code>&lt;svg&gt;</code> lists the steps in
+  order in <code>data-states</code> (<code>["1","2","2.5","3"]</code>), so a player that only counts whole steps, such as
+  reveal.js fragments, can map <code>2.5</code> to its own index.</p>

@@ -1,0 +1,7 @@
+diagram(router="avoid")
+  card#a A
+    to(b side="haut-bas")
+  boite#x Inconnue
+    card#y Y
+  card#b B @2:draw
+  | perdue

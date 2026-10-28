@@ -1,0 +1,5 @@
+diagram(layout="timeline" start="2026-10" end="2027-06")
+  card#a(date="2026-13-01") A
+  card#b B
+  card#c(start="2027-03" end="2027-01") C
+  card#d(date="2026-11" at="1,2") D

@@ -1,0 +1,74 @@
+<h1>Arrows</h1>
+<p class="lead">An arrow is written inside the card it leaves: <code>to(target)</code>. Its classes style it, its text labels it.</p>
+
+<h2>Writing an arrow</h2>
+<pre><code>card#api API
+  to(db)                      //- api → db
+  to(queue).dashed events     //- styled, with a label
+card#db Database
+card#queue Queue</code></pre>
+<p>The target is the <code>#id</code> of a card. An unknown target is an error, with a suggestion when the id is close to an
+  existing one. Arrows may go backwards, form cycles, or link a card to several others.</p>
+
+<h2>Styles</h2>
+<skemo name="arrows"></skemo>
+<table>
+  <tr><th>Class</th><th>Effect</th></tr>
+  <tr><td><code>.dashed</code>, <code>.dotted</code></td><td>dashed or dotted line</td></tr>
+  <tr><td><code>.thick</code></td><td>thicker line</td></tr>
+  <tr><td><code>.flow</code></td><td>moving dashes (animated in HTML)</td></tr>
+  <tr><td><code>.both</code></td><td>a head at both ends</td></tr>
+  <tr><td><code>.nohead</code></td><td>no head</td></tr>
+  <tr><td><code>.dot</code></td><td>a dot at the start</td></tr>
+  <tr><td><code>.link</code></td><td>dotted, no head: attaches a note to a card</td></tr>
+  <tr><td><code>.wan</code>, <code>.secure</code></td><td>colour examples of the default theme (red and thicker, green)</td></tr>
+</table>
+<p>Classes combine (<code>to(b).dashed.both</code>). Your own classes colour arrows through CSS:
+  <code>.edge.important { color: #E8590C; }</code>. When the direction or the kind of an arrow matters, give it a line style too,
+  not only a colour, so it reads in black and white.</p>
+
+<h2>Several targets</h2>
+<skemo name="multi"></skemo>
+<p><code>to(w1 w2 w3)</code> creates one arrow per target, all with the same classes and label (a label is therefore repeated on
+  each arrow).</p>
+
+<h2>Shared trunk</h2>
+<skemo name="trunk"></skemo>
+<p>With <code>join="trunk"</code>, the arrows of one <code>to(…)</code> leave the same point and share a trunk before branching, the
+  way organisation charts are drawn. Each target still has its own arrow, with its own id and animation marker.</p>
+<p><em>(preview)</em> Plain arrows from one card to several cards of the next row are drawn this way without asking (a
+  <em>fork</em>). When several cards each link to the same cards of the next row, every one to every one, their arrows share one
+  bar between the rows (a <em>bus</em>) instead of crossing. Junctions are marked with a dot.</p>
+<p><em>(preview)</em> Any other name joins arrows <em>into</em> one card: arrows to the same card that carry the same
+  <code>join="http"</code>, written under different cards, meet before it and end on one line with a single head (the HTTP
+  calls of two frontends to one backend, in the Kubernetes example of <a href="layout.html">Layout</a>). A name that no other
+  arrow to that card carries is reported and ignored. Their label names the whole flow: it sits on the part the arrows
+  share, just before the card.</p>
+<p>A line without a head (<code>.nohead</code>, <code>.link</code>, a head shown as a dot) runs right up to the card.</p>
+
+<h2>Arrows outside the layout <em>(preview)</em></h2>
+<skemo name="constraint"></skemo>
+<p><code>constraint="false"</code> draws and routes an arrow without letting it shape the layout: its target is not pushed a row
+  further. Use it for cross links (service discovery, monitoring, callbacks) that would otherwise turn the diagram into a long
+  chain. Here CoreDNS stays beside the pods instead of below them.</p>
+
+<h2>Classes from the endpoints</h2>
+<skemo name="edge-classes"></skemo>
+<p>Every arrow automatically receives the classes <code>from-&lt;type&gt;</code> and <code>to-&lt;type&gt;</code> of the cards it
+  joins, so one CSS rule can colour all arrows leaving or entering a type.</p>
+
+<h2>Sides, waypoints, ids</h2>
+<table>
+  <tr><th>Attribute</th><th>Effect</th></tr>
+  <tr><td><code>side="right-top"</code></td><td>attachment side at the start and at the end, among <code>top</code> <code>bottom</code>
+    <code>left</code> <code>right</code>. One half may stay empty: <code>side="-top"</code></td></tr>
+  <tr><td><code>via="x,y x,y"</code></td><td>waypoints the route passes through, in order</td></tr>
+  <tr><td><code>href="…"</code></td><td>the arrow is a link (SVG and HTML)</td></tr>
+  <tr><td><code>to#id(…)</code></td><td>an explicit id; by default an arrow is called <code>source-&gt;target</code>
+    (then <code>#2</code>, <code>#3</code> for duplicates)</td></tr>
+</table>
+<p>See <a href="layout.html">Layout and positions</a> for when to use <code>side</code> and <code>via</code>.</p>
+
+<h2>Routing</h2>
+<p>Every arrow is routed with right angles, around the cards and around the zones that contain neither of its ends. Bends sit in the
+  middle of the free corridor, and arrows that share a side are spread apart. You never draw a route yourself.</p>

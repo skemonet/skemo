@@ -1,0 +1,8 @@
+diagram(dir="down")
+  zone#site.cloud Datacenter
+    zone#dmz.dmz DMZ
+      card#web Web
+      card#mail Mail
+    zone#lan.lan LAN
+      card#files Files
+      card#print Printers

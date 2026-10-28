@@ -1,0 +1,396 @@
+{
+ "options": {
+  "layout": "timeline",
+  "from": "2026-10",
+  "to": "2027-06",
+  "scale": "month",
+  "today": "2026-10-15"
+ },
+ "nodes": [
+  {
+   "id": "lancement",
+   "kind": "card",
+   "parent": null,
+   "classes": [
+    "jalon"
+   ],
+   "title": "Specs livrées",
+   "tag": null,
+   "items": [],
+   "at": null,
+   "size": null,
+   "step": null,
+   "fx": null,
+   "date": "2026-10-14",
+   "start": null,
+   "end": null
+  },
+  {
+   "id": "router",
+   "kind": "zone",
+   "parent": null,
+   "classes": [
+    "lane"
+   ],
+   "title": "Routeur",
+   "tag": null,
+   "items": [],
+   "at": null,
+   "size": null,
+   "step": 1,
+   "fx": "up",
+   "date": null,
+   "start": null,
+   "end": null
+  },
+  {
+   "id": "r0",
+   "kind": "card",
+   "parent": "router",
+   "classes": [
+    "spike"
+   ],
+   "title": "R0 · spike hightower",
+   "tag": null,
+   "items": [],
+   "at": null,
+   "size": null,
+   "step": null,
+   "fx": null,
+   "date": null,
+   "start": "2026-10-16",
+   "end": "2026-10-31"
+  },
+  {
+   "id": "r1",
+   "kind": "card",
+   "parent": "router",
+   "classes": [
+    "dev"
+   ],
+   "title": "R1 → R2 · routage + espacement",
+   "tag": null,
+   "items": [
+    "côtés, via, régions, nudging"
+   ],
+   "at": null,
+   "size": null,
+   "step": null,
+   "fx": null,
+   "date": null,
+   "start": "2026-11-10",
+   "end": "2026-12-20"
+  },
+  {
+   "id": "r3",
+   "kind": "card",
+   "parent": "router",
+   "classes": [
+    "dev"
+   ],
+   "title": "R3 · incrémental + WASM",
+   "tag": null,
+   "items": [],
+   "at": null,
+   "size": null,
+   "step": null,
+   "fx": null,
+   "date": null,
+   "start": "2027-02",
+   "end": "2027-03"
+  },
+  {
+   "id": "engine",
+   "kind": "zone",
+   "parent": null,
+   "classes": [
+    "lane"
+   ],
+   "title": "Moteur",
+   "tag": null,
+   "items": [],
+   "at": null,
+   "size": null,
+   "step": 2,
+   "fx": "up",
+   "date": null,
+   "start": null,
+   "end": null
+  },
+  {
+   "id": "e0",
+   "kind": "card",
+   "parent": "engine",
+   "classes": [
+    "spike"
+   ],
+   "title": "E0 · spikes elk-rs, mesure, rendu",
+   "tag": null,
+   "items": [],
+   "at": null,
+   "size": null,
+   "step": null,
+   "fx": null,
+   "date": null,
+   "start": "2026-10-16",
+   "end": "2026-11-07"
+  },
+  {
+   "id": "e1",
+   "kind": "card",
+   "parent": "engine",
+   "classes": [
+    "dev"
+   ],
+   "title": "E1 · mesure + placement",
+   "tag": null,
+   "items": [],
+   "at": null,
+   "size": null,
+   "step": null,
+   "fx": null,
+   "date": null,
+   "start": "2026-11-10",
+   "end": "2026-12-15"
+  },
+  {
+   "id": "e2",
+   "kind": "card",
+   "parent": "engine",
+   "classes": [
+    "dev"
+   ],
+   "title": "E2 → E3 · routage + rendu",
+   "tag": null,
+   "items": [],
+   "at": null,
+   "size": null,
+   "step": null,
+   "fx": null,
+   "date": null,
+   "start": "2026-12-16",
+   "end": "2027-01-31"
+  },
+  {
+   "id": "e5",
+   "kind": "card",
+   "parent": "engine",
+   "classes": [
+    "dev"
+   ],
+   "title": "E4 → E5 · étapes + WASM",
+   "tag": null,
+   "items": [],
+   "at": null,
+   "size": null,
+   "step": null,
+   "fx": null,
+   "date": null,
+   "start": "2027-02",
+   "end": "2027-04"
+  },
+  {
+   "id": "lang",
+   "kind": "zone",
+   "parent": null,
+   "classes": [
+    "lane"
+   ],
+   "title": "Langage",
+   "tag": null,
+   "items": [],
+   "at": null,
+   "size": null,
+   "step": 3,
+   "fx": "up",
+   "date": null,
+   "start": null,
+   "end": null
+  },
+  {
+   "id": "l1",
+   "kind": "card",
+   "parent": "lang",
+   "classes": [
+    "dev"
+   ],
+   "title": "L1 · parseur + diagnostics",
+   "tag": null,
+   "items": [],
+   "at": null,
+   "size": null,
+   "step": null,
+   "fx": null,
+   "date": null,
+   "start": "2026-10-16",
+   "end": "2026-11-20"
+  },
+  {
+   "id": "l2",
+   "kind": "card",
+   "parent": "lang",
+   "classes": [
+    "dev"
+   ],
+   "title": "L2 · styles",
+   "tag": null,
+   "items": [],
+   "at": null,
+   "size": null,
+   "step": null,
+   "fx": null,
+   "date": null,
+   "start": "2026-11-21",
+   "end": "2026-12-31"
+  },
+  {
+   "id": "l3",
+   "kind": "card",
+   "parent": "lang",
+   "classes": [
+    "dev"
+   ],
+   "title": "L3 · édition chirurgicale",
+   "tag": null,
+   "items": [],
+   "at": null,
+   "size": null,
+   "step": null,
+   "fx": null,
+   "date": null,
+   "start": "2027-02",
+   "end": "2027-03"
+  },
+  {
+   "id": "produit",
+   "kind": "zone",
+   "parent": null,
+   "classes": [
+    "lane"
+   ],
+   "title": "Livrables",
+   "tag": null,
+   "items": [],
+   "at": null,
+   "size": null,
+   "step": 4,
+   "fx": "up",
+   "date": null,
+   "start": null,
+   "end": null
+  },
+  {
+   "id": "valid",
+   "kind": "card",
+   "parent": "produit",
+   "classes": [
+    "decision"
+   ],
+   "title": "Validation des choix",
+   "tag": null,
+   "items": [
+    "D-005 · D-007 · option routeur"
+   ],
+   "at": null,
+   "size": null,
+   "step": null,
+   "fx": null,
+   "date": "2026-11-09",
+   "start": null,
+   "end": null
+  },
+  {
+   "id": "cli2",
+   "kind": "card",
+   "parent": "produit",
+   "classes": [
+    "jalon"
+   ],
+   "title": "CLI : premier rendu PNG",
+   "tag": null,
+   "items": [],
+   "at": null,
+   "size": null,
+   "step": null,
+   "fx": null,
+   "date": "2027-02-01",
+   "start": null,
+   "end": null
+  },
+  {
+   "id": "editeur",
+   "kind": "card",
+   "parent": "produit",
+   "classes": [
+    "jalon"
+   ],
+   "title": "Démarrage éditeur",
+   "tag": null,
+   "items": [],
+   "at": null,
+   "size": null,
+   "step": null,
+   "fx": null,
+   "date": "2027-05-03",
+   "start": null,
+   "end": null
+  }
+ ],
+ "edges": [
+  {
+   "id": "r0->valid",
+   "from": "r0",
+   "to": "valid",
+   "classes": [],
+   "label": "",
+   "via": null,
+   "side": null,
+   "step": null,
+   "fx": null
+  },
+  {
+   "id": "e0->valid",
+   "from": "e0",
+   "to": "valid",
+   "classes": [],
+   "label": "",
+   "via": null,
+   "side": null,
+   "step": null,
+   "fx": null
+  },
+  {
+   "id": "e1->e2",
+   "from": "e1",
+   "to": "e2",
+   "classes": [],
+   "label": "",
+   "via": null,
+   "side": null,
+   "step": null,
+   "fx": null
+  },
+  {
+   "id": "e2->cli2",
+   "from": "e2",
+   "to": "cli2",
+   "classes": [],
+   "label": "",
+   "via": null,
+   "side": null,
+   "step": null,
+   "fx": null
+  },
+  {
+   "id": "e5->editeur",
+   "from": "e5",
+   "to": "editeur",
+   "classes": [],
+   "label": "",
+   "via": null,
+   "side": null,
+   "step": null,
+   "fx": null
+  }
+ ]
+}

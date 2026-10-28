@@ -1,0 +1,9 @@
+card#lb Load balancer
+  to(p1)
+zone#ns(wrap="3") Namespace
+  card#p1 pod-1
+  card#p2 pod-2
+  card#p3 pod-3
+  card#p4 pod-4
+  card#p5 pod-5
+  card#p6 pod-6

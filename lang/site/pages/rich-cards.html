@@ -1,0 +1,59 @@
+<h1>Rich cards, tables and panels <em>(preview)</em></h1>
+<p class="lead">A card can say what it is, stress a word, carry a table or a finding; a diagram can have a legend, a footnote and
+  panels set around the drawing. None of it needs a new tag: lines <code>|</code>, Markdown, classes and <code>at=</code>.</p>
+
+<h2>Category, emphasis and states</h2>
+<skemo name="rich-card"></skemo>
+<table>
+  <tr><th>Write</th><th>Effect</th></tr>
+  <tr><td><code>label="RDS PostgreSQL 16.4"</code></td><td>the card's category, a small line above its name; by default the type's
+    <code>--label</code>; <code>label=""</code> shows none. <code>tag=</code> stays the chip on the right</td></tr>
+  <tr><td><code>**bold**</code>, <code>*italic*</code>, <code>`mono`</code></td><td>Markdown emphasis inside a line or a table cell</td></tr>
+  <tr><td><code>==text==</code>, <code>==.ok text==</code></td><td>a mark: in red, or the colour of the line's state, or of the class
+    written after <code>==</code></td></tr>
+  <tr><td><code>.ok</code>, <code>.warn</code>, <code>.error</code></td><td>on a card: a ring and a mark before the name; on a line
+    (<code>|.warn …</code>): a mark and the state's colour; on a cell: the state's colour</td></tr>
+</table>
+<p>Delimiters only count when they wrap a word: <code>cron(0 2 * * ? *)</code> and <code>status == 200</code> stay as written, and
+  <code>_</code> is never emphasis. Write <code>\*</code>, <code>\`</code> or <code>\==</code> for the characters themselves.</p>
+
+<h2>Tables</h2>
+<skemo name="table"></skemo>
+<p>A table is written as a Markdown table inside a card: a line that ends with <code>|</code> is a row, rows that follow each other
+  are one table, and the card can hold lines of text before and after it. The spaces around a cell are trimmed, so a table aligned by
+  any Markdown formatter stays valid.</p>
+<table>
+  <tr><th>Write</th><th>Effect</th></tr>
+  <tr><td><code>|---|---|</code> after the first row</td><td>the first row is a header; <code>:---:</code> centres a column, <code>---:</code> aligns it right</td></tr>
+  <tr><td><code>||</code> (nothing in the cell)</td><td>the cell on the left spans this column too; an empty cell is <code>| |</code></td></tr>
+  <tr><td><code>^^</code></td><td>the cell above spans this row too</td></tr>
+  <tr><td><code>|.error lambda |</code></td><td>the cell takes the class (glued to the bar)</td></tr>
+  <tr><td><code>|</code> alone</td><td>an empty line; it also separates two tables</td></tr>
+</table>
+<p>A table never wraps: its card grows as wide as it needs. Arrows end on the card, not on a row.</p>
+
+<h2>Legends and plain text</h2>
+<skemo name="legend"></skemo>
+<p><code>card.legend</code> is a legend: each line <code>|.class text</code> shows a sample of the class it names, an arrow for a
+  class used on arrows, a chip for a card type, a small frame for a zone type, the icon of a class that sets
+  <code>--icon</code>, the mark for a state. A legend without lines lists by itself the classes of the
+  diagram that have a <code>--label</code> in the stylesheet (arrow classes too: <code>.edge.events { --label: "events"; }</code>).
+  <code>card.text</code> is plain text with no frame, for a note or a footnote.</p>
+
+<h2>Panels, legends and footnotes around the drawing</h2>
+<skemo name="docking" stacked></skemo>
+<p><code>at=</code> with a compass point docks a top-level card or zone <em>outside</em> the drawing, which is laid out as if it
+  were absent: nothing in it moves.</p>
+<table>
+  <tr><th>Write</th><th>Where</th></tr>
+  <tr><td><code>at="s"</code>, <code>at="n"</code></td><td>a band below (above) the drawing, over the whole width; several elements go side by side
+    in writing order; a <code>.wide</code> one takes a row of its own (a footnote: <code>card.text.wide(at="s")</code>)</td></tr>
+  <tr><td><code>at="e"</code>, <code>at="w"</code></td><td>a column on the right (left) of the drawing</td></tr>
+  <tr><td><code>at="ne"</code>, <code>at="nw"</code>, <code>at="se"</code>, <code>at="sw"</code></td><td>in that column, at the top or the bottom: a legend at the top right is <code>at="ne"</code></td></tr>
+</table>
+<p>A docked zone is laid out on its own, like a small diagram. An arrow between a docked element and the rest of the drawing is
+  not drawn (warning <code>docked-arrow</code>).</p>
+
+<h2>Subtitle and zone descriptions</h2>
+<p>Lines <code>|</code> under <code>title</code> are subtitle lines; <code>|.pill</code> lines are pills on the title's row. Lines
+  under a zone are a description under its title (“3 availability zones”); the zone keeps room for them.</p>

@@ -1,0 +1,37 @@
+[package]
+name = "skemo-engine"
+version.workspace = true
+edition.workspace = true
+description = "skemo rendering engine: measurement, layout, routing, HTML/SVG/PNG/GIF/WebP output, animation steps"
+license = "MIT OR Apache-2.0"
+repository.workspace = true
+homepage.workspace = true
+readme = "README.md"
+keywords = ["diagram", "layout", "svg", "png", "rendering"]
+categories = ["visualization", "rendering", "graphics"]
+publish = false
+
+[dependencies]
+skemo-lang.workspace = true
+skemo-router.workspace = true
+org-eclipse-elk-graph-json.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+resvg = { version = "0.49", default-features = false, features = ["text", "raster-images"], optional = true }
+# Animated GIF: NeuQuant quantisation (color_quant, MIT), deterministic; not imagequant (GPL-3)
+gif = { version = "0.14", optional = true }
+# Animated PNG (APNG): already pulled in by tiny-skia (resvg)
+png = { version = "0.18", optional = true }
+# WebP (still and animated): a lossless encoder in pure Rust, no C library (WASM, musl)
+image-webp = { version = "0.2", optional = true }
+harfrust = "0.15"
+
+[features]
+default = ["png"]
+# PNG rendering (resvg): can be turned off for WebAssembly if size matters
+png = ["dep:resvg", "dep:gif", "dep:png", "dep:image-webp"]
+
+[dev-dependencies]
+
+[lints]
+workspace = true

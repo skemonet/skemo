@@ -1,0 +1,27 @@
+<h1>skemo documentation</h1>
+<p class="lead">skemo is a language for diagrams. You write cards, the zones that group them and the arrows between them as a few lines
+  of indented text; skemo lays them out, routes the arrows and renders the result as PNG, SVG, WebP, animated HTML or GIF.</p>
+
+<skemo name="intro"></skemo>
+
+<h2>Why text</h2>
+<ul>
+  <li><strong>The text is the source.</strong> A diagram is read, reviewed with <code>git diff</code> and fixed like code.</li>
+  <li><strong>Layout is automatic.</strong> No coordinates to maintain; pin only what you want fixed.</li>
+  <li><strong>Edits stay local.</strong> Changing one card only moves the arrows attached to it.</li>
+  <li><strong>Style is CSS.</strong> A card type is one line: an accent colour and a label. Light, dark and print themes follow.</li>
+  <li><strong>Cheap for AI agents.</strong> An agent writes a few hundred tokens of text instead of thousands of SVG coordinates.</li>
+</ul>
+
+<h2>Where to go next</h2>
+<table>
+  <tr><td><a href="getting-started.html">Getting started</a></td><td>install skemo and render a first diagram</td></tr>
+  <tr><td><a href="syntax.html">Syntax</a></td><td>the four tags and how a line is read</td></tr>
+  <tr><td><a href="styling.html">Styling with CSS</a></td><td>types, colours, looks</td></tr>
+  <tr><td><a href="timeline.html">Timeline</a>, <a href="frieze.html">frieze</a>, <a href="mindmap.html">mind map</a></td><td>the other layout modes</td></tr>
+  <tr><td><a href="cli.html">Command line</a></td><td>every command and option</td></tr>
+  <tr><td><a href="ai-agents.html">AI agents</a></td><td>the skill that teaches an agent to write skemo</td></tr>
+</table>
+
+<div class="note"><p>skemo is in pre-release ({{version}}). The language described here is stable; features marked
+  <em>preview</em> may still change.</p></div>

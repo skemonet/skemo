@@ -1,0 +1,15 @@
+# Known contrast defects (E-STYLE-7). Default theme = the prototype's theme: to fix once a change
+# of the default theme is validated. process.css / design.css: example CSS.
+reseau.pug [light] dmz/title (zone title) : 3.93 < 4.5 (#A16B2D on #F4EEE9)
+reseau-manuel.pug [light] dmz/title (zone title) : 3.93 < 4.5 (#A16B2D on #F4EEE9)
+reseau-manuel-via.pug [light] dmz/title (zone title) : 3.93 < 4.5 (#A16B2D on #F4EEE9)
+reseau-entete.pug [light] dmz/title (zone title) : 3.93 < 4.5 (#A16B2D on #F4EEE9)
+process.pug [light] equipe/title (zone title) : 4.07 < 4.5 (#2B8A3E on #EBFBEE)
+process.pug [dark] equipe/title (zone title) : 4.07 < 4.5 (#2B8A3E on #EBFBEE)
+process.pug [print] equipe/title (zone title) : 4.15 < 4.5 (#2B8A3E on #F9F9F9)
+design.pug [light] dns (title) : 4.35 < 4.5 (#8C6E21 on #FAF4E3)
+animation.pug [light] seg/tag (chip) : 3.85 < 4.5 (#7B828E on #FFFFFF)
+animation.pug [light] dns (title) : 4.35 < 4.5 (#8C6E21 on #FAF4E3)
+animation.pug [dark] seg/tag (chip) : 3.85 < 4.5 (#7B828E on #FFFFFF)
+animation.pug [print] seg/tag (chip) : 3.85 < 4.5 (#7B828E on #FFFFFF)
+reseau-2pins.pug [light] dmz/title (zone title) : 3.93 < 4.5 (#A16B2D on #F4EEE9)

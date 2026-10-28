@@ -1,0 +1,3 @@
+.client  { --c: #7048E8; --label: "CLIENT"; }
+.service { --c: #3E6FC4; --label: "SERVICE"; }
+.store   { --c: #2F9E44; --label: "DATA"; }

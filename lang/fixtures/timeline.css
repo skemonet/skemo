@@ -1,0 +1,6 @@
+/* Thème perso de la feuille de route — uniquement des accents : clair, sombre et impression suivent seuls */
+.jalon    { --c: var(--ink); --on-c: var(--bg); --label: "JALON"; }
+.decision { --c: #E8590C; --label: "DÉCISION"; }
+.spike    { --c: #7A5AF8; --label: "SPIKE"; }
+.dev      { --c: #3E6FC4; }
+.lane     { --c: #8A93A3; }

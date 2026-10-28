@@ -1,0 +1,220 @@
+<!doctype html><meta charset="utf-8"><title>manuel-straight</title><style>body{margin:0;background:rgb(246, 247, 249)}/* ============================================================
+   Thème par défaut — à surcharger dans un CSS perso
+   Principe : un type ne définit que son accent (--c) et son libellé (--label).
+   Fonds, bordures et encres sont DÉRIVÉS de --c avec color-mix() → clair et sombre gratuits.
+   ============================================================ */
+.stage {
+  --font: Inter, system-ui, sans-serif;
+  --mono: 'JetBrains Mono', 'DejaVu Sans Mono', monospace;
+  --bg: #F6F7F9;          /* fond de page */
+  --surface: #FFFFFF;     /* fond des cartes */
+  --ink: #1F2430;         /* texte principal */
+  --ink-2: #3B4250;       /* texte secondaire fort (IP…) */
+  --muted: #4A5262;       /* texte secondaire (contraste ≥ 4.5:1 sur --bg) */
+  --line: #6B7487;        /* flèches */
+  --card-border: #D3D8DF;
+  --on-c: #FFFFFF;        /* texte posé sur la couleur d'accent (badges, bandeaux, bandes) */
+  --fill-mix: 85%;        /* part de l'accent dans les aplats sous texte blanc (≥ 3:1) ; 68 % en print (≥ 4,5:1) */
+  --shadow: 0 1px 2px rgba(20,30,50,.06), 0 4px 14px rgba(20,30,50,.06);
+  --grid: rgba(110,120,140,.13);
+  --grid-major: rgba(110,120,140,.32);
+  --radius: 12px;
+  --zone-pad: 22px;      /* marge intérieure des zones (lue par le core) */
+  --zone-head: 30px;     /* hauteur réservée au titre de zone (lue par le core) */
+  position: relative; font: 14px/1.4 var(--font); color: var(--ink); background: var(--bg);
+}
+/* Thème sombre : seules les variables de base changent ; tout le reste en découle */
+.stage.theme-dark {
+  --bg: #0F1218; --surface: #181C24; --ink: #E6E9EF; --ink-2: #C9CFD9; --muted: #98A1B0; --line: #7D8799;
+  --card-border: #2A303B; --shadow: 0 1px 2px rgba(0,0,0,.35), 0 6px 18px rgba(0,0,0,.35);
+  --grid: rgba(160,170,190,.10); --grid-major: rgba(160,170,190,.26);
+}
+@media (prefers-color-scheme: dark) {
+  .stage.theme-auto {
+    --bg: #0F1218; --surface: #181C24; --ink: #E6E9EF; --ink-2: #C9CFD9; --muted: #98A1B0; --line: #7D8799;
+    --card-border: #2A303B; --shadow: 0 1px 2px rgba(0,0,0,.35), 0 6px 18px rgba(0,0,0,.35);
+    --grid: rgba(160,170,190,.10); --grid-major: rgba(160,170,190,.26);
+  }
+  body:has(> .stage.theme-auto) { background: #0F1218 !important; }
+}
+
+/* Thème « print » : impression, y compris en noir et blanc. Fond blanc, encre noire, pas d'ombre,
+   aplats d'accent assombris (le texte blanc reste lisible une fois converti en gris), traits plus foncés et épais. */
+.stage.theme-print {
+  --bg: #FFFFFF; --surface: #FFFFFF; --ink: #000000; --ink-2: #111111; --muted: #2E2E2E; --line: #222222;
+  --card-border: #4D4D4D; --shadow: none; --grid: rgba(0,0,0,.16); --grid-major: rgba(0,0,0,.45);
+  --fill-mix: 68%;
+}
+.stage.theme-print card { border-width: 1.5px; border-color: #4D4D4D; border-top-color: var(--accent-fill); }
+.stage.theme-print card.look-header { border-color: var(--accent-fill); }
+.stage.theme-print card.note, .stage.theme-print card.chip, .stage.theme-print card.info { border-color: color-mix(in srgb, var(--c) 55%, #000); }
+.stage.theme-print zone:not(.bare) { border: 1.5px solid #6B6B6B; background: color-mix(in srgb, var(--c, #888) 5%, #fff); }
+.stage.theme-print .edge .line { stroke: color-mix(in srgb, currentColor 45%, #000); stroke-width: 1.7; }
+.stage.theme-print .edge .head, .stage.theme-print .edge .tail, .stage.theme-print .edge .origin { fill: color-mix(in srgb, currentColor 45%, #000); }
+@media print {
+  .stage, .stage.theme-dark, .stage.theme-auto {
+    --bg: #FFFFFF; --surface: #FFFFFF; --ink: #000000; --ink-2: #111111; --muted: #2E2E2E; --line: #222222;
+    --card-border: #4D4D4D; --shadow: none; --grid: rgba(0,0,0,.16); --grid-major: rgba(0,0,0,.45);
+    --fill-mix: 68%;
+  }
+  body { background: #fff !important; }
+  .stage card { border-width: 1.5px; border-color: #4D4D4D; border-top-color: var(--accent-fill); }
+  .stage card.look-header { border-color: var(--accent-fill); }
+  .stage .edge .line { stroke: color-mix(in srgb, currentColor 45%, #000); stroke-width: 1.7; }
+}
+
+/* Aplat d'accent calculé sur CHAQUE élément (une variable définie sur .stage serait figée avec le --c de .stage) */
+.stage * { --accent-fill: color-mix(in srgb, var(--c, #6B7280) var(--fill-mix), #000); }
+
+/* ---------- Cartes : le texte direct = titre, les li = contenu ---------- */
+card { position: absolute; display: block; box-sizing: border-box; min-width: 170px; max-width: 280px;
+       padding: 11px 15px 13px; background: var(--surface); border-radius: var(--radius);
+       border: 1px solid var(--card-border); border-top: 3px solid var(--c, #9AA3B2);
+       box-shadow: var(--shadow); z-index: 2; }
+card .title { font-weight: 650; }
+card ul { margin: 8px 0 0; padding: 0; }
+card li { list-style: none; color: var(--muted); font-size: 12.5px; margin-top: 3px; }
+card .mono { font-family: var(--mono); font-size: 12px; color: var(--ink-2); margin-right: 2px; }
+
+/* Badge : texte donné par le type (--label) ou par tag="..." */
+card .title::before { content: var(--label); display: inline-block; margin-right: 8px;
+       padding: 1px 7px; border-radius: 999px; font-size: 10.5px; font-weight: 700; letter-spacing: .03em;
+       color: var(--on-c); background: var(--accent-fill, var(--c, #9AA3B2)); vertical-align: 1px; }
+card.no-tag .title::before { content: none; }   /* classe posée par le core si aucun badge */
+
+/* ---------- Style « en-tête » (--look: header) : bandeau type + pastille tag, nom centré ---------- */
+.stage.look-header card { --look: header; }       /* diagram(look="header") : pour tout le schéma */
+card.look-header { padding: 0; min-width: 190px; text-align: center; overflow: hidden; border-radius: 10px;
+       border: 1.5px solid var(--c, #9AA3B2); background: color-mix(in srgb, var(--c, #9AA3B2) 9%, var(--surface)); }
+card.look-header > .head { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+       padding: 6px 10px 6px 12px; background: var(--accent-fill, var(--c, #9AA3B2)); color: var(--on-c); font-size: 12.5px; font-weight: 700; text-align: left; }
+card.look-header > .head .tag { padding: 0 7px; border-radius: 999px; font-size: 10.5px; font-weight: 700; letter-spacing: .03em;
+       background: #fff; color: color-mix(in srgb, var(--c, #9AA3B2) 80%, #000); }
+card.look-header > .title { padding: 12px 16px 2px; font-size: 17px; font-weight: 750; letter-spacing: -.01em; }
+card.look-header > .title:last-child { padding-bottom: 13px; }
+card.look-header > .title::before { content: none; }
+card.look-header > ul { margin: 0; padding: 0 16px 12px; }
+card.look-header li { color: var(--ink-2); font-size: 13px; }
+
+/* ---------- Note, chip, encadré : cartes secondaires ---------- */
+.stage card.note, .stage card.chip, .stage card.info { --look: plain; }
+card.note { --c: #D4A017; min-width: 0; text-align: center; box-shadow: none;
+       border: 1.5px dashed color-mix(in srgb, var(--c) 75%, var(--surface));
+       background: color-mix(in srgb, var(--c) 12%, var(--surface)); }
+card.note .title { color: color-mix(in srgb, var(--c) 55%, var(--ink)); }
+card.note li { color: var(--ink-2); font-size: 13px; }
+card.chip { --c: #7B5CC4; min-width: 0; padding: 4px 18px; border-radius: 999px; text-align: center; box-shadow: none;
+       border: 1.5px solid var(--c); background: color-mix(in srgb, var(--c) 10%, var(--surface)); }
+card.info { --c: #D4A017; min-width: 0; padding: 7px 16px; border-radius: 8px; text-align: center; box-shadow: none;
+       border: 1.5px solid color-mix(in srgb, var(--c) 70%, var(--surface)); background: color-mix(in srgb, var(--c) 12%, var(--surface)); }
+card.chip .title, card.info .title { font-weight: 500; color: color-mix(in srgb, var(--c) 60%, var(--ink)); }
+card.chip .title::before, card.info .title::before, card.note .title::before { content: none; }
+
+/* ---------- Zones : teintes dérivées de --c (ou --z-bg / --z-border / --z-ink si fournis) ---------- */
+zone { position: absolute; display: block; box-sizing: border-box; border-radius: 16px; z-index: 0;
+       background: var(--z-bg, color-mix(in srgb, var(--c, #8A93A3) 8%, var(--bg)));
+       border: 1px solid var(--z-border, color-mix(in srgb, var(--c, #8A93A3) 40%, var(--bg))); }
+zone > .title { position: absolute; left: 16px; top: 9px; font-size: 12px; font-weight: 700;
+       letter-spacing: .06em; text-transform: uppercase; color: var(--z-ink, color-mix(in srgb, var(--c, var(--muted)) 70%, var(--ink))); }
+/* Zone « nue » : pas de cadre, légende en bas (ex. « Uplinks / VLAN » sous un groupe de chips) */
+zone.bare { background: transparent; border: 0; }
+zone.bare > .title { top: auto; bottom: 2px; left: 0; right: 0; text-align: center; text-transform: none; letter-spacing: 0;
+       font-style: italic; font-weight: 500; font-size: 12.5px; }
+
+/* ---------- Flèches ---------- */
+.edges { position: absolute; inset: 0; overflow: visible; z-index: 1; pointer-events: none; }
+.edge { color: var(--line); }
+.edge .line { fill: none; stroke: currentColor; stroke-width: 1.4; }
+.edge .head { fill: currentColor; }
+.edge-label { position: absolute; transform: translate(-50%, -50%); z-index: 3; white-space: nowrap;
+       font-size: 11.5px; color: var(--muted); background: var(--bg); padding: 0 5px; border-radius: 4px; }
+
+/* ---------- Types (une ligne chacun) ---------- */
+.t0    { --c: #C94A44; --label: "T0"; }
+.t1    { --c: #D9892B; --label: "T1"; }
+.t2    { --c: #3E6FC4; --label: "T2"; }
+.t3    { --c: #6B7280; --label: "T3"; }
+.cloud { --c: #A6AEBB; }
+.dmz   { --c: #D9892B; }
+.lan   { --c: #3E6FC4; }
+.edge .tail, .edge .origin { display: none; fill: currentColor; }
+
+/* Styles de flèches : des classes combinables sur to(...) ; une flèche porte aussi from-<type> et to-<type> */
+.edge.wan    { color: #C94A44; }
+.edge.wan .line { stroke-width: 2; }
+.edge.dashed .line, .edge.link .line { stroke-dasharray: 5 4; }
+.edge.dotted .line { stroke-dasharray: 1.5 4; stroke-linecap: round; }
+.edge.thick .line  { stroke-width: 3; }
+.edge.flow .line   { stroke-dasharray: 6 5; animation: flow 1s linear infinite; }   /* flux animé */
+.edge.both .tail   { display: inline; }        /* double pointe */
+.edge.nohead .head, .edge.link .head { display: none; }   /* simple trait ; .link = rattachement pointillé sans pointe */
+.edge.dot .origin  { display: inline; }        /* rond au départ */
+.edge.secure { color: #2E9E6B; }
+@keyframes flow { to { stroke-dashoffset: -11; } }
+
+/* ---------- Animations (mode présentation) ---------- */
+[data-step] { transition: opacity .45s ease, transform .45s ease; }
+.pending { opacity: 0 !important; }
+.pending[data-fx="up"]   { transform: translateY(12px); }
+.pending[data-fx="zoom"] { transform: scale(.92); }
+.edge.pending .line { stroke-dashoffset: var(--len); stroke-dasharray: var(--len); }
+.edge[data-step] .line { transition: stroke-dashoffset .6s ease; }
+
+/* ---------- Mode timeline ---------- */
+.tl-axis  { position: absolute; z-index: 0; border-bottom: 1px solid var(--grid-major); background: var(--bg); }
+.tl-tick  { position: absolute; z-index: 1; transform: translateX(4px); font-size: 11px; color: var(--muted); white-space: nowrap; }
+.tl-tick.major { font-weight: 700; color: var(--ink); }
+.tl-grid  { position: absolute; z-index: 1; width: 0; border-left: 1px solid var(--grid); pointer-events: none; }
+.tl-grid.major { border-left-color: var(--grid-major); }
+.tl-mark  { position: absolute; z-index: 3; width: 9px; height: 9px; margin-left: -4.5px; transform: rotate(45deg); background: var(--ink); border-radius: 1.5px; }
+.tl-today { position: absolute; z-index: 0; width: 0; border-left: 2px dashed #E03131; pointer-events: none; }
+.tl-today-label { position: absolute; z-index: 3; transform: translate(-50%, -100%); font-size: 10.5px; font-weight: 700; color: #fff;
+                  background: #E03131; padding: 1px 6px; border-radius: 999px; white-space: nowrap; }
+
+/* Jalon : bord gauche = la date, losange sur ce bord */
+card.milestone { min-width: 0; padding-left: 16px; }
+card.milestone::after { content: ""; position: absolute; left: -6px; top: 15px; width: 10px; height: 10px; transform: rotate(45deg);
+                        background: var(--c, #6B7280); border: 2px solid var(--bg); border-radius: 2px; }
+/* Période : carte qui commence à start ; barre du haut = durée exacte (--bar-w, posée par le moteur) */
+card.phase { min-width: 0; max-width: 300px; padding: 12px 13px 10px; border-top: 1px solid var(--card-border); overflow: hidden;
+             background: color-mix(in srgb, var(--c, #9AA3B2) 7%, var(--surface)); }
+card.phase::after { content: ""; position: absolute; left: 0; top: 0; height: 5px; width: var(--bar-w, 100%);
+                    background: var(--accent-fill, var(--c, #9AA3B2)); border-radius: 0 3px 3px 0; }
+
+/* ---------- Mode frise chronologique ---------- */
+.fr-axis  { position: absolute; z-index: 1; height: 4px; background: var(--ink); border-radius: 2px; }
+.fr-tick  { position: absolute; z-index: 1; width: 1px; height: 8px; background: var(--ink); }
+.fr-tick-label { position: absolute; z-index: 3; transform: translateX(-50%); font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+.fr-century { position: absolute; z-index: 3; transform: translateX(-50%); font-size: 10px; font-weight: 700; letter-spacing: .05em;
+              color: var(--muted); opacity: .6; white-space: nowrap; }
+.fr-stem  { position: absolute; z-index: 0; width: 0; border-left: 1.5px solid var(--line); margin-left: -0.75px; }
+.fr-dot   { position: absolute; z-index: 3; width: 10px; height: 10px; margin: -3px 0 0 -5px; border-radius: 50%;
+            background: var(--bg); border: 2.5px solid var(--ink); box-sizing: border-box; }
+/* Événement : carte centrée sur sa date, reliée à l'axe par une tige */
+card.event { min-width: 0; max-width: 210px; padding: 9px 12px 10px; text-align: center; }
+card.event .title { font-size: 13px; }
+card.event ul { margin-top: 4px; }
+/* Époque : bande colorée sur l'axe ; le titre est tronqué si la bande est courte */
+card.era { min-width: 0; padding: 5px 9px; border: 0; border-radius: 6px; box-shadow: none; overflow: hidden;
+           background: var(--accent-fill, var(--c, #6B7280)); color: var(--on-c); display: flex; align-items: center; }
+card.era .title { font-size: 12px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+card.era .title::before { content: none; }
+card.era ul { display: none; }
+card.era.outside { overflow: visible; }
+card.era.outside .title { position: absolute; left: calc(100% + 6px); overflow: visible; color: var(--c, #6B7280); }
+</style><div id="stage" class="stage theme-light" style="width: 1070px; height: 692px;"><card id="internet" class="cloud no-tag" style="left: 390px; top: 28px; width: 170px; height: 48px;"><div class="title">Internet</div></card><card id="fw" class="t0" style="left: 365px; top: 158px; width: 220px; height: 94px;"><div class="title">Pare-feu périmétrique</div><ul><li><span class="mono">203.0.113.10/29</span></li><li><span class="mono">10.0.0.1/24</span></li></ul></card><zone id="dmz" class="dmz" style="left: 28px; top: 292px; width: 214px; height: 262px;"><div class="title">DMZ</div></zone><card id="web" class="t1" style="left: 50px; top: 338px; width: 170px; height: 74px;"><div class="title">Serveur Web</div><ul><li><span class="mono">172.16.0.10</span></li></ul></card><card id="mail" class="t1" style="left: 50px; top: 458px; width: 170px; height: 74px;"><div class="title">Serveur Mail</div><ul><li><span class="mono">172.16.0.20</span></li></ul></card><zone id="lan" class="lan" style="left: 368px; top: 322px; width: 674px; height: 342px;"><div class="title">LAN interne</div></zone><card id="core" class="t1" style="left: 570px; top: 368px; width: 177px; height: 94px;"><div class="title">Switch cœur</div><ul><li><span class="mono">10.10.0.0/16</span> VLAN 10</li><li><span class="mono">10.20.0.0/16</span> VLAN 20</li></ul></card><card id="srv" class="t2" style="left: 390px; top: 568px; width: 191px; height: 74px;"><div class="title">Serveurs internes</div><ul><li><span class="mono">10.30.0.0/24</span></li></ul></card><card id="users" class="t3" style="left: 630px; top: 568px; width: 170px; height: 74px;"><div class="title">Postes</div><ul><li>~400 postes</li></ul></card><card id="voip" class="t3" style="left: 850px; top: 568px; width: 170px; height: 74px;"><div class="title">Téléphonie IP</div><ul><li>~150 postes</li></ul></card><svg class="edges" viewBox="0 0 1070 692" width="1070" height="692"><g class="edge wan from-cloud to-t0" data-id="internet-&gt;fw" style="--len: 75;"><path class="line" d="M475,76 L475,151"></path><path class="head" d="M475,158 L469.75,148.2 L480.25,148.2 Z"></path><path class="tail" d="M475,76 L469.75,85.8 L480.25,85.8 Z"></path><circle class="origin" cx="475" cy="76" r="3.5"></circle></g><g class="edge from-t0 to-t1" data-id="fw-&gt;web" style="--len: 185.30184936523438;"><path class="line" d="M381,252 L215.2609903369994,334.8695048315003"></path><path class="head" d="M209,338 L215.4175150954244,328.9215640113509 L220.11325784817393,338.31304951684996 Z"></path><path class="tail" d="M381,252 L369.88674215182607,251.68695048315 L374.5824849045756,261.0784359886491 Z"></path><circle class="origin" cx="381" cy="252" r="3.5"></circle></g><g class="edge from-t0 to-t1" data-id="fw-&gt;mail" style="--len: 310.4375;"><path class="line" d="M419.8965517241379,252 L183.7051480085412,453.4573737574207"></path><path class="head" d="M178.3793103448276,458 L182.42851339209219,447.6459450126038 L189.24245275596107,455.63470150817426 Z"></path><path class="tail" d="M419.8965517241379,252 L409.0334093130044,254.36529849182577 L415.84734867687325,262.3540549873962 Z"></path><circle class="origin" cx="419.8965517241379" cy="252" r="3.5"></circle></g><g class="edge from-t0 to-t1" data-id="fw-&gt;core" style="--len: 147.04620361328125;"><path class="line" d="M516.0690476190476,252 L612.8249752552869,362.72885451558716"></path><path class="head" d="M617.4309523809524,368 L607.029225291711,364.0748791660711 L614.9359435183302,357.1659134775729 Z"></path><path class="tail" d="M516.0690476190476,252 L518.5640564816698,262.8340865224271 L526.470774708289,255.92512083392887 Z"></path><circle class="origin" cx="516.0690476190476" cy="252" r="3.5"></circle></g><g class="edge from-t1 to-t2" data-id="core-&gt;srv" style="--len: 136.35723876953125;"><path class="line" d="M615.7052631578947,462 L523.9022495222482,562.8241190218082"></path><path class="head" d="M519.1894736842105,568 L521.9054491238195,557.2191847520032 L529.6692705911072,564.2883485090599 Z"></path><path class="tail" d="M615.7052631578947,462 L605.225466250998,465.71165149094014 L612.9892877182857,472.7808152479968 Z"></path><circle class="origin" cx="615.7052631578947" cy="462" r="3.5"></circle></g><g class="edge from-t1 to-t3" data-id="core-&gt;users" style="--len: 103.58744049072266;"><path class="line" d="M672.4763157894737,462 L702.0021380886592,561.2903758733669"></path><path class="head" d="M703.9973684210527,568 L696.1718278607269,560.1029489720088 L706.2362640506766,557.1101034734186 Z"></path><path class="tail" d="M672.4763157894737,462 L670.2374201598498,472.8898965265815 L680.3018563497994,469.89705102799115 Z"></path><circle class="origin" cx="672.4763157894737" cy="462" r="3.5"></circle></g><g class="edge from-t1 to-t3" data-id="core-&gt;voip" style="--len: 180.16705322265625;"><path class="line" d="M726.8973684210526,462 L875.3860566463945,564.0356266286256"></path><path class="head" d="M881.1552631578948,568 L870.1050940132635,566.7767821637009 L876.0516540703253,558.1229723964506 Z"></path><path class="tail" d="M726.8973684210526,462 L732.0009775086221,471.87702760354944 L737.9475375656839,463.2232178362991 Z"></path><circle class="origin" cx="726.8973684210526" cy="462" r="3.5"></circle></g></svg><div class="edge-label" style="left: 475px; top: 117px;">WAN</div><div class="edge-label" style="left: 566.75px; top: 310px;">transit</div></div><script>// Lecteur d'étapes minimal : → / espace = suivant, ← = précédent
+(() => {
+  const els = [...document.querySelectorAll('[data-step]')];
+  const steps = [...new Set(els.map(e => +e.dataset.step))].sort((a, b) => a - b);
+  let i = new URLSearchParams(location.search).has('all') ? steps.length : 0;
+  const show = () => els.forEach(e => e.classList.toggle('pending', +e.dataset.step > (i ? steps[i - 1] : 0)));
+  addEventListener('keydown', ev => {
+    if (['ArrowRight', ' ', 'PageDown'].includes(ev.key)) i = Math.min(i + 1, steps.length);
+    else if (['ArrowLeft', 'PageUp'].includes(ev.key)) i = Math.max(i - 1, 0);
+    else return;
+    ev.preventDefault(); show();
+  });
+  addEventListener('click', () => { i = Math.min(i + 1, steps.length); show(); });
+  show();
+})();
+</script>

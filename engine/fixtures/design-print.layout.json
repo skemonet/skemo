@@ -1,0 +1,490 @@
+{
+ "model": {
+  "options": {
+   "dir": "right",
+   "look": "header"
+  },
+  "nodes": [
+   {
+    "id": "seg",
+    "kind": "card",
+    "parent": null,
+    "classes": [
+     "segment"
+    ],
+    "title": "seg-k8s-01",
+    "tag": "DHCP",
+    "items": [
+     "10.1.20.0/28"
+    ],
+    "at": null,
+    "size": null,
+    "step": null,
+    "fx": null,
+    "date": null,
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "ports",
+    "kind": "card",
+    "parent": null,
+    "classes": [
+     "note"
+    ],
+    "title": "Segment ports",
+    "tag": null,
+    "items": [
+     "db-node-a",
+     "db-node-b",
+     "db-node-c"
+    ],
+    "at": null,
+    "size": null,
+    "step": null,
+    "fx": null,
+    "date": null,
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "dns",
+    "kind": "card",
+    "parent": null,
+    "classes": [
+     "info"
+    ],
+    "title": "DNS 10.1.0.53",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": null,
+    "fx": null,
+    "date": null,
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "uplinks",
+    "kind": "zone",
+    "parent": null,
+    "classes": [
+     "bare",
+     "uplink"
+    ],
+    "title": "Uplinks / VLAN",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": null,
+    "fx": null,
+    "date": null,
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "ad",
+    "kind": "card",
+    "parent": "uplinks",
+    "classes": [
+     "chip",
+     "uplink"
+    ],
+    "title": "ad-01",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": null,
+    "fx": null,
+    "date": null,
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "in",
+    "kind": "card",
+    "parent": "uplinks",
+    "classes": [
+     "chip",
+     "uplink"
+    ],
+    "title": "in-02",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": null,
+    "fx": null,
+    "date": null,
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "nas",
+    "kind": "card",
+    "parent": "uplinks",
+    "classes": [
+     "chip",
+     "uplink"
+    ],
+    "title": "nas-03",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": null,
+    "fx": null,
+    "date": null,
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "naos",
+    "kind": "card",
+    "parent": "uplinks",
+    "classes": [
+     "chip",
+     "uplink"
+    ],
+    "title": "naos-04",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": null,
+    "fx": null,
+    "date": null,
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "t0",
+    "kind": "card",
+    "parent": null,
+    "classes": [
+     "t0gw"
+    ],
+    "title": "t0-k8s-01",
+    "tag": null,
+    "items": [
+     "Edge : edge-01"
+    ],
+    "at": null,
+    "size": null,
+    "step": null,
+    "fx": null,
+    "date": null,
+    "start": null,
+    "end": null
+   }
+  ],
+  "edges": [
+   {
+    "id": "seg->t0",
+    "from": "seg",
+    "to": "t0",
+    "classes": [],
+    "label": "",
+    "via": null,
+    "side": null,
+    "step": null,
+    "fx": null
+   },
+   {
+    "id": "ports->seg",
+    "from": "ports",
+    "to": "seg",
+    "classes": [
+     "link"
+    ],
+    "label": "",
+    "via": null,
+    "side": null,
+    "step": null,
+    "fx": null
+   },
+   {
+    "id": "dns->ad",
+    "from": "dns",
+    "to": "ad",
+    "classes": [
+     "dashed"
+    ],
+    "label": "",
+    "via": null,
+    "side": null,
+    "step": null,
+    "fx": null
+   },
+   {
+    "id": "ad->t0",
+    "from": "ad",
+    "to": "t0",
+    "classes": [],
+    "label": "",
+    "via": null,
+    "side": null,
+    "step": null,
+    "fx": null
+   },
+   {
+    "id": "in->t0",
+    "from": "in",
+    "to": "t0",
+    "classes": [],
+    "label": "",
+    "via": null,
+    "side": null,
+    "step": null,
+    "fx": null
+   },
+   {
+    "id": "nas->t0",
+    "from": "nas",
+    "to": "t0",
+    "classes": [],
+    "label": "",
+    "via": null,
+    "side": null,
+    "step": null,
+    "fx": null
+   },
+   {
+    "id": "t0->naos",
+    "from": "t0",
+    "to": "naos",
+    "classes": [],
+    "label": "",
+    "via": null,
+    "side": "left-right",
+    "step": null,
+    "fx": null
+   }
+  ]
+ },
+ "layout": {
+  "engine": "elk",
+  "router": "avoid",
+  "sizes": {
+   "seg": {
+    "w": 190,
+    "h": 103
+   },
+   "ports": {
+    "w": 133,
+    "h": 115
+   },
+   "dns": {
+    "w": 125,
+    "h": 36
+   },
+   "ad": {
+    "w": 76,
+    "h": 30
+   },
+   "in": {
+    "w": 75,
+    "h": 30
+   },
+   "nas": {
+    "w": 87,
+    "h": 30
+   },
+   "naos": {
+    "w": 96,
+    "h": 30
+   },
+   "t0": {
+    "w": 190,
+    "h": 103
+   }
+  },
+  "nodes": {
+   "seg": [
+    213,
+    48,
+    190,
+    103
+   ],
+   "ports": [
+    467,
+    24,
+    133,
+    115
+   ],
+   "dns": [
+    24,
+    327,
+    125,
+    36
+   ],
+   "ad": [
+    282,
+    330.2,
+    76,
+    30
+   ],
+   "in": [
+    293,
+    280.2,
+    75,
+    30
+   ],
+   "nas": [
+    281,
+    230.2,
+    87,
+    30
+   ],
+   "naos": [
+    272,
+    380.2,
+    96,
+    30
+   ],
+   "t0": [
+    467,
+    243,
+    190,
+    103
+   ],
+   "uplinks": [
+    250,
+    184.2,
+    140,
+    248
+   ]
+  },
+  "edges": {
+   "seg->t0": [
+    [
+     403,
+     106.5
+    ],
+    [
+     435,
+     106.5
+    ],
+    [
+     435,
+     294.5
+    ],
+    [
+     467,
+     294.5
+    ]
+   ],
+   "ports->seg": [
+    [
+     467,
+     81.5
+    ],
+    [
+     435,
+     81.5
+    ],
+    [
+     435,
+     92.5
+    ],
+    [
+     403,
+     92.5
+    ]
+   ],
+   "dns->ad": [
+    [
+     149,
+     345
+    ],
+    [
+     215.5,
+     345
+    ],
+    [
+     215.5,
+     345.2
+    ],
+    [
+     282,
+     345.2
+    ]
+   ],
+   "ad->t0": [
+    [
+     358,
+     345.2
+    ],
+    [
+     417.5,
+     345.2
+    ],
+    [
+     417.5,
+     301.6
+    ],
+    [
+     467,
+     301.6
+    ]
+   ],
+   "in->t0": [
+    [
+     368,
+     295.2
+    ],
+    [
+     403.5,
+     295.2
+    ],
+    [
+     403.5,
+     287.6
+    ],
+    [
+     467,
+     287.6
+    ]
+   ],
+   "nas->t0": [
+    [
+     368,
+     245.2
+    ],
+    [
+     417.5,
+     245.2
+    ],
+    [
+     417.5,
+     273.6
+    ],
+    [
+     467,
+     273.6
+    ]
+   ],
+   "t0->naos": [
+    [
+     467,
+     315.6
+    ],
+    [
+     431.5,
+     315.6
+    ],
+    [
+     431.5,
+     395.3
+    ],
+    [
+     368,
+     395.3
+    ]
+   ]
+  }
+ }
+}

@@ -1,0 +1,54 @@
+---
+source: tests/errors.rs
+expression: out
+---
+warning[unknown-attribute]: « engine » is no longer read: ignored
+  ┌─ v08-avertissements.skemo:1:9
+  │
+1 │ diagram(engine="dagre" elk='{"a":1}')
+  │         ^^^^^^^^^^^^^^
+warning[unknown-attribute]: « elk » is no longer read: ignored
+  ┌─ v08-avertissements.skemo:1:24
+  │
+1 │ diagram(engine="dagre" elk='{"a":1}')
+  │                        ^^^^^^^^^^^^^
+warning[bad-table]: a table of one cell between lines of text: if this line only ends with « | », write « \| »
+  ┌─ v08-avertissements.skemo:7:5
+  │
+7 │     | lone cell |
+  │     ^^^^^^^^^^^^^
+warning[docked-arrow]: arrow « a->b »: a docked element (at="s"…) and the rest of the drawing are not linked; not drawn
+  ┌─ v08-avertissements.skemo:9:5
+  │
+9 │     to(b)
+  │     ^^^^^
+warning[bad-at]: « at="north" »: coordinates « x,y » or a compass point (n s e w ne nw se sw) expected; ignored
+   ┌─ v08-avertissements.skemo:10:10
+   │
+10 │   zone#z(at="north") Z
+   │          ^^^^^^^^^^
+warning[bad-at]: « at="s" » docks only a top-level element: ignored
+   ┌─ v08-avertissements.skemo:12:12
+   │
+12 │     card#b(at="s") B
+   │            ^^^^^^
+warning[bad-table]: « ^^ » in the first row of a table: there is no cell above
+   ┌─ v08-avertissements.skemo:13:7
+   │
+13 │       | ^^ | x |
+   │       ^^^^^^^^^^
+warning[bad-table]: the separator row has 3 columns, the header 2
+   ┌─ v08-avertissements.skemo:14:7
+   │
+14 │       |--|--|--|
+   │       ^^^^^^^^^^
+warning[bad-table]: a row starts with « || »: there is no cell on the left to join
+   ┌─ v08-avertissements.skemo:15:7
+   │
+15 │       || y |
+   │       ^^^^^^
+warning[bad-table]: a separator row « |---| » only counts right after the first row of a table: ignored
+   ┌─ v08-avertissements.skemo:19:5
+   │
+19 │     |---|---|
+   │     ^^^^^^^^^

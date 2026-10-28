@@ -1,0 +1,20 @@
+---
+source: tests/errors.rs
+expression: out
+---
+error[bad-root]: « root="inconnu" »: no card with this identifier
+  ┌─ mindmap-zone.skemo:1:26
+  │
+1 │ diagram(layout="mindmap" root="inconnu")
+  │                          ^^^^^^^^^^^^^^
+error[zone-in-mindmap]: zone « z »: zones are not supported in mindmap mode
+  ┌─ mindmap-zone.skemo:2:3
+  │
+2 │   zone#z Group
+  │   ^^^^
+  = help: remove the zone: a mindmap's structure comes from the arrows
+warning[at-ignored]: « at » has no effect in mindmap mode: the position comes from the structure
+  ┌─ mindmap-zone.skemo:3:12
+  │
+3 │     card#a(at="10,10") Root
+  │            ^^^^^^^^^^

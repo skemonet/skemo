@@ -1,0 +1,322 @@
+{
+ "name": "design",
+ "provenance": "poc/reference/design.layout.json — tracés libavoid-js 0.5.0-beta.5 (référence de qualité)",
+ "units": "px, origine en haut à gauche, y vers le bas",
+ "params": {
+  "shapeBuffer": 14,
+  "idealNudging": 14,
+  "segmentPenalty": 50,
+  "crossingPenalty": 100
+ },
+ "obstacles": [
+  {
+   "id": "seg",
+   "rect": [
+    226,
+    48,
+    190,
+    103
+   ],
+   "kind": "shape"
+  },
+  {
+   "id": "ports",
+   "rect": [
+    480,
+    24,
+    133,
+    115
+   ],
+   "kind": "shape"
+  },
+  {
+   "id": "dns",
+   "rect": [
+    24,
+    327,
+    138,
+    36
+   ],
+   "kind": "shape"
+  },
+  {
+   "id": "uplinks",
+   "rect": [
+    256.6,
+    184.2,
+    148,
+    248
+   ],
+   "kind": "region"
+  },
+  {
+   "id": "ad",
+   "rect": [
+    286.6,
+    330.2,
+    88,
+    30
+   ],
+   "kind": "shape"
+  },
+  {
+   "id": "in",
+   "rect": [
+    299.6,
+    280.2,
+    83,
+    30
+   ],
+   "kind": "shape"
+  },
+  {
+   "id": "nas",
+   "rect": [
+    288.6,
+    230.2,
+    94,
+    30
+   ],
+   "kind": "shape"
+  },
+  {
+   "id": "naos",
+   "rect": [
+    278.6,
+    380.2,
+    104,
+    30
+   ],
+   "kind": "shape"
+  },
+  {
+   "id": "t0",
+   "rect": [
+    480,
+    243,
+    190,
+    103
+   ],
+   "kind": "shape"
+  }
+ ],
+ "connectors": [
+  {
+   "id": "seg->t0",
+   "from": {
+    "shape": "seg"
+   },
+   "to": {
+    "shape": "t0"
+   },
+   "passThrough": []
+  },
+  {
+   "id": "ports->seg",
+   "from": {
+    "shape": "ports"
+   },
+   "to": {
+    "shape": "seg"
+   },
+   "passThrough": []
+  },
+  {
+   "id": "dns->ad",
+   "from": {
+    "shape": "dns"
+   },
+   "to": {
+    "shape": "ad"
+   },
+   "passThrough": [
+    "uplinks"
+   ]
+  },
+  {
+   "id": "ad->t0",
+   "from": {
+    "shape": "ad"
+   },
+   "to": {
+    "shape": "t0"
+   },
+   "passThrough": [
+    "uplinks"
+   ]
+  },
+  {
+   "id": "in->t0",
+   "from": {
+    "shape": "in"
+   },
+   "to": {
+    "shape": "t0"
+   },
+   "passThrough": [
+    "uplinks"
+   ]
+  },
+  {
+   "id": "nas->t0",
+   "from": {
+    "shape": "nas"
+   },
+   "to": {
+    "shape": "t0"
+   },
+   "passThrough": [
+    "uplinks"
+   ]
+  },
+  {
+   "id": "t0->naos",
+   "from": {
+    "shape": "t0",
+    "side": "left"
+   },
+   "to": {
+    "shape": "naos",
+    "side": "right"
+   },
+   "passThrough": [
+    "uplinks"
+   ]
+  }
+ ],
+ "expected": {
+  "seg->t0": [
+   [
+    416,
+    106.5
+   ],
+   [
+    448,
+    106.5
+   ],
+   [
+    448,
+    294.5
+   ],
+   [
+    480,
+    294.5
+   ]
+  ],
+  "ports->seg": [
+   [
+    480,
+    81.5
+   ],
+   [
+    448,
+    81.5
+   ],
+   [
+    448,
+    92.5
+   ],
+   [
+    416,
+    92.5
+   ]
+  ],
+  "dns->ad": [
+   [
+    162,
+    345
+   ],
+   [
+    224.3,
+    345
+   ],
+   [
+    224.3,
+    345.2
+   ],
+   [
+    286.6,
+    345.2
+   ]
+  ],
+  "ad->t0": [
+   [
+    374.6,
+    345.2
+   ],
+   [
+    431.3,
+    345.2
+   ],
+   [
+    431.3,
+    301.6
+   ],
+   [
+    480,
+    301.6
+   ]
+  ],
+  "in->t0": [
+   [
+    382.6,
+    295.2
+   ],
+   [
+    417.3,
+    295.2
+   ],
+   [
+    417.3,
+    287.6
+   ],
+   [
+    480,
+    287.6
+   ]
+  ],
+  "nas->t0": [
+   [
+    382.6,
+    245.2
+   ],
+   [
+    431.3,
+    245.2
+   ],
+   [
+    431.3,
+    273.6
+   ],
+   [
+    480,
+    273.6
+   ]
+  ],
+  "t0->naos": [
+   [
+    480,
+    315.6
+   ],
+   [
+    445.3,
+    315.6
+   ],
+   [
+    445.3,
+    395.3
+   ],
+   [
+    382.6,
+    395.3
+   ]
+  ]
+ },
+ "checks": [
+  "aucun segment ne traverse un obstacle « shape » (hors extrémités)",
+  "aucun segment ne traverse une « region » absente de passThrough",
+  "side respecté au départ et à l'arrivée",
+  "flèches parallèles vers le même côté (4 chips → gateway) espacées ≥ 12 px",
+  "nombre de coudes ≤ expected + 1"
+ ]
+}

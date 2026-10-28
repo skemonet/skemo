@@ -1,0 +1,42 @@
+diagram(dir="down" lang="fr" theme="dark")
+
+  stack
+    zone#poste.poste(icon="laptop") Poste de travail @7
+      card#kubectl.outil(icon="terminal") kubectl
+        | Client de l'API
+        to(api) @12
+
+      card#manifest.manifeste(icon="file-text") Manifest @8
+        | Fichier YAML
+        to(vol).link @9
+        to(net).link @10
+        to(img).link @11
+      card#vol.chip(icon="hard-drive") Volumes @9
+      card#net.chip(icon="network") Réseau @10
+      card#img.chip(icon="container") Images @11
+
+    zone#cluster.cluster Cluster @1
+      zone#cp.noeud(wrap="1" icon="server") Control plane
+        card#api.systeme(icon="box") Kubernetes API @6
+          | Container
+          to(k1 k2 constraint="false").dashed @13
+        card#k0.agent(icon="cog") Kubelet @5
+          | Process système
+        card#d0.runtime(icon="container") Docker @4
+
+      zone#w1.noeud(wrap="1" icon="server") Worker @2
+        card#a1.app(icon="box") Application @15
+          | Container
+        card#k1.agent(icon="cog") Kubelet @5 @14:focus
+          | Process système
+        card#d1.runtime(icon="container") Docker @4
+
+      zone#w2.noeud(wrap="1" icon="server") Worker @3
+        card#a2.app(icon="box") Application @15
+          | Container
+        card#k2.agent(icon="cog") Kubelet @5 @14:focus
+          | Process système
+        card#d2.runtime(icon="container") Docker @4
+
+    card#bus.wide.reseau Réseau du cluster @1
+      to(d0 d1 d2)

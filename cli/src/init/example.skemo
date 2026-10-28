@@ -1,0 +1,19 @@
+//- My first skemo diagram
+//- Render: skemo render example.skemo --css custom.css -o example.png
+//- Live preview: skemo watch example.skemo --css custom.css
+diagram(dir="down")
+
+  card#internet.cloud Internet
+    to(fw) WAN
+
+  card#fw.firewall Firewall
+    | 203.0.113.10/29
+    to(web)
+    to(base)
+
+  zone#internal.internal Internal network
+    card#web.server Web server
+      | 10.0.0.10
+      to(base)
+    card#base.server Database
+      | 10.0.0.20

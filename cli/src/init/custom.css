@@ -1,0 +1,20 @@
+/* Custom theme: overrides the default theme (see `skemo theme --print`).
+   Each rule only replaces what it names. */
+
+/* Global variables: background, font, corner radius. */
+:root {
+  /* --bg: #FBFAF7; */
+  /* --font: 'Inter', sans-serif; */
+  /* --radius: 18px; */
+}
+
+/* A class = a card type. `--c` is its accent colour, `--label` the text of its badge. */
+.firewall { --c: #E8590C; --label: "FIREWALL"; }
+.server   { --c: #5B6CFF; }
+.cloud    { --c: #2B8A3E; }
+
+/* A zone: background, border, title colour. */
+.internal { --z-bg: #F3F0FF; --z-border: #D0C6FF; --z-ink: #5F3DC4; }
+
+/* Arrows: `.edge` plus the class written on the `to(…)`. */
+/* .edge.important { color: #E8590C; } */

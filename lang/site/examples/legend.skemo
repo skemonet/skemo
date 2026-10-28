@@ -1,0 +1,11 @@
+diagram(dir="right" lang="en")
+  card#web.service Web
+    to(api).user HTTPS
+  card#api.service API
+    to(queue).events jobs
+  card#queue.store Queue
+  card#flows.legend Flows
+    |.user user request
+    |.events events / queues
+    |.warn finding worth reviewing
+  card#auto.legend Automatic

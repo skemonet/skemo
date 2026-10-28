@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>skemo — WebAssembly demo</title>
+<style>
+  body { margin: 0; font: 14px/1.4 system-ui, sans-serif; display: grid; grid-template-columns: minmax(280px, 38%) 1fr; height: 100vh; }
+  #src { font: 13px/1.5 ui-monospace, monospace; padding: 12px; border: 0; border-right: 1px solid #ddd; resize: none; outline: none; }
+  #right { overflow: auto; background: #F6F7F9; }
+  #bar { padding: 8px 12px; border-bottom: 1px solid #ddd; display: flex; gap: 12px; align-items: center; background: #fff; position: sticky; top: 0; }
+  #diag { white-space: pre; font: 12px/1.4 ui-monospace, monospace; color: #b00; padding: 8px 12px; }
+  #out svg { display: block; }
+</style></head>
+<body>
+<textarea id="src" spellcheck="false">diagram(dir="down")
+  card#internet.cloud Internet
+    to(fw).wan WAN
+  card#fw.t0 Pare-feu
+    li 203.0.113.10/29
+    to(web)
+    to(core) transit
+  zone#dmz.dmz DMZ
+    card#web.t1 Serveur Web
+      li 172.16.0.10
+  zone#lan.lan LAN interne
+    card#core.t1 Switch cœur
+      li 10.10.0.0/16 VLAN 10
+</textarea>
+<div id="right">
+  <div id="bar">
+    <label>Theme <select id="theme"><option>light</option><option>dark</option><option>print</option></select></label>
+    <span id="info"></span>
+  </div>
+  <div id="diag"></div>
+  <div id="out"></div>
+</div>
+<script type="module">
+  // Construire avant : tools/wasm-demo.sh (wasm-bindgen --target web → demo/pkg/)
+  import init, { render, version } from './pkg/skemo_engine_wasm.js';
+  await init();
+  const src = document.getElementById('src'), out = document.getElementById('out');
+  const diag = document.getElementById('diag'), info = document.getElementById('info'), theme = document.getElementById('theme');
+  let timer;
+  function update() {
+    const t0 = performance.now();
+    const r = JSON.parse(render(src.value, '', JSON.stringify({ theme: theme.value })));
+    const ms = Math.round(performance.now() - t0);
+    diag.textContent = (r.diagnostics || []).map(d => d.text).join('\n') + (r.error ? r.error : '');
+    if (r.ok) out.innerHTML = r.svg;
+    info.textContent = `moteur ${version()} · ${ms} ms`;
+  }
+  src.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(update, 120); });
+  theme.addEventListener('change', update);
+  update();
+</script>
+</body></html>

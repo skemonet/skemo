@@ -1,0 +1,32 @@
+//- Network diagram — automatic layout
+diagram(dir="down")
+
+  card#internet.cloud Internet
+    to(fw).wan WAN
+
+  card#fw.t0 Perimeter firewall
+    | 203.0.113.10/29
+    | 10.0.0.1/24
+    to(web)
+    to(mail)
+    to(core) transit
+
+  zone#dmz.dmz DMZ
+    card#web.t1 Web server
+      | 172.16.0.10
+    card#mail.t1 Mail server
+      | 172.16.0.20
+
+  zone#lan.lan Internal LAN
+    card#core.t1 Core switch
+      | 10.10.0.0/16 VLAN 10
+      | 10.20.0.0/16 VLAN 20
+      to(srv)
+      to(users)
+      to(voip)
+    card#srv.t2 Internal servers
+      | 10.30.0.0/24
+    card#users.t3 Workstations
+      | ~400 workstations
+    card#voip.t3 IP telephony
+      | ~150 phones

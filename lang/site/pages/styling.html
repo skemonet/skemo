@@ -1,0 +1,72 @@
+<h1>Styling with CSS</h1>
+<p class="lead">Classes are types, types are styled in CSS. A type only needs an accent colour and a label; every tint is derived
+  from them.</p>
+
+<skemo name="types"></skemo>
+<p>Render with the stylesheet: <code>skemo types.skemo --css types.css</code>. <code>--css</code> can be repeated; files apply
+  after the default theme, with the normal cascade.</p>
+
+<h2>A type in one line</h2>
+<pre><code>.server { --c: #5B6CFF; --label: "SERVER"; }</code></pre>
+<p><code>--c</code> is the accent: the band, the border and the tinted background of the card all come from it through
+  <code>color-mix()</code> with the theme's surface colours. <code>--label</code> is the text of the badge or chip (omit it for no
+  badge; <code>tag="…"</code> on a card overrides it). Because nothing else is hard-coded, the same type works in the light, dark and
+  print themes.</p>
+<div class="warn"><p>Do not set <code>background</code> or text colours on types. Use the variables (<code>var(--surface)</code>,
+  <code>var(--ink)</code>…) if you must, or the dark and print themes will break.</p></div>
+
+<h2>Variables</h2>
+<table>
+  <tr><th>Variable</th><th>Where</th><th>Role</th></tr>
+  <tr><td><code>--c</code></td><td>card or zone type</td><td>accent colour; a zone passes it on to its untyped cards</td></tr>
+  <tr><td><code>--label</code></td><td>card type</td><td>badge or chip text</td></tr>
+  <tr><td><code>--look</code></td><td>card type</td><td><code>band</code>, <code>header</code>, <code>classic</code> or <code>eyebrow</code> (below)</td></tr>
+  <tr><td><code>--on-c</code></td><td>type</td><td>colour of text set on the accent (default white)</td></tr>
+  <tr><td><code>--z-bg</code>, <code>--z-border</code>, <code>--z-ink</code></td><td>zone type</td><td>explicit zone tints, instead of the derived ones</td></tr>
+  <tr><td><code>--icon</code></td><td>type</td><td>default icon of the type (<a href="icons-and-links.html">preview</a>)</td></tr>
+  <tr><td><code>--zone-pad</code>, <code>--zone-head</code></td><td><code>:root</code></td><td>zone margins, used by the layout</td></tr>
+  <tr><td><code>--bg</code>, <code>--surface</code>, <code>--ink</code>, <code>--ink-2</code>, <code>--muted</code>, <code>--line</code>,
+    <code>--card-border</code></td><td><code>:root</code></td><td>base colours, redefined by each theme</td></tr>
+  <tr><td><code>--font</code>, <code>--mono</code>, <code>--radius</code></td><td><code>:root</code></td><td>typography and corner radius</td></tr>
+  <tr><td><code>--font-scale</code></td><td><code>.stage</code></td><td>multiplies every text size of the theme, <code>1.4</code>
+    for a projected slide (<em>preview</em>); also <code>skemo render --font-scale 1.4</code></td></tr>
+</table>
+<p><code>skemo theme --print</code> prints the whole default theme: a good starting point for a theme of your own, which
+  <code>--base-theme</code> then uses instead of the default one.</p>
+
+<h2>Arrows</h2>
+<p>An arrow's colour is its <code>color</code>; heads follow it. Lines are SVG paths:</p>
+<pre><code>.edge.ok { color: #2B8A3E; }
+.edge.ko .line { stroke-dasharray: 5 4; }
+.edge.from-uplink { color: #7B5CC4; }    /* every arrow leaving an .uplink card */</code></pre>
+
+<h2>Card looks</h2>
+<p>Four looks, for the whole diagram with <code>diagram(look="…")</code> or per type with <code>--look</code>:</p>
+<div class="example stacked">
+  <div class="figures steps">
+    <div><skemo name="look-band" figure></skemo><p class="muted"><code>band</code> (default): the name in a coloured band, the chip on the right</p></div>
+    <div><skemo name="look-header" figure></skemo><p class="muted"><code>header</code>: the type in the band, the name centred below</p></div>
+    <div><skemo name="look-classic" figure></skemo><p class="muted"><code>classic</code>: an accent line on top, a badge before the name</p></div>
+    <div><skemo name="look-eyebrow" figure></skemo><p class="muted"><code>eyebrow</code> (preview): a white card, the type as a small coloured label above the name</p></div>
+  </div>
+  <p>In every look, a card without a type is drawn light: white, with a hairline border. Colour is left to the types that mean something.</p>
+</div>
+<skemo-source name="look-header"></skemo-source>
+
+<h2>Targeting one element</h2>
+<p>In the SVG and HTML outputs, ids are written as <code>data-id</code>, so several diagrams can share a page. Target one card with
+  an attribute selector:</p>
+<pre><code>[data-id="fw"] { --c: #C94A44; }</code></pre>
+<p>Other selectors you can rely on: <code>card</code>, <code>zone</code>, <code>card &gt; .title</code>, <code>card li</code> (one per line <code>|</code>), <code>card table</code>, <code>card mark</code>,
+  <code>.edge</code>, <code>.edge .line</code>, <code>.edge .head</code>, <code>.edge .edge-label</code>. An arrow label sits inside its arrow
+  and takes its colour: <code>.edge.ok { color: #2B8A3E; }</code> tints both the line and the label pill <em>(preview)</em>.</p>
+
+<h2>Fonts <em>(preview)</em></h2>
+<p>skemo embeds Inter and JetBrains Mono, and reads no font from the system, so a diagram measures and renders the same everywhere.
+  To use another font, name its family in the CSS and give its files to the renderer, one per weight or style:</p>
+<pre><code>.stage { --font: 'Source Serif 4', serif; }</code></pre>
+<pre><code>skemo render plan.skemo --css plan.css --font SourceSerif4-Regular.ttf --font SourceSerif4-Bold.ttf</code></pre>
+<p>The family, weight and style are read from each file (TrueType or OpenType). The font serves the measure and every output;
+  the HTML embeds it, and so does the SVG with <code>--embed-fonts</code>. A family that no font draws falls back on Inter, with a
+  warning that names it. Use only fonts whose licence allows embedding.</p>
+

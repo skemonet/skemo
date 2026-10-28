@@ -1,0 +1,430 @@
+{
+ "model": {
+  "options": {
+   "layout": "frise",
+   "from": "-800",
+   "to": "600",
+   "scale": "century",
+   "width": "1300"
+  },
+  "nodes": [
+   {
+    "id": "royaute",
+    "kind": "card",
+    "parent": null,
+    "classes": [
+     "roy"
+    ],
+    "title": "Royauté",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": 1,
+    "fx": null,
+    "date": null,
+    "start": "-753",
+    "end": "-509"
+   },
+   {
+    "id": "republique",
+    "kind": "card",
+    "parent": null,
+    "classes": [
+     "rep"
+    ],
+    "title": "République",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": 1,
+    "fx": null,
+    "date": null,
+    "start": "-509",
+    "end": "-27"
+   },
+   {
+    "id": "empire",
+    "kind": "card",
+    "parent": null,
+    "classes": [
+     "emp"
+    ],
+    "title": "Empire",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": 1,
+    "fx": null,
+    "date": null,
+    "start": "-27",
+    "end": "476"
+   },
+   {
+    "id": "puniques",
+    "kind": "card",
+    "parent": null,
+    "classes": [
+     "guerre"
+    ],
+    "title": "Guerres puniques",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": 1,
+    "fx": null,
+    "date": null,
+    "start": "-264",
+    "end": "-146"
+   },
+   {
+    "id": "crise",
+    "kind": "card",
+    "parent": null,
+    "classes": [
+     "guerre"
+    ],
+    "title": "Crise du IIIᵉ s.",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": 1,
+    "fx": null,
+    "date": null,
+    "start": "235",
+    "end": "284"
+   },
+   {
+    "id": "fondation",
+    "kind": "card",
+    "parent": null,
+    "classes": [
+     "evt"
+    ],
+    "title": "Fondation de Rome",
+    "tag": null,
+    "items": [
+     "selon la tradition"
+    ],
+    "at": null,
+    "size": null,
+    "step": 2,
+    "fx": null,
+    "date": "-753",
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "gaulois",
+    "kind": "card",
+    "parent": null,
+    "classes": [
+     "evt"
+    ],
+    "title": "Sac de Rome par les Gaulois",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": 2,
+    "fx": null,
+    "date": "-390",
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "cesar",
+    "kind": "card",
+    "parent": null,
+    "classes": [
+     "evt"
+    ],
+    "title": "Mort de César",
+    "tag": null,
+    "items": [
+     "Ides de mars"
+    ],
+    "at": null,
+    "size": null,
+    "step": 3,
+    "fx": null,
+    "date": "-44-03-15",
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "auguste",
+    "kind": "card",
+    "parent": null,
+    "classes": [
+     "evt"
+    ],
+    "title": "Auguste, premier empereur",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": 3,
+    "fx": null,
+    "date": "-27",
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "vesuve",
+    "kind": "card",
+    "parent": null,
+    "classes": [
+     "evt"
+    ],
+    "title": "Éruption du Vésuve",
+    "tag": null,
+    "items": [
+     "Pompéi ensevelie"
+    ],
+    "at": null,
+    "size": null,
+    "step": 4,
+    "fx": null,
+    "date": "79-10-24",
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "caracalla",
+    "kind": "card",
+    "parent": null,
+    "classes": [
+     "evt"
+    ],
+    "title": "Édit de Caracalla",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": 4,
+    "fx": null,
+    "date": "212",
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "partage",
+    "kind": "card",
+    "parent": null,
+    "classes": [
+     "evt"
+    ],
+    "title": "Partage de l'Empire",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": 5,
+    "fx": null,
+    "date": "395",
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "chute",
+    "kind": "card",
+    "parent": null,
+    "classes": [
+     "fin"
+    ],
+    "title": "Chute de l'Empire d'Occident",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": 5,
+    "fx": null,
+    "date": "476-09-04",
+    "start": null,
+    "end": null
+   }
+  ],
+  "edges": [
+   {
+    "id": "partage->chute",
+    "from": "partage",
+    "to": "chute",
+    "classes": [
+     "dashed"
+    ],
+    "label": "",
+    "via": null,
+    "side": null,
+    "step": null,
+    "fx": null
+   }
+  ]
+ },
+ "layout": {
+  "engine": "frise",
+  "router": "avoid",
+  "sizes": {
+   "royaute": {
+    "w": 226.57142857142858,
+    "h": 28
+   },
+   "republique": {
+    "w": 447.5714285714286,
+    "h": 28
+   },
+   "empire": {
+    "w": 466.1428571428572,
+    "h": 28
+   },
+   "puniques": {
+    "w": 109.57142857142861,
+    "h": 28
+   },
+   "crise": {
+    "w": 45.5,
+    "h": 28
+   },
+   "fondation": {
+    "w": 148,
+    "h": 63
+   },
+   "gaulois": {
+    "w": 205,
+    "h": 42
+   },
+   "cesar": {
+    "w": 116,
+    "h": 63
+   },
+   "auguste": {
+    "w": 201,
+    "h": 42
+   },
+   "vesuve": {
+    "w": 150,
+    "h": 63
+   },
+   "caracalla": {
+    "w": 133,
+    "h": 42
+   },
+   "partage": {
+    "w": 150,
+    "h": 42
+   },
+   "chute": {
+    "w": 210,
+    "h": 60
+   }
+  },
+  "nodes": {
+   "empire": [
+    717.8,
+    22,
+    466.1,
+    28
+   ],
+   "republique": [
+    270.2,
+    22,
+    447.6,
+    28
+   ],
+   "royaute": [
+    43.6,
+    22,
+    226.6,
+    28
+   ],
+   "puniques": [
+    497.7,
+    54,
+    109.6,
+    28
+   ],
+   "crise": [
+    960.1,
+    54,
+    45.5,
+    28
+   ],
+   "fondation": [
+    -30.4,
+    -93,
+    148,
+    63
+   ],
+   "gaulois": [
+    278.2,
+    112,
+    205,
+    42
+   ],
+   "cesar": [
+    644.2,
+    -93,
+    116,
+    63
+   ],
+   "auguste": [
+    617.3,
+    112,
+    201,
+    42
+   ],
+   "vesuve": [
+    741,
+    -170,
+    150,
+    63
+   ],
+   "caracalla": [
+    872.3,
+    112,
+    133,
+    42
+   ],
+   "partage": [
+    1033.7,
+    -72,
+    150,
+    42
+   ],
+   "chute": [
+    1079.6,
+    112,
+    210,
+    60
+   ]
+  },
+  "edges": {
+   "partage->chute": [
+    [
+     1183.7,
+     -51
+    ],
+    [
+     1191.9,
+     -51
+    ],
+    [
+     1191.9,
+     81
+    ],
+    [
+     1184.6,
+     81
+    ],
+    [
+     1184.6,
+     112
+    ]
+   ]
+  }
+ }
+}

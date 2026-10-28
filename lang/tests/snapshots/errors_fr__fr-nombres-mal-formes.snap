@@ -1,0 +1,22 @@
+---
+source: tests/errors_fr.rs
+expression: out
+---
+erreur[bad-number] : « at » mal formé : « x,y » attendu
+  ┌─ nombres-mal-formes.skemo:1:8
+  │
+1 │ card#a(at="12;40") A
+  │        ^^^^^^^^^^
+  = aide : exemple : at="120,40"
+erreur[bad-number] : « size » mal formé : « largeur,hauteur » attendu
+  ┌─ nombres-mal-formes.skemo:2:17
+  │
+2 │ zone#z(at="0,0" size="grand") Z
+  │                 ^^^^^^^^^^^^
+  = aide : exemple : size="300,200"
+erreur[bad-number] : « via » mal formé : liste de points « x,y x,y » attendue
+  ┌─ nombres-mal-formes.skemo:4:8
+  │
+4 │   to(a via="1,2 x")
+  │        ^^^^^^^^^^^
+  = aide : exemple : via="300,420 300,500"

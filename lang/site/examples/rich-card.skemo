@@ -1,0 +1,9 @@
+diagram(dir="right" lang="en")
+  card#api.service(label="ECS service (Fargate)" tag="module.app") api
+    | `python3.12` · autoscaling **2–12**
+    | logs kept *30 days*
+    to(db) 5432
+  card#db.store.warn(label="RDS PostgreSQL 16.4" tag="module.data") orders
+    | db.r6g.large · Multi-AZ
+    |.warn single-AZ replica
+    | backups: ==none==

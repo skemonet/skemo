@@ -1,0 +1,6 @@
+/* Custom theme of the roadmap — accents only: light, dark and print follow by themselves */
+.milestone { --c: var(--ink); --on-c: var(--bg); --label: "MILESTONE"; }
+.decision  { --c: #E8590C; --label: "DECISION"; }
+.spike     { --c: #7A5AF8; --label: "SPIKE"; }
+.dev       { --c: #3E6FC4; }
+.lane      { --c: #8A93A3; }

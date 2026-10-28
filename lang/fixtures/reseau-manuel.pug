@@ -1,0 +1,32 @@
+//- Même schéma, positions figées puis retouchées « à la main »
+diagram(dir="down")
+
+  card#internet.cloud(at="380,20") Internet
+    to(fw).wan WAN
+
+  card#fw.t0(at="355,150") Pare-feu périmétrique
+    li 203.0.113.10/29
+    li 10.0.0.1/24
+    to(web)
+    to(mail)
+    to(core) transit
+
+  zone#dmz.dmz DMZ
+    card#web.t1(at="40,330") Serveur Web
+      li 172.16.0.10
+    card#mail.t1(at="40,450") Serveur Mail
+      li 172.16.0.20
+
+  zone#lan.lan LAN interne
+    card#core.t1(at="560,360") Switch cœur
+      li 10.10.0.0/16 VLAN 10
+      li 10.20.0.0/16 VLAN 20
+      to(srv)
+      to(users)
+      to(voip)
+    card#srv.t2(at="380,560") Serveurs internes
+      li 10.30.0.0/24
+    card#users.t3(at="620,560") Postes
+      li ~400 postes
+    card#voip.t3(at="840,560") Téléphonie IP
+      li ~150 postes

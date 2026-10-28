@@ -1,0 +1,43 @@
+diagram(dir="down" lang="fr" theme="dark" zones="stretch")
+  stack
+    zone#apps.bare.wide
+      card#a1.pod.col-a site-a-cjxbl
+      card#a2.pod.col-a site-a-jkn87
+      card#b1.pod.col-b site-b-ac789
+      card#b2.pod.col-b site-b-p78f2
+    zone#svcs.bare.wide
+      card#sa.service.col-a Site A
+        | NodePort @0-2
+        | ClusterIP @3
+        to(a1 a2 join="trunk")
+      card#pris.note.col-mid Port 443 déjà pris @2-2
+        to(sb).link
+      card#ia.ingress.col-mid Ingress A @5
+        to(c1).link
+      card#ib.ingress.col-mid Ingress B @5
+        to(c2).link
+      card#sb.service.col-b Site B
+        | NodePort @0-2
+        | ClusterIP @3
+        to(b1 b2 join="trunk")
+    zone#ctrl.bare.wide
+      card#c1.pod.col-mid ingress-controller @4
+        to(sa constraint="false") @6
+      card#c2.pod.col-mid ingress-controller @4
+        to(sb constraint="false") @6
+    zone#ic-row.bare.wide
+      card#ic.service.col-mid Ingress controller @3
+        | NodePort
+        to(c1 c2 join="trunk")
+    zone#noeuds.bare.wide
+      card#cp.noeud.col-a(icon="server") Control plane
+      card#w1.noeud.col-mid(icon="server" tag=":443 @1") Worker
+        to(sa join="a" constraint="false") @1-2
+        to(sb join="b" constraint="false").dashed @2-2
+        to(ic join="in" constraint="false") @3
+      card#w2.noeud.col-b(icon="server" tag=":443 @1") Worker
+        to(sa join="a" constraint="false") @1-2
+        to(sb join="b" constraint="false").dashed @2-2
+        to(ic join="in" constraint="false") @3
+    card#bus.wide.reseau Réseau du cluster
+      to(cp w1 w2)

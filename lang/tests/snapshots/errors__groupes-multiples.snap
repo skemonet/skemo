@@ -1,0 +1,10 @@
+---
+source: tests/errors.rs
+expression: out
+---
+error[multiple-attr-groups]: several attribute groups on one tag
+  ┌─ groupes-multiples.skemo:2:15
+  │
+2 │   to(b).dashed(side="left-top")
+  │               ^^^^^^^^^^^^^^^^^
+  = help: put the attributes in a single pair of parentheses: to(core side="right-top").dashed

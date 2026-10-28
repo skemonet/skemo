@@ -1,0 +1,229 @@
+<!doctype html><meta charset="utf-8"><title>process</title><style>body{margin:0;background:rgb(246, 247, 249)}/* ============================================================
+   Thème par défaut — à surcharger dans un CSS perso
+   Principe : un type ne définit que son accent (--c) et son libellé (--label).
+   Fonds, bordures et encres sont DÉRIVÉS de --c avec color-mix() → clair et sombre gratuits.
+   ============================================================ */
+.stage {
+  --font: Inter, system-ui, sans-serif;
+  --mono: 'JetBrains Mono', 'DejaVu Sans Mono', monospace;
+  --bg: #F6F7F9;          /* fond de page */
+  --surface: #FFFFFF;     /* fond des cartes */
+  --ink: #1F2430;         /* texte principal */
+  --ink-2: #3B4250;       /* texte secondaire fort (IP…) */
+  --muted: #4A5262;       /* texte secondaire (contraste ≥ 4.5:1 sur --bg) */
+  --line: #6B7487;        /* flèches */
+  --card-border: #D3D8DF;
+  --on-c: #FFFFFF;        /* texte posé sur la couleur d'accent (badges, bandeaux, bandes) */
+  --fill-mix: 85%;        /* part de l'accent dans les aplats sous texte blanc (≥ 3:1) ; 68 % en print (≥ 4,5:1) */
+  --shadow: 0 1px 2px rgba(20,30,50,.06), 0 4px 14px rgba(20,30,50,.06);
+  --grid: rgba(110,120,140,.13);
+  --grid-major: rgba(110,120,140,.32);
+  --radius: 12px;
+  --zone-pad: 22px;      /* marge intérieure des zones (lue par le core) */
+  --zone-head: 30px;     /* hauteur réservée au titre de zone (lue par le core) */
+  position: relative; font: 14px/1.4 var(--font); color: var(--ink); background: var(--bg);
+}
+/* Thème sombre : seules les variables de base changent ; tout le reste en découle */
+.stage.theme-dark {
+  --bg: #0F1218; --surface: #181C24; --ink: #E6E9EF; --ink-2: #C9CFD9; --muted: #98A1B0; --line: #7D8799;
+  --card-border: #2A303B; --shadow: 0 1px 2px rgba(0,0,0,.35), 0 6px 18px rgba(0,0,0,.35);
+  --grid: rgba(160,170,190,.10); --grid-major: rgba(160,170,190,.26);
+}
+@media (prefers-color-scheme: dark) {
+  .stage.theme-auto {
+    --bg: #0F1218; --surface: #181C24; --ink: #E6E9EF; --ink-2: #C9CFD9; --muted: #98A1B0; --line: #7D8799;
+    --card-border: #2A303B; --shadow: 0 1px 2px rgba(0,0,0,.35), 0 6px 18px rgba(0,0,0,.35);
+    --grid: rgba(160,170,190,.10); --grid-major: rgba(160,170,190,.26);
+  }
+  body:has(> .stage.theme-auto) { background: #0F1218 !important; }
+}
+
+/* Thème « print » : impression, y compris en noir et blanc. Fond blanc, encre noire, pas d'ombre,
+   aplats d'accent assombris (le texte blanc reste lisible une fois converti en gris), traits plus foncés et épais. */
+.stage.theme-print {
+  --bg: #FFFFFF; --surface: #FFFFFF; --ink: #000000; --ink-2: #111111; --muted: #2E2E2E; --line: #222222;
+  --card-border: #4D4D4D; --shadow: none; --grid: rgba(0,0,0,.16); --grid-major: rgba(0,0,0,.45);
+  --fill-mix: 68%;
+}
+.stage.theme-print card { border-width: 1.5px; border-color: #4D4D4D; border-top-color: var(--accent-fill); }
+.stage.theme-print card.look-header { border-color: var(--accent-fill); }
+.stage.theme-print card.note, .stage.theme-print card.chip, .stage.theme-print card.info { border-color: color-mix(in srgb, var(--c) 55%, #000); }
+.stage.theme-print zone:not(.bare) { border: 1.5px solid #6B6B6B; background: color-mix(in srgb, var(--c, #888) 5%, #fff); }
+.stage.theme-print .edge .line { stroke: color-mix(in srgb, currentColor 45%, #000); stroke-width: 1.7; }
+.stage.theme-print .edge .head, .stage.theme-print .edge .tail, .stage.theme-print .edge .origin { fill: color-mix(in srgb, currentColor 45%, #000); }
+@media print {
+  .stage, .stage.theme-dark, .stage.theme-auto {
+    --bg: #FFFFFF; --surface: #FFFFFF; --ink: #000000; --ink-2: #111111; --muted: #2E2E2E; --line: #222222;
+    --card-border: #4D4D4D; --shadow: none; --grid: rgba(0,0,0,.16); --grid-major: rgba(0,0,0,.45);
+    --fill-mix: 68%;
+  }
+  body { background: #fff !important; }
+  .stage card { border-width: 1.5px; border-color: #4D4D4D; border-top-color: var(--accent-fill); }
+  .stage card.look-header { border-color: var(--accent-fill); }
+  .stage .edge .line { stroke: color-mix(in srgb, currentColor 45%, #000); stroke-width: 1.7; }
+}
+
+/* Aplat d'accent calculé sur CHAQUE élément (une variable définie sur .stage serait figée avec le --c de .stage) */
+.stage * { --accent-fill: color-mix(in srgb, var(--c, #6B7280) var(--fill-mix), #000); }
+
+/* ---------- Cartes : le texte direct = titre, les li = contenu ---------- */
+card { position: absolute; display: block; box-sizing: border-box; min-width: 170px; max-width: 280px;
+       padding: 11px 15px 13px; background: var(--surface); border-radius: var(--radius);
+       border: 1px solid var(--card-border); border-top: 3px solid var(--c, #9AA3B2);
+       box-shadow: var(--shadow); z-index: 2; }
+card .title { font-weight: 650; }
+card ul { margin: 8px 0 0; padding: 0; }
+card li { list-style: none; color: var(--muted); font-size: 12.5px; margin-top: 3px; }
+card .mono { font-family: var(--mono); font-size: 12px; color: var(--ink-2); margin-right: 2px; }
+
+/* Badge : texte donné par le type (--label) ou par tag="..." */
+card .title::before { content: var(--label); display: inline-block; margin-right: 8px;
+       padding: 1px 7px; border-radius: 999px; font-size: 10.5px; font-weight: 700; letter-spacing: .03em;
+       color: var(--on-c); background: var(--accent-fill, var(--c, #9AA3B2)); vertical-align: 1px; }
+card.no-tag .title::before { content: none; }   /* classe posée par le core si aucun badge */
+
+/* ---------- Style « en-tête » (--look: header) : bandeau type + pastille tag, nom centré ---------- */
+.stage.look-header card { --look: header; }       /* diagram(look="header") : pour tout le schéma */
+card.look-header { padding: 0; min-width: 190px; text-align: center; overflow: hidden; border-radius: 10px;
+       border: 1.5px solid var(--c, #9AA3B2); background: color-mix(in srgb, var(--c, #9AA3B2) 9%, var(--surface)); }
+card.look-header > .head { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+       padding: 6px 10px 6px 12px; background: var(--accent-fill, var(--c, #9AA3B2)); color: var(--on-c); font-size: 12.5px; font-weight: 700; text-align: left; }
+card.look-header > .head .tag { padding: 0 7px; border-radius: 999px; font-size: 10.5px; font-weight: 700; letter-spacing: .03em;
+       background: #fff; color: color-mix(in srgb, var(--c, #9AA3B2) 80%, #000); }
+card.look-header > .title { padding: 12px 16px 2px; font-size: 17px; font-weight: 750; letter-spacing: -.01em; }
+card.look-header > .title:last-child { padding-bottom: 13px; }
+card.look-header > .title::before { content: none; }
+card.look-header > ul { margin: 0; padding: 0 16px 12px; }
+card.look-header li { color: var(--ink-2); font-size: 13px; }
+
+/* ---------- Note, chip, encadré : cartes secondaires ---------- */
+.stage card.note, .stage card.chip, .stage card.info { --look: plain; }
+card.note { --c: #D4A017; min-width: 0; text-align: center; box-shadow: none;
+       border: 1.5px dashed color-mix(in srgb, var(--c) 75%, var(--surface));
+       background: color-mix(in srgb, var(--c) 12%, var(--surface)); }
+card.note .title { color: color-mix(in srgb, var(--c) 55%, var(--ink)); }
+card.note li { color: var(--ink-2); font-size: 13px; }
+card.chip { --c: #7B5CC4; min-width: 0; padding: 4px 18px; border-radius: 999px; text-align: center; box-shadow: none;
+       border: 1.5px solid var(--c); background: color-mix(in srgb, var(--c) 10%, var(--surface)); }
+card.info { --c: #D4A017; min-width: 0; padding: 7px 16px; border-radius: 8px; text-align: center; box-shadow: none;
+       border: 1.5px solid color-mix(in srgb, var(--c) 70%, var(--surface)); background: color-mix(in srgb, var(--c) 12%, var(--surface)); }
+card.chip .title, card.info .title { font-weight: 500; color: color-mix(in srgb, var(--c) 60%, var(--ink)); }
+card.chip .title::before, card.info .title::before, card.note .title::before { content: none; }
+
+/* ---------- Zones : teintes dérivées de --c (ou --z-bg / --z-border / --z-ink si fournis) ---------- */
+zone { position: absolute; display: block; box-sizing: border-box; border-radius: 16px; z-index: 0;
+       background: var(--z-bg, color-mix(in srgb, var(--c, #8A93A3) 8%, var(--bg)));
+       border: 1px solid var(--z-border, color-mix(in srgb, var(--c, #8A93A3) 40%, var(--bg))); }
+zone > .title { position: absolute; left: 16px; top: 9px; font-size: 12px; font-weight: 700;
+       letter-spacing: .06em; text-transform: uppercase; color: var(--z-ink, color-mix(in srgb, var(--c, var(--muted)) 70%, var(--ink))); }
+/* Zone « nue » : pas de cadre, légende en bas (ex. « Uplinks / VLAN » sous un groupe de chips) */
+zone.bare { background: transparent; border: 0; }
+zone.bare > .title { top: auto; bottom: 2px; left: 0; right: 0; text-align: center; text-transform: none; letter-spacing: 0;
+       font-style: italic; font-weight: 500; font-size: 12.5px; }
+
+/* ---------- Flèches ---------- */
+.edges { position: absolute; inset: 0; overflow: visible; z-index: 1; pointer-events: none; }
+.edge { color: var(--line); }
+.edge .line { fill: none; stroke: currentColor; stroke-width: 1.4; }
+.edge .head { fill: currentColor; }
+.edge-label { position: absolute; transform: translate(-50%, -50%); z-index: 3; white-space: nowrap;
+       font-size: 11.5px; color: var(--muted); background: var(--bg); padding: 0 5px; border-radius: 4px; }
+
+/* ---------- Types (une ligne chacun) ---------- */
+.t0    { --c: #C94A44; --label: "T0"; }
+.t1    { --c: #D9892B; --label: "T1"; }
+.t2    { --c: #3E6FC4; --label: "T2"; }
+.t3    { --c: #6B7280; --label: "T3"; }
+.cloud { --c: #A6AEBB; }
+.dmz   { --c: #D9892B; }
+.lan   { --c: #3E6FC4; }
+.edge .tail, .edge .origin { display: none; fill: currentColor; }
+
+/* Styles de flèches : des classes combinables sur to(...) ; une flèche porte aussi from-<type> et to-<type> */
+.edge.wan    { color: #C94A44; }
+.edge.wan .line { stroke-width: 2; }
+.edge.dashed .line, .edge.link .line { stroke-dasharray: 5 4; }
+.edge.dotted .line { stroke-dasharray: 1.5 4; stroke-linecap: round; }
+.edge.thick .line  { stroke-width: 3; }
+.edge.flow .line   { stroke-dasharray: 6 5; animation: flow 1s linear infinite; }   /* flux animé */
+.edge.both .tail   { display: inline; }        /* double pointe */
+.edge.nohead .head, .edge.link .head { display: none; }   /* simple trait ; .link = rattachement pointillé sans pointe */
+.edge.dot .origin  { display: inline; }        /* rond au départ */
+.edge.secure { color: #2E9E6B; }
+@keyframes flow { to { stroke-dashoffset: -11; } }
+
+/* ---------- Animations (mode présentation) ---------- */
+[data-step] { transition: opacity .45s ease, transform .45s ease; }
+.pending { opacity: 0 !important; }
+.pending[data-fx="up"]   { transform: translateY(12px); }
+.pending[data-fx="zoom"] { transform: scale(.92); }
+.edge.pending .line { stroke-dashoffset: var(--len); stroke-dasharray: var(--len); }
+.edge[data-step] .line { transition: stroke-dashoffset .6s ease; }
+
+/* ---------- Mode timeline ---------- */
+.tl-axis  { position: absolute; z-index: 0; border-bottom: 1px solid var(--grid-major); background: var(--bg); }
+.tl-tick  { position: absolute; z-index: 1; transform: translateX(4px); font-size: 11px; color: var(--muted); white-space: nowrap; }
+.tl-tick.major { font-weight: 700; color: var(--ink); }
+.tl-grid  { position: absolute; z-index: 1; width: 0; border-left: 1px solid var(--grid); pointer-events: none; }
+.tl-grid.major { border-left-color: var(--grid-major); }
+.tl-mark  { position: absolute; z-index: 3; width: 9px; height: 9px; margin-left: -4.5px; transform: rotate(45deg); background: var(--ink); border-radius: 1.5px; }
+.tl-today { position: absolute; z-index: 0; width: 0; border-left: 2px dashed #E03131; pointer-events: none; }
+.tl-today-label { position: absolute; z-index: 3; transform: translate(-50%, -100%); font-size: 10.5px; font-weight: 700; color: #fff;
+                  background: #E03131; padding: 1px 6px; border-radius: 999px; white-space: nowrap; }
+
+/* Jalon : bord gauche = la date, losange sur ce bord */
+card.milestone { min-width: 0; padding-left: 16px; }
+card.milestone::after { content: ""; position: absolute; left: -6px; top: 15px; width: 10px; height: 10px; transform: rotate(45deg);
+                        background: var(--c, #6B7280); border: 2px solid var(--bg); border-radius: 2px; }
+/* Période : carte qui commence à start ; barre du haut = durée exacte (--bar-w, posée par le moteur) */
+card.phase { min-width: 0; max-width: 300px; padding: 12px 13px 10px; border-top: 1px solid var(--card-border); overflow: hidden;
+             background: color-mix(in srgb, var(--c, #9AA3B2) 7%, var(--surface)); }
+card.phase::after { content: ""; position: absolute; left: 0; top: 0; height: 5px; width: var(--bar-w, 100%);
+                    background: var(--accent-fill, var(--c, #9AA3B2)); border-radius: 0 3px 3px 0; }
+
+/* ---------- Mode frise chronologique ---------- */
+.fr-axis  { position: absolute; z-index: 1; height: 4px; background: var(--ink); border-radius: 2px; }
+.fr-tick  { position: absolute; z-index: 1; width: 1px; height: 8px; background: var(--ink); }
+.fr-tick-label { position: absolute; z-index: 3; transform: translateX(-50%); font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+.fr-century { position: absolute; z-index: 3; transform: translateX(-50%); font-size: 10px; font-weight: 700; letter-spacing: .05em;
+              color: var(--muted); opacity: .6; white-space: nowrap; }
+.fr-stem  { position: absolute; z-index: 0; width: 0; border-left: 1.5px solid var(--line); margin-left: -0.75px; }
+.fr-dot   { position: absolute; z-index: 3; width: 10px; height: 10px; margin: -3px 0 0 -5px; border-radius: 50%;
+            background: var(--bg); border: 2.5px solid var(--ink); box-sizing: border-box; }
+/* Événement : carte centrée sur sa date, reliée à l'axe par une tige */
+card.event { min-width: 0; max-width: 210px; padding: 9px 12px 10px; text-align: center; }
+card.event .title { font-size: 13px; }
+card.event ul { margin-top: 4px; }
+/* Époque : bande colorée sur l'axe ; le titre est tronqué si la bande est courte */
+card.era { min-width: 0; padding: 5px 9px; border: 0; border-radius: 6px; box-shadow: none; overflow: hidden;
+           background: var(--accent-fill, var(--c, #6B7280)); color: var(--on-c); display: flex; align-items: center; }
+card.era .title { font-size: 12px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+card.era .title::before { content: none; }
+card.era ul { display: none; }
+card.era.outside { overflow: visible; }
+card.era.outside .title { position: absolute; left: calc(100% + 6px); overflow: visible; color: var(--c, #6B7280); }
+/* Thème perso : surcharge le thème par défaut */
+:root { --bg: #FBFAF7; --font: 'Inter', sans-serif; --radius: 18px; }
+.etape { --c: #5B6CFF; --label: "ÉTAPE"; }
+.choix { --c: #E8590C; --label: "?"; }
+.fin   { --c: #2B8A3E; }
+.rh     { --z-bg: #F3F0FF; --z-border: #D0C6FF; --z-ink: #5F3DC4; }
+.equipe { --z-bg: #EBFBEE; --z-border: #B2F2BB; --z-ink: #2B8A3E; }
+.edge.ok { color: #2B8A3E; }
+.edge.ko { color: #E8590C; }
+</style><div id="stage" class="stage theme-light" style="width: 1483px; height: 231px;"><zone id="rh" class="rh" style="left: 59px; top: 28px; width: 416px; height: 151.533px;"><div class="title">Ressources humaines</div></zone><card id="offre" class="etape" style="left: 81px; top: 71.2px; width: 182px; height: 74px;"><div class="title">Publier l'offre</div><ul><li>J+0</li></ul></card><card id="tri" class="etape" style="left: 283px; top: 83.5333px; width: 170px; height: 74px;"><div class="title">Trier les CV</div><ul><li>~120 candidatures</li></ul></card><zone id="equipe" class="equipe" style="left: 679px; top: 41px; width: 404px; height: 139.2px;"><div class="title">Équipe</div></zone><card id="entretien" class="etape" style="left: 701px; top: 84.2px; width: 170px; height: 74px;"><div class="title">Entretiens</div><ul><li>2 tours</li></ul></card><card id="decision" class="choix" style="left: 891px; top: 84.2px; width: 170px; height: 74px;"><div class="title">Décision</div><ul><li>comité</li></ul></card><card id="offre-envoi" class="fin" data-tag="FIN" style="--label: &quot;FIN&quot;; left: 1243px; top: 72px; width: 212px; height: 74px;"><div class="title">Proposition envoyée</div><ul><li>J+30</li></ul></card><svg class="edges" viewBox="0 0 1483 231" width="1483" height="231"><g class="edge from-etape to-etape" data-id="offre-&gt;tri" style="--len: 13;"><path class="line" d="M263,108.2 L276,108.2"></path><path class="head" d="M283,108.2 L273.2,113.45 L273.2,102.95 Z"></path><path class="tail" d="M263,108.2 L272.8,113.45 L272.8,102.95 Z"></path><circle class="origin" cx="263" cy="108.2" r="3.5"></circle></g><g class="edge from-etape to-etape" data-id="tri-&gt;entretien" style="--len: 241.0037841796875;"><path class="line" d="M453,120.53333333333333 L472.00119467213466,120.8617490437159 Q480,121 487.9999957487546,121.00824741829769 L666.0000042512454,121.19175258170232 Q674,121.2 682,121.2 L694,121.2"></path><path class="head" d="M701,121.2 L691.2,126.45 L691.2,115.95 Z"></path><path class="tail" d="M453,120.53333333333333 L462.7078093365736,125.95190675119295 L462.88926371669646,115.45347475836974 Z"></path><circle class="origin" cx="453" cy="120.53333333333333" r="3.5"></circle></g><g class="edge from-etape to-choix" data-id="entretien-&gt;decision" style="--len: 13;"><path class="line" d="M871,121.2 L884,121.2"></path><path class="head" d="M891,121.2 L881.2,126.45 L881.2,115.95 Z"></path><path class="tail" d="M871,121.2 L880.8,126.45 L880.8,115.95 Z"></path><circle class="origin" cx="871" cy="121.2" r="3.5"></circle></g><g class="edge ok from-choix to-fin" data-id="decision-&gt;offre-envoi" style="--len: 175.00030517578125;"><path class="line" d="M1061,108.86666666666667 L1080.0000975443218,108.96049430886085 Q1088,109 1096,109 L1236,109"></path><path class="head" d="M1243,109 L1233.2,114.25 L1233.2,103.75 Z"></path><path class="tail" d="M1061,108.86666666666667 L1070.773954898396,114.16499712485101 L1070.8258061180159,103.66512515177324 Z"></path><circle class="origin" cx="1061" cy="108.86666666666667" r="3.5"></circle></g><g class="edge ko dashed from-choix to-etape" data-id="decision-&gt;tri" style="--len: 1510.6749267578125;"><path class="line" d="M1061,133.53333333333333 L1080.0011946721347,133.86174904371592 Q1088,134 1096,134 L1106,134 Q1114,134 1114,142 L1114,195 Q1114,203 1106,203 L36,203 Q28,203 28,195 L28,163 Q28,155 35.999763324112784,155.0615366409547 L46.000236675887216,155.1384633590453 Q54,155.2 62,155.2 L265,155.2 Q273,155.2 273,147.2 L273,134.36666666666667 Q273,132.86666666666667 274.5,132.86666666666667 L276,132.86666666666667"></path><path class="head" d="M283,132.86666666666667 L273.2,138.11666666666667 L273.2,127.61666666666667 Z"></path><path class="tail" d="M1061,133.53333333333333 L1070.7078093365735,138.95190675119295 L1070.8892637166964,128.45347475836974 Z"></path><circle class="origin" cx="1061" cy="133.53333333333333" r="3.5"></circle></g></svg><div class="edge-label" style="left: 577px; top: 120.5px;">15 retenus</div><div class="edge-label" style="left: 1165.5px; top: 108.5px;">oui</div><div class="edge-label" style="left: 577px; top: 202.5px;">non</div></div><script>// Lecteur d'étapes minimal : → / espace = suivant, ← = précédent
+(() => {
+  const els = [...document.querySelectorAll('[data-step]')];
+  const steps = [...new Set(els.map(e => +e.dataset.step))].sort((a, b) => a - b);
+  let i = new URLSearchParams(location.search).has('all') ? steps.length : 0;
+  const show = () => els.forEach(e => e.classList.toggle('pending', +e.dataset.step > (i ? steps[i - 1] : 0)));
+  addEventListener('keydown', ev => {
+    if (['ArrowRight', ' ', 'PageDown'].includes(ev.key)) i = Math.min(i + 1, steps.length);
+    else if (['ArrowLeft', 'PageUp'].includes(ev.key)) i = Math.max(i - 1, 0);
+    else return;
+    ev.preventDefault(); show();
+  });
+  addEventListener('click', () => { i = Math.min(i + 1, steps.length); show(); });
+  show();
+})();
+</script>

@@ -1,0 +1,28 @@
+//- Style « en-tête » (bandeau + pastille), notes, chips et encadrés — réseau fictif
+diagram(dir="right" look="header")
+
+  card#seg.segment(tag="DHCP") seg-k8s-01
+    li 10.1.20.0/28
+    to(t0)
+
+  card#ports.note Segment ports
+    li db-node-a
+    li db-node-b
+    li db-node-c
+    to(seg).link
+
+  card#dns.info DNS 10.1.0.53
+    to(ad).dashed
+
+  zone#uplinks.bare.uplink Uplinks / VLAN
+    card#ad.chip.uplink ad-01
+      to(t0)
+    card#in.chip.uplink in-02
+      to(t0)
+    card#nas.chip.uplink nas-03
+      to(t0)
+    card#naos.chip.uplink naos-04
+
+  card#t0.t0gw t0-k8s-01
+    li Edge : edge-01
+    to(naos side="left-right")

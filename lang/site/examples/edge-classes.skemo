@@ -1,0 +1,8 @@
+diagram(dir="right")
+  card#u1.uplink Uplink A
+    to(core)
+  card#u2.uplink Uplink B
+    to(core)
+  card#core.t1 Core
+    to(srv)
+  card#srv.t2 Servers

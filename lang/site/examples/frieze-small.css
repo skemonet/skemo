@@ -1,0 +1,3 @@
+.rep { --c: #2F6F8F; }
+.emp { --c: #7B2D6B; }
+.evt { --c: var(--ink); }

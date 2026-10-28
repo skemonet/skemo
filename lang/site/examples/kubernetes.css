@@ -1,0 +1,40 @@
+/* zones */
+.podz { --c: #10B981; }
+.svcz { --c: #F59E0B; }
+zone.podz, zone.svcz { border-width: 1.5px; }
+zone.svcz > .title { top: auto; bottom: 12px; }
+zone > .title { letter-spacing: .14em; }
+
+/* pods: a thick band on top, centred text, the port as a pill */
+.fe { --c: #2563EB; }
+.be { --c: #7C3AED; }
+.db { --c: #DB2777; }
+card.pod { min-width: 0; padding: 12px 14px 12px; text-align: center; border-top-width: 6px; }
+card.pod .title { font-size: 13.5px; font-weight: 700; }
+card.pod li { font-size: 12.5px; color: #64748B; }
+card.pod li .mono { color: #64748B; }
+card.pod li.pill { color: var(--c); }
+
+/* services: a full coloured border, a light badge */
+.svc { --label: "SERVICE"; }
+card.svc { border: 1.5px solid var(--c); border-radius: 12px; padding: 12px 18px; }
+card.svc .title::before { background: color-mix(in srgb, var(--c) 12%, #FFFFFF); color: var(--c);
+  font-size: 10px; letter-spacing: .1em; padding: 1px 6px; border-radius: 6px; }
+card.svc li { color: #64748B; }
+
+/* arrows: forks in the service's colour, dependencies dashed with a dark label */
+.edge.from-fe { color: #2563EB; }
+.edge.from-be { color: #7C3AED; }
+.edge.from-db { color: #DB2777; }
+.edge.dep { color: #475569; }
+.edge.dep .line { stroke-dasharray: 5 4; }
+.edge.dep .edge-label { background: #334155; color: #F8FAFC; font-family: var(--mono); font-size: 11px; }
+
+/* nodes and the cluster network */
+.k8snode { --c: #1E293B; --icon-color: #94A3B8; }
+card.k8snode { background: #1E293B; border: 1px solid #334155; border-radius: 12px; padding: 16px 22px; --icon-size: 20px; }
+card.k8snode .title { color: #F8FAFC; font-size: 17px; }
+card.k8snode li { color: #94A3B8; }
+card.network { --c: #0F172A; background: #1E293B; border-color: #334155; }
+card.network .title { color: #94A3B8; text-align: left; }
+.edge.from-network { color: #475569; }

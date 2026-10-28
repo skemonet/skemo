@@ -1,0 +1,157 @@
+{
+ "_doc": "Résolution attendue des marqueurs de animation.pug (FORMAT.md §3.8, engine F-ANIM-1 à 3). Calculée à la main ; à confirmer par le premier test Rust (en cas de désaccord, c'est la spec qui tranche, puis on corrige ce fichier en le justifiant).",
+ "texts": {
+  "seg": "seg-k8s-01",
+  "seg/li[0]": "10.1.20.0/28",
+  "ports": "Segment ports",
+  "dns": "DNS 10.1.0.53",
+  "uplinks": "Uplinks / VLAN",
+  "naos": "naos-04",
+  "t0/li[1]": "voir @2 ou admin@example.com"
+ },
+ "warnings": [
+  {
+   "element": "in",
+   "code": "step-before-parent",
+   "written": "2",
+   "parent": "uplinks",
+   "kept": "3",
+   "message": "« in » : @2 est plus tôt que sa zone « uplinks » (@3) ; étape retenue : 3"
+  }
+ ],
+ "states": [
+  "1",
+  "2",
+  "2.5",
+  "3",
+  "3.5",
+  "4",
+  "5",
+  "6"
+ ],
+ "_states_note": "L'état 0 est omis : aucun élément n'y est visible.",
+ "svg_attributes": {
+  "seg": {
+   "data-step": "1",
+   "data-fx": "up",
+   "data-focus": "4-6"
+  },
+  "seg/li[0]": {
+   "data-step": "2",
+   "data-fx": "fade"
+  },
+  "ports": {
+   "data-step": "2.5",
+   "data-fx": "up"
+  },
+  "ports/li[0]": {},
+  "dns": {
+   "data-step": "1",
+   "data-fx": "fade",
+   "data-until": "3"
+  },
+  "uplinks": {
+   "data-step": "3",
+   "data-fx": "fade"
+  },
+  "ad": {},
+  "in": {},
+  "naos": {
+   "data-step": "3.5",
+   "data-fx": "zoom",
+   "data-focus": "5"
+  },
+  "t0": {
+   "data-step": "1",
+   "data-fx": "fade"
+  },
+  "t0/li[0]": {},
+  "t0/li[1]": {},
+  "seg->t0": {
+   "data-step": "1",
+   "data-fx": "draw",
+   "data-from": "seg",
+   "data-to": "t0"
+  },
+  "ports->seg": {
+   "data-step": "2.5",
+   "data-fx": "draw",
+   "data-from": "ports",
+   "data-to": "seg"
+  },
+  "dns->ad": {
+   "data-step": "3",
+   "data-fx": "draw",
+   "data-until": "3",
+   "data-from": "dns",
+   "data-to": "ad"
+  },
+  "ad->t0": {
+   "data-step": "3",
+   "data-fx": "draw",
+   "data-from": "ad",
+   "data-to": "t0"
+  },
+  "in->t0": {
+   "data-step": "3",
+   "data-fx": "draw",
+   "data-from": "in",
+   "data-to": "t0"
+  },
+  "t0->naos": {
+   "data-step": "3.5",
+   "data-fx": "draw",
+   "data-from": "t0",
+   "data-to": "naos"
+  }
+ },
+ "_svg_note": "{} = aucun attribut d'animation (l'élément apparaît avec son groupe). Tous les nœuds portent data-id ; aucun ne porte id. Chaque lien a un path pathLength=\"1\".",
+ "visible_by_state": {
+  "1": [
+   "seg",
+   "dns",
+   "t0",
+   "t0/li[0]",
+   "t0/li[1]",
+   "seg->t0"
+  ],
+  "2": [
+   "+seg/li[0]"
+  ],
+  "2.5": [
+   "+ports",
+   "+ports/li[0]",
+   "+ports->seg"
+  ],
+  "3": [
+   "+uplinks",
+   "+ad",
+   "+in",
+   "+dns->ad",
+   "+ad->t0",
+   "+in->t0"
+  ],
+  "3.5": [
+   "-dns",
+   "-dns->ad",
+   "+naos",
+   "+t0->naos"
+  ],
+  "4": [],
+  "5": [],
+  "6": []
+ },
+ "focus_by_state": {
+  "4": [
+   "seg"
+  ],
+  "5": [
+   "seg",
+   "naos"
+  ],
+  "6": [
+   "seg"
+  ]
+ },
+ "_visible_note": "« + » = devient visible, « - » = disparaît, par rapport à l'état précédent."
+}

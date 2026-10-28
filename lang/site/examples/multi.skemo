@@ -1,0 +1,6 @@
+diagram(dir="down")
+  card#lb Load balancer
+    to(w1 w2 w3)
+  card#w1 Worker 1
+  card#w2 Worker 2
+  card#w3 Worker 3

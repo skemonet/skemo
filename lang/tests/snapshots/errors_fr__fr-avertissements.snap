@@ -1,0 +1,30 @@
+---
+source: tests/errors_fr.rs
+expression: out
+---
+avertissement[unknown-attribute] : « router » n'est plus lu : ignoré
+  ┌─ avertissements.skemo:1:9
+  │
+1 │ diagram(router="avoid")
+  │         ^^^^^^^^^^^^^^
+avertissement[bad-side] : « side="haut-bas" » : côtés attendus top, bottom, left, right (ex. "left-top", "-top") ; ignoré
+  ┌─ avertissements.skemo:3:10
+  │
+3 │     to(b side="haut-bas")
+  │          ^^^^^^^^^^^^^^^
+avertissement[unknown-tag] : balise « boite » inconnue : ignorée avec son contenu
+  ┌─ avertissements.skemo:4:3
+  │
+4 │   boite#x Inconnue
+  │   ^^^^^
+  = aide : balises reconnues : diagram, title, card, cards, zone, stack, to ; une ligne commence par « | »
+avertissement[draw-on-node] : l'effet « draw » ne s'applique qu'aux liens : « fade » est utilisé
+  ┌─ avertissements.skemo:6:3
+  │
+6 │   card#b B @2:draw
+  │   ^^^^^^^^^^^^^^^^
+avertissement[line-misplaced] : une ligne s'écrit sous une carte, une zone ou le titre : ignorée
+  ┌─ avertissements.skemo:7:3
+  │
+7 │   | perdue
+  │   ^

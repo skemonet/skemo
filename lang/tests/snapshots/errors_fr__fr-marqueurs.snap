@@ -1,0 +1,31 @@
+---
+source: tests/errors_fr.rs
+expression: out
+---
+erreur[multiple-appear] : « @1 » : un seul marqueur d'apparition par élément
+  ┌─ marqueurs.skemo:1:10
+  │
+1 │ card#a A @1 @2
+  │          ^^
+  = aide : plusieurs marqueurs ne sont permis que pour :focus
+erreur[bad-marker] : « @0 » : l'étape 0 est l'état initial, déjà visible ; écrire « @0-N » pour masquer l'élément après l'étape N
+  ┌─ marqueurs.skemo:2:10
+  │
+2 │ card#b B @0
+  │          ^^
+erreur[bad-marker] : « @4-2 » : la fin de la plage précède son début
+  ┌─ marqueurs.skemo:3:10
+  │
+3 │ card#c C @4-2
+  │          ^^^^
+erreur[bad-marker] : « @2:wiggle » : effet « wiggle » inconnu (fade, up, zoom, draw, focus)
+  ┌─ marqueurs.skemo:4:10
+  │
+4 │ card#d D @2:wiggle
+  │          ^^^^^^^^^
+erreur[legacy-and-marker] : « step=/fx= » et un marqueur « @ » sur le même élément
+  ┌─ marqueurs.skemo:5:8
+  │
+5 │ card#e(step=2) E @3
+  │        ^^^^^^
+  = aide : garder seulement le marqueur @

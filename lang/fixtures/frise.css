@@ -1,0 +1,6 @@
+.roy    { --c: #8E5B3B; }
+.rep    { --c: #2F6F8F; }
+.emp    { --c: #7B2D6B; }
+.guerre { --c: #C94A44; }
+.evt    { --c: var(--ink); }
+.fin    { --c: #C94A44; --label: "FIN"; }

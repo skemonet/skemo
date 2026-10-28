@@ -1,0 +1,10 @@
+diagram(dir="right")
+  card#app.t2 Application
+    | v2.4
+    to(v10 v20)
+  card#todo.note To migrate
+    | before Q3
+    to(app).link
+  zone#vlans.bare Uplinks / VLAN
+    card#v10.chip VLAN 10
+    card#v20.chip VLAN 20

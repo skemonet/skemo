@@ -1,0 +1,10 @@
+diagram(dir="right")
+  card#lb.t3(tag="ALB") Load balancer
+    to(api) HTTPS
+  cards#api.t2(count="4" tag="ECS") api
+    | 4 tasks
+    to(db) 5432
+  cards#jobs.t2 workers
+    | autoscaled
+    to(db)
+  card#db.t1(tag="RDS") orders

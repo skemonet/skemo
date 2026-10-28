@@ -1,0 +1,6 @@
+diagram(dir="down")
+  card#ceo CEO
+    to(cto cfo coo join="trunk")
+  card#cto CTO
+  card#cfo CFO
+  card#coo COO

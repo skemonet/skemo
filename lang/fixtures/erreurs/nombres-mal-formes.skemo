@@ -1,0 +1,4 @@
+card#a(at="12;40") A
+zone#z(at="0,0" size="grand") Z
+card#b B
+  to(a via="1,2 x")

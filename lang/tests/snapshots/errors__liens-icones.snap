@@ -1,0 +1,27 @@
+---
+source: tests/errors.rs
+expression: out
+---
+warning[icon-ignored]: « icon » has no effect here: only cards and zones have an icon
+  ┌─ liens-icones.skemo:4:10
+  │
+4 │     to(b icon="cloud" href="javascript:alert(1)") go
+  │          ^^^^^^^^^^^^
+error[unsafe-href]: unsafe or empty link « javascript:alert(1) »
+  ┌─ liens-icones.skemo:4:23
+  │
+4 │     to(b icon="cloud" href="javascript:alert(1)") go
+  │                       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  = help: allowed: http:, https:, mailto:, a relative path or #id
+error[unsafe-href]: unsafe or empty link «  »
+  ┌─ liens-icones.skemo:5:10
+  │
+5 │   card#b(href="") B
+  │          ^^^^^^^
+  = help: allowed: http:, https:, mailto:, a relative path or #id
+error[unsafe-href]: unsafe or empty link «   data:text/html,x »
+  ┌─ liens-icones.skemo:6:10
+  │
+6 │   card#c(href="  data:text/html,x") C
+  │          ^^^^^^^^^^^^^^^^^^^^^^^^^
+  = help: allowed: http:, https:, mailto:, a relative path or #id

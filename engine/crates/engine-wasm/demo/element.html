@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>skemo — the &lt;skemo-view&gt; element</title>
+<script type="module" src="./skemo-view.js"></script>
+<style>body{font:14px system-ui;margin:16px} button{margin-right:6px}</style></head>
+<body>
+<p><button id="prev">←</button><button id="next">→</button> step: <span id="cur">all</span></p>
+<skemo-view id="d" src="./animation.pug" step=""></skemo-view>
+<script type="module">
+  const d = document.getElementById('d'), cur = document.getElementById('cur');
+  let i = -1;
+  d.addEventListener('stepchange', e => { cur.textContent = e.detail.step || 'tout'; });
+  const go = k => { const st = d.states(); i = Math.max(0, Math.min(st.length - 1, k)); d.goto(st[i]); };
+  document.getElementById('next').onclick = () => go(i + 1);
+  document.getElementById('prev').onclick = () => go(i - 1);
+</script>
+</body></html>

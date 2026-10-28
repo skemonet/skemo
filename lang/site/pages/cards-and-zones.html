@@ -1,0 +1,68 @@
+<h1>Cards and zones</h1>
+<p class="lead">Cards are the boxes of a diagram; zones group them. Both take a title, classes and a few attributes.</p>
+
+<h2>Cards</h2>
+<skemo name="cards"></skemo>
+<table>
+  <tr><th>Write</th><th>Effect</th></tr>
+  <tr><td><code>card#id Title</code></td><td>a card; the text after the tag is its title</td></tr>
+  <tr><td><code>| text</code></td><td>a content line, indented under the card. A line that starts with an IPv4 address or a CIDR block
+    shows it in monospace. <em>(Preview)</em> <code>|.pill 8080 · http</code>: the line takes its classes; the theme's
+    <code>.pill</code> draws it as a pill tinted with the card's colour</td></tr>
+  <tr><td><code>.type</code></td><td>the card's type: its colour and badge come from CSS</td></tr>
+  <tr><td><code>tag="…"</code></td><td>the text of the card's chip (an owner, a module, a port)</td></tr>
+  <tr><td><code>label="…"</code> <em>(preview)</em></td><td>the card's category, above its name; by default the type's <code>--label</code>; <code>label=""</code> shows none. See <a href="rich-cards.html">Rich cards</a></td></tr>
+  <tr><td><code>icon="…"</code>, <code>href="…"</code></td><td>an icon before the title, a link: see <a href="icons-and-links.html">Icons and links</a></td></tr>
+  <tr><td><code>at="x,y"</code></td><td>a pinned position: see <a href="layout.html">Layout</a></td></tr>
+</table>
+<p>Keep titles short (under about 30 characters): a long title widens the card, while long lines wrap. Three or four
+  lines per card read best.</p>
+
+<p>A card without lines has its title centred; with lines, the title stays on the left above them. In a column of cards (a
+  <code>wrap="1"</code> zone, a <code>stack</code>) where others have lines, a card without lines keeps the column's alignment.</p>
+
+<h2>Piles of cards <em>(preview)</em></h2>
+<skemo name="piles"></skemo>
+<p><code>cards</code> instead of <code>card</code> draws a pile: several instances of one thing (the tasks of a service, the
+  machines of a group). It is a card in every respect: lines, arrows, classes, chip. <code>count="4"</code> says how many: up to
+  three cards are drawn, and a <code>×4</code> badge sits on the pile's bottom-right corner, at the same place in every look.
+  Without <code>count</code>, three cards and no badge. The cards behind belong to the card's box: arrows end on them and the top
+  card keeps the width of its neighbours.</p>
+
+<h2>Zones</h2>
+<skemo name="zones"></skemo>
+<p>A zone encloses everything indented below it, with a margin and room for its title. Zones nest. A zone gives its accent
+  colour to the untyped cards it contains, and an empty zone keeps a visible frame. With <code>at="x,y"</code>, a zone can also
+  take an imposed <code>size="w,h"</code>. <em>(Preview)</em> <code>tag="…"</code> on a zone adds a pill after its title
+  (<code>zone#pods(tag="172.30.0.0/16") Pods</code>), as on a card. <code>.tag-left</code> and <code>.tag-right</code> on a card or
+  a zone put its badge before or after the name. A stylesheet may set a zone's title at the bottom
+  (<code>zone.svc &gt; .title { top: auto; bottom: 12px }</code>): the room for it is then kept below the cards.</p>
+
+<h2>Title of the diagram <em>(preview)</em></h2>
+<pre><code>diagram
+  title Kubernetes application architecture
+    |.pill namespace mon_namespace</code></pre>
+<p>A <code>title</code>, written once directly under <code>diagram</code>, is drawn above the drawing on the left; each of its
+  <code>|</code> lines is a subtitle line under it, each <code>|.pill</code> line a pill on the right of the same line. The title widens the image if needed and never moves a card.
+  See the Kubernetes example in <a href="layout.html">Layout</a>.</p>
+
+<h2>Notes, chips and boxes</h2>
+<p>The theme provides secondary cards for annotations, and a frameless zone for captions:</p>
+<skemo name="secondary"></skemo>
+<table>
+  <tr><th>Class</th><th>On</th><th>Rendering</th></tr>
+  <tr><td><code>.note</code></td><td>card</td><td>annotation: dashed border, tinted background, centred text, no badge</td></tr>
+  <tr><td><code>.chip</code></td><td>card</td><td>a rounded pill on one line</td></tr>
+  <tr><td><code>.info</code></td><td>card</td><td>a small, discreet box</td></tr>
+  <tr><td><code>.bare</code></td><td>zone</td><td>no frame; the title becomes a caption below, centred and in italics; without a title, nothing is drawn</td></tr>
+  <tr><td><code>.wide</code> <em>(preview)</em></td><td>card</td><td>spans the width of its group, like a network or a bus bar; its arrows drop straight to it and end in a dot</td></tr>
+  <tr><td><code>.wide</code> <em>(preview)</em></td><td>zone</td><td>spans the width of its group too; its cards, on one row, share that width</td></tr>
+  <tr><td><code>.col-<em>name</em></code> <em>(preview)</em></td><td>card, zone</td><td>a column: nodes of one <code>.col-…</code> class line up across the direction, from one zone to another (pods and services over the machine that hosts them)</td></tr>
+</table>
+<p>They combine with your own types, and keep their plain style whatever the card look of the diagram. Use the <code>.link</code>
+  arrow style to attach a note to a card.</p>
+
+<h2>Built-in types</h2>
+<p>The default theme ships a few network-flavoured types, handy for quick sketches: <code>.t0</code> (red, "T0"),
+  <code>.t1</code> (orange), <code>.t2</code> (blue), <code>.t3</code> (grey) for cards, and <code>.cloud</code>, <code>.dmz</code>,
+  <code>.lan</code> for zones. For anything else, define your own in a few lines of <a href="styling.html">CSS</a>.</p>

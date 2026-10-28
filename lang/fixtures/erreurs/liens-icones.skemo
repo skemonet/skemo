@@ -1,0 +1,9 @@
+diagram
+  card#a(icon="globe" href="https://example.org") A
+    | x
+    to(b icon="cloud" href="javascript:alert(1)") go
+  card#b(href="") B
+  card#c(href="  data:text/html,x") C
+  card#d(href="docs/fw.md") D
+  zone#z(href="#a" icon="cloud") Z
+    card#e(href="MAILTO:x@y.z") E

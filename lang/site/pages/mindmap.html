@@ -1,0 +1,17 @@
+<h1>Mind map</h1>
+<p class="lead">A central card, branches to the right and to the left. The tree comes from the arrows: the targets of a card's
+  <code>to(…)</code> are its children, in writing order.</p>
+
+<skemo name="mindmap" stacked></skemo>
+
+<h2>Rules</h2>
+<ul>
+  <li><code>diagram(layout="mindmap")</code> enables the mode; <code>root="id"</code> picks the centre. By default the root is the
+    first card that no arrow targets.</li>
+  <li>The root's children are spread between the right and the left, balancing the height of both sides; on each side, writing order
+    reads top to bottom.</li>
+  <li>A node is centred on the block of its children; arrows of one parent share a trunk.</li>
+  <li>An arrow to a card already in the tree is drawn as an ordinary cross-link.</li>
+  <li>A card that cannot be reached from the root is placed under the map, with a warning.</li>
+  <li>Zones are not allowed; <code>at=</code> has no effect. Classes, themes and animation markers work as everywhere.</li>
+</ul>

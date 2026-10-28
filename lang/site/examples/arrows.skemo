@@ -1,0 +1,16 @@
+diagram(dir="right")
+  card#a1 A
+    to(b1).dashed dashed
+  card#b1 B
+  card#a2 A
+    to(b2).dotted dotted
+  card#b2 B
+  card#a4 A
+    to(b4).both both
+  card#b4 B
+  card#a5 A
+    to(b5).dot.nohead dot.nohead
+  card#b5 B
+  card#a6 A
+    to(b6).link link
+  card#b6 B

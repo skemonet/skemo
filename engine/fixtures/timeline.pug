@@ -1,0 +1,32 @@
+//- Timeline : la feuille de route du projet lui-même (jalons + périodes, couloirs = dépôts)
+diagram(layout="timeline" from="2026-10" to="2027-06" scale="month" today="2026-10-15")
+
+  card#lancement.jalon(date="2026-10-14") Specs livrées
+
+  zone#router.lane(step=1 fx="up") Routeur
+    card#r0.spike(start="2026-10-16" end="2026-10-31") R0 · spike hightower
+      to(valid)
+    card#r1.dev(start="2026-11-10" end="2026-12-20") R1 → R2 · routage + espacement
+      li côtés, via, régions, nudging
+    card#r3.dev(start="2027-02" end="2027-03") R3 · incrémental + WASM
+
+  zone#engine.lane(step=2 fx="up") Moteur
+    card#e0.spike(start="2026-10-16" end="2026-11-07") E0 · spikes elk-rs, mesure, rendu
+      to(valid)
+    card#e1.dev(start="2026-11-10" end="2026-12-15") E1 · mesure + placement
+      to(e2)
+    card#e2.dev(start="2026-12-16" end="2027-01-31") E2 → E3 · routage + rendu
+      to(cli2)
+    card#e5.dev(start="2027-02" end="2027-04") E4 → E5 · étapes + WASM
+      to(editeur)
+
+  zone#lang.lane(step=3 fx="up") Langage
+    card#l1.dev(start="2026-10-16" end="2026-11-20") L1 · parseur + diagnostics
+    card#l2.dev(start="2026-11-21" end="2026-12-31") L2 · styles
+    card#l3.dev(start="2027-02" end="2027-03") L3 · édition chirurgicale
+
+  zone#produit.lane(step=4 fx="up") Livrables
+    card#valid.decision(date="2026-11-09") Validation des choix
+      li D-005 · D-007 · option routeur
+    card#cli2.jalon(date="2027-02-01") CLI : premier rendu PNG
+    card#editeur.jalon(date="2027-05-03") Démarrage éditeur

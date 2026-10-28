@@ -1,0 +1,31 @@
+[package]
+name = "skemo-cli"
+version = "0.1.0-rc.2"
+edition = "2024"
+description = "The skemo command-line tool: render text diagrams to PNG, SVG, WebP, animated HTML, GIF and APNG"
+license = "MIT OR Apache-2.0"
+repository.workspace = true
+homepage.workspace = true
+readme = "README.md"
+keywords = ["diagram", "cli", "svg", "png", "architecture"]
+categories = ["command-line-utilities", "visualization"]
+publish = false
+
+[[bin]]
+name = "skemo"
+path = "src/main.rs"
+
+[dependencies]
+# Sibling crates of the project, by path
+skemo-engine = { path = "../engine/crates/engine" }
+skemo-lang = { path = "../lang" }
+clap = { version = "4", features = ["derive"] }
+serde_json = "1"
+# live preview (watch): a small HTTP server
+tiny_http = "0.12"
+
+[dev-dependencies]
+assert_cmd = "2"
+
+[lints]
+workspace = true

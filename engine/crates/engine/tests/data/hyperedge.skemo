@@ -1,0 +1,17 @@
+//- Hyperedge: one `to(...)` with join="trunk" draws a shared trunk, then branches to each target
+diagram(dir="down")
+
+  card#ceo.boss CEO
+    | Company
+    to(cto cfo coo join="trunk")
+
+  card#cto.exec CTO
+    | Engineering
+    to(dev ops join="trunk")
+  card#cfo.exec CFO
+    | Finance
+  card#coo.exec COO
+    | Operations
+
+  card#dev.team Developers
+  card#ops.team Operations team

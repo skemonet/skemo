@@ -1,0 +1,10 @@
+diagram(dir="right")
+  zone#hr.hr Human resources
+    card#post.step Post the offer
+      to(screen)
+    card#screen.step Screen CVs
+      to(decide)
+  card#decide.choice Decision
+    to(hire).ok yes
+    to(screen).ko no
+  card#hire.end(tag="DONE") Hire

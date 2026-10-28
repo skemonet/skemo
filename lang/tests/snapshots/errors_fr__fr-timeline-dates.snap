@@ -1,0 +1,25 @@
+---
+source: tests/errors_fr.rs
+expression: out
+---
+erreur[bad-date] : « date » : date invalide : « 2026-13-01 » (attendu AAAA, AAAA-MM ou AAAA-MM-JJ)
+  ┌─ timeline-dates.skemo:2:10
+  │
+2 │   card#a(date="2026-13-01") A
+  │          ^^^^^^^^^^^^^^^^^
+erreur[missing-date] : carte « b » sans date= ni start= (mode timeline)
+  ┌─ timeline-dates.skemo:3:3
+  │
+3 │   card#b B
+  │   ^^^^
+  = aide : date="2027-03-15" pour un jalon, start="…" end="…" pour une période
+erreur[end-before-start] : carte « c » : end antérieur à start
+  ┌─ timeline-dates.skemo:4:26
+  │
+4 │   card#c(start="2027-03" end="2027-01") C
+  │                          ^^^^^^^^^^^^^
+avertissement[at-ignored] : « at » est sans effet en mode timeline : la position vient de la date
+  ┌─ timeline-dates.skemo:5:25
+  │
+5 │   card#d(date="2026-11" at="1,2") D
+  │                         ^^^^^^^^

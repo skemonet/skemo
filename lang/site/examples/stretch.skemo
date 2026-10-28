@@ -1,0 +1,11 @@
+diagram(dir="up" zones="stretch")
+  zone#pods Pods
+    card#f1 frontend-1
+    card#f2 frontend-2
+    card#b1 backend-1
+    card#b2 backend-2
+  zone#svcs Services
+    card#sf Frontend
+      to(f1 f2 join="trunk")
+    card#sb Backend
+      to(b1 b2 join="trunk")

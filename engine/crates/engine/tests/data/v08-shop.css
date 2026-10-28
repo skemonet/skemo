@@ -1,0 +1,7 @@
+.ext { --c: #475569; }
+.app { --c: #2b5bd7; }
+.fn { --c: #c2410c; }
+.data { --c: #b45309; }
+.vpc { --c: #0f766e; }
+.edge.user { color: #2b5bd7; --label: "user request"; }
+.edge.data { color: #0f766e; --label: "data access"; }

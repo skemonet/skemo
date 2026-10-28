@@ -1,0 +1,23 @@
+//- Frise chronologique : Rome antique (années négatives = av. J.-C.)
+diagram(layout="frise" from="-800" to="600" scale="century" width="1300")
+
+  //- Époques : bandes sur l'axe (empilées si elles se chevauchent)
+  card#royaute.roy(start="-753" end="-509" step=1) Royauté
+  card#republique.rep(start="-509" end="-27" step=1) République
+  card#empire.emp(start="-27" end="476" step=1) Empire
+  card#puniques.guerre(start="-264" end="-146" step=1) Guerres puniques
+  card#crise.guerre(start="235" end="284" step=1) Crise du IIIᵉ s.
+
+  //- Événements : au-dessus ou au-dessous de l'axe, selon la place
+  card#fondation.evt(date="-753" step=2) Fondation de Rome
+    li selon la tradition
+  card#gaulois.evt(date="-390" step=2) Sac de Rome par les Gaulois
+  card#cesar.evt(date="-44-03-15" step=3) Mort de César
+    li Ides de mars
+  card#auguste.evt(date="-27" step=3) Auguste, premier empereur
+  card#vesuve.evt(date="79-10-24" step=4) Éruption du Vésuve
+    li Pompéi ensevelie
+  card#caracalla.evt(date="212" step=4) Édit de Caracalla
+  card#partage.evt(date="395" step=5) Partage de l'Empire
+    to(chute).dashed
+  card#chute.fin(date="476-09-04" step=5) Chute de l'Empire d'Occident

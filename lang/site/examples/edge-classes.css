@@ -1,0 +1,3 @@
+.uplink { --c: #7B5CC4; --label: "UPLINK"; }
+/* every arrow leaving an uplink card takes its colour */
+.edge.from-uplink { color: #7B5CC4; }

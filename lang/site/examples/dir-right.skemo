@@ -1,0 +1,8 @@
+diagram(dir="right")
+  card#a Plan
+    to(b)
+  card#b Build
+    to(c)
+    to(d)
+  card#c Test
+  card#d Document

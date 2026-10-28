@@ -1,0 +1,9 @@
+diagram(layout="timeline" start="2027-01" end="2027-06" scale="month" today="2027-02-15" lang="en")
+  card#kick.milestone(date="2027-01-11") Kick-off
+  zone#team.lane Team
+    card#build.work(start="2027-01-15" end="2027-03") Build
+      to(pilot)
+    card#pilot.work(start="2027-04" end="2027-05-15") Pilot
+  zone#ops.lane Operations
+    card#train.work(start="2027-03-01" end="2027-04-10") Training
+    card#golive.milestone(date="2027-05-20") Go-live

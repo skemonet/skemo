@@ -1,0 +1,10 @@
+---
+source: tests/errors_fr.rs
+expression: out
+---
+erreur[multiple-attr-groups] : plusieurs groupes d'attributs sur une balise
+  ┌─ groupes-multiples.skemo:2:15
+  │
+2 │   to(b).dashed(side="left-top")
+  │               ^^^^^^^^^^^^^^^^^
+  = aide : regrouper les attributs dans une seule paire de parenthèses : to(core side="right-top").dashed

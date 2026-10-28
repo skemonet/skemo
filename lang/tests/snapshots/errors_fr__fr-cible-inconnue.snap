@@ -1,0 +1,10 @@
+---
+source: tests/errors_fr.rs
+expression: out
+---
+erreur[unknown-target] : cible « cor » inconnue
+  ┌─ cible-inconnue.skemo:2:6
+  │
+2 │   to(cor) transit
+  │      ^^^
+  = aide : vouliez-vous « core » ?

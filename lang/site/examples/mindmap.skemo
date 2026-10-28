@@ -1,0 +1,28 @@
+//- Mindmap: the root in the middle, branches to the right and to the left
+diagram(layout="mindmap")
+
+  card#skemo.root skemo
+    to(language engine router cli editor docs)
+
+  card#language Language
+    | FORMAT.md
+    to(parser styles editing)
+  card#parser Parser
+  card#styles CSS styles
+  card#editing Surgical editing
+
+  card#engine Engine
+    to(measure layout render)
+  card#measure Measurement
+  card#layout Layout
+  card#render Rendering
+    | HTML, SVG, PNG, WebP
+
+  card#router Router
+    to(nudging hyperedges)
+  card#nudging Spacing
+  card#hyperedges Hyperedges
+
+  card#cli Command line
+  card#editor Editor
+  card#docs Documentation

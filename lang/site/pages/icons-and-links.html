@@ -1,0 +1,36 @@
+<h1>Icons and links</h1>
+<div class="warn"><p><strong>Preview.</strong> Icons and links are implemented and may still change before the first stable
+  release.</p></div>
+
+<skemo name="icons"></skemo>
+
+<h2>Icons</h2>
+<p><code>icon="name"</code> draws an icon of the built-in set before the title of a card or a zone. The set is
+  <a href="https://lucide.dev/">Lucide</a> (about 1,900 icons), embedded in skemo: rendering stays offline and identical everywhere.
+  Search it from the command line:</p>
+<pre><code>skemo icons data        # database, database-backup, … (names and tags)</code></pre>
+<ul>
+  <li>A type can carry a default icon in CSS: <code>.store { --icon: "database"; }</code>. <code>icon="none"</code> removes it on
+    one card.</li>
+  <li>An unknown name draws nothing, reserves no space, and warns with a suggestion (<code>unknown-icon</code>).</li>
+  <li>Arrows and <code>li</code> lines take no icon (warning <code>icon-ignored</code>).</li>
+  <li>The icon takes the colour of the text it precedes; <code>--icon-size</code>, <code>--icon-color</code> and
+    <code>--icon-gap</code> tune it.</li>
+</ul>
+
+<h2>Your own images <em>(preview)</em></h2>
+<pre><code>card#build(icon="img/docker.svg") Docker image
+card#repo(icon="img/harbor.png") Harbor</code></pre>
+<p>An <code>icon=</code> value ending in <code>.svg</code>, <code>.png</code>, <code>.jpg</code> or <code>.webp</code> is an image
+  file, relative to the source file and inside its folder (no <code>..</code>, no URL). It is drawn in the icon's box, in its own
+  colours, and travels inside every rendered file with the source, so the image reopens with its icons (<code>skemo extract</code>
+  writes them back). An SVG is shown as an image, never inlined: its scripts and links do nothing. At most 1 MB per file. Logos
+  belong to their owners: use the ones you may.</p>
+
+<h2>Links</h2>
+<p><code>href="…"</code> makes a card, a zone or an arrow clickable in the SVG and HTML outputs (raster formats are not clickable).
+  Accepted values: <code>http:</code>, <code>https:</code>, <code>mailto:</code>, a relative path (<code>docs/fw.md</code>) or a
+  fragment (<code>#core</code>). Any other scheme (<code>javascript:</code>, <code>data:</code>, <code>file:</code>…) and an empty
+  value are the blocking error <code>unsafe-href</code>.</p>
+<p>A linked card or zone shows a small link glyph after its name, in every format, so the layout never depends on the output.
+  <code>--link-mark: none</code> hides it. External links open in a new tab in the HTML output.</p>

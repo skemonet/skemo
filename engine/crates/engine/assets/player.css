@@ -1,0 +1,9 @@
+/* skemo step player (F-ANIM-4, F-ANIM-7): effects and emphasis, driven by player.js */
+.stage [data-step], .stage [data-until], .stage [data-focus] { transition: opacity .45s ease, transform .45s ease, box-shadow .45s ease; }
+.stage .sk-off { opacity: 0 !important; pointer-events: none; }
+.stage card.sk-off[data-fx="up"], .stage zone.sk-off[data-fx="up"], .stage li.sk-off[data-fx="up"], .stage li > span.sk-off[data-fx="up"] { transform: translateY(12px); }
+.stage card.sk-off[data-fx="zoom"], .stage zone.sk-off[data-fx="zoom"], .stage li.sk-off[data-fx="zoom"], .stage li > span.sk-off[data-fx="zoom"] { transform: scale(.92); }
+.stage.sk-focus > card:not(.sk-focus-on), .stage.sk-focus > zone:not(.sk-focus-on),
+.stage.sk-focus .edge:not(.sk-focus-on), .stage.sk-focus > .edge-label:not(.sk-focus-on) { opacity: var(--dim-opacity, .28); transition: opacity .45s ease; }
+.stage card.sk-focus-on { box-shadow: 0 0 0 3px var(--focus-ring, color-mix(in srgb, var(--c, #3E6FC4) 60%, transparent)), var(--shadow); }
+@media print { .stage .sk-off { opacity: 1 !important; } .stage.sk-focus * { opacity: 1 !important; } }

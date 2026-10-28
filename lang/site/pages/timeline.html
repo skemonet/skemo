@@ -1,0 +1,37 @@
+<h1>Timeline</h1>
+<p class="lead">For roadmaps and plans: a card's horizontal position comes from its date, and top-level zones become lanes.</p>
+
+<skemo name="timeline-small" stacked></skemo>
+
+<h2>Options</h2>
+<table>
+  <tr><th>Attribute</th><th>On</th><th>Meaning</th></tr>
+  <tr><td><code>layout="timeline"</code></td><td>diagram</td><td>enables the mode</td></tr>
+  <tr><td><code>start</code>, <code>end</code></td><td>diagram</td><td>bounds of the axis (<code>end</code> included); by default the extreme dates, ± 7 days</td></tr>
+  <tr><td><code>scale</code></td><td>diagram</td><td><code>day</code> · <code>week</code> · <code>month</code> (default) ·
+    <code>quarter</code> · <code>year</code></td></tr>
+  <tr><td><code>width</code></td><td>diagram</td><td>imposed width of the axis, in pixels</td></tr>
+  <tr><td><code>today</code></td><td>diagram</td><td>date of the "today" marker</td></tr>
+  <tr><td><code>date</code></td><td>card</td><td><strong>milestone</strong>: the left edge sits on the date, with a diamond on the axis</td></tr>
+  <tr><td><code>start</code>, <code>end</code></td><td>card</td><td><strong>period</strong>: a bar measures the duration exactly; the
+    card widens if its text needs it</td></tr>
+</table>
+
+<h2>Dates</h2>
+<p><code>YYYY</code>, <code>YYYY-MM</code> or <code>YYYY-MM-DD</code>. <strong><code>end</code> is inclusive</strong>:
+  <code>end="2027-03"</code> runs to 31 March. A <code>start</code> given as a month means its first day. Every card needs
+  <code>date</code> or <code>start</code>; <code>end</code> earlier than <code>start</code> is an error.</p>
+<p>Month and quarter labels follow the language of the messages; pin them with <code>diagram(lang="en")</code> for a file that must
+  render identically everywhere.</p>
+
+<h2>Lanes and arrows</h2>
+<ul>
+  <li>Top-level zones are lanes, in writing order; cards outside any zone form an unframed lane at the top.</li>
+  <li>Cards that overlap in time stack on successive rows of their lane.</li>
+  <li>Arrows are dependencies: they leave on the right and arrive on the left within a lane, freely across lanes.</li>
+  <li><code>at=</code> has no effect; animation markers work as usual (the axis diamond follows its milestone).</li>
+</ul>
+
+<h2>A larger example</h2>
+<skemo name="timeline" figure></skemo>
+<skemo-source name="timeline"></skemo-source>

@@ -1,0 +1,32 @@
+//- Schéma réseau — exemple
+diagram(dir="down")
+
+  card#internet.cloud Internet
+    to(fw).wan WAN
+
+  card#fw.t0 Pare-feu périmétrique
+    li 203.0.113.10/29
+    li 10.0.0.1/24
+    to(web)
+    to(mail)
+    to(core) transit
+
+  zone#dmz.dmz DMZ
+    card#web.t1(at="560,500") Serveur Web
+      li 172.16.0.10
+    card#mail.t1 Serveur Mail
+      li 172.16.0.20
+
+  zone#lan.lan LAN interne
+    card#core.t1 Switch cœur
+      li 10.10.0.0/16 VLAN 10
+      li 10.20.0.0/16 VLAN 20
+      to(srv)
+      to(users)
+      to(voip)
+    card#srv.t2 Serveurs internes
+      li 10.30.0.0/24
+    card#users.t3 Postes
+      li ~400 postes
+    card#voip.t3 Téléphonie IP
+      li ~150 postes

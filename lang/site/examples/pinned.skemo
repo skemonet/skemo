@@ -1,0 +1,8 @@
+diagram(dir="down")
+  card#internet.cloud(at="180,0") Internet
+    to(fw).wan WAN
+  card#fw.t0(at="180,110") Firewall
+    to(web side="left-top")
+    to(db side="right-top" via="440,200")
+  card#web.t1(at="0,260") Web
+  card#db.t2(at="420,260") Database

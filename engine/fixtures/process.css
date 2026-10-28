@@ -1,0 +1,9 @@
+/* Thème perso : surcharge le thème par défaut */
+:root { --bg: #FBFAF7; --font: 'Inter', sans-serif; --radius: 18px; }
+.etape { --c: #5B6CFF; --label: "ÉTAPE"; }
+.choix { --c: #E8590C; --label: "?"; }
+.fin   { --c: #2B8A3E; }
+.rh     { --z-bg: #F3F0FF; --z-border: #D0C6FF; --z-ink: #5F3DC4; }
+.equipe { --z-bg: #EBFBEE; --z-border: #B2F2BB; --z-ink: #2B8A3E; }
+.edge.ok { color: #2B8A3E; }
+.edge.ko { color: #E8590C; }

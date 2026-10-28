@@ -1,0 +1,10 @@
+diagram(dir="down")
+  card#client Client
+    to(svc)
+  card#dns CoreDNS
+  card#svc Service
+    to(p1 p2)
+  card#p1 Pod 1
+    to(dns constraint="false").dashed
+  card#p2 Pod 2
+    to(dns constraint="false").dashed

@@ -1,0 +1,537 @@
+{
+ "model": {
+  "options": {
+   "dir": "down"
+  },
+  "nodes": [
+   {
+    "id": "internet",
+    "kind": "card",
+    "parent": null,
+    "classes": [
+     "cloud"
+    ],
+    "title": "Internet",
+    "tag": null,
+    "items": [],
+    "at": [
+     380,
+     20
+    ],
+    "size": null,
+    "step": 1,
+    "fx": null,
+    "date": null,
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "fw",
+    "kind": "card",
+    "parent": null,
+    "classes": [
+     "t0"
+    ],
+    "title": "Pare-feu périmétrique",
+    "tag": null,
+    "items": [
+     "203.0.113.10/29",
+     "10.0.0.1/24"
+    ],
+    "at": [
+     355,
+     150
+    ],
+    "size": null,
+    "step": 1,
+    "fx": null,
+    "date": null,
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "dmz",
+    "kind": "zone",
+    "parent": null,
+    "classes": [
+     "dmz"
+    ],
+    "title": "DMZ",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": 2,
+    "fx": "up",
+    "date": null,
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "web",
+    "kind": "card",
+    "parent": "dmz",
+    "classes": [
+     "t1"
+    ],
+    "title": "Serveur Web",
+    "tag": null,
+    "items": [
+     "172.16.0.10"
+    ],
+    "at": [
+     40,
+     330
+    ],
+    "size": null,
+    "step": null,
+    "fx": null,
+    "date": null,
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "mail",
+    "kind": "card",
+    "parent": "dmz",
+    "classes": [
+     "t1"
+    ],
+    "title": "Serveur Mail",
+    "tag": null,
+    "items": [
+     "172.16.0.20"
+    ],
+    "at": [
+     40,
+     470
+    ],
+    "size": null,
+    "step": null,
+    "fx": null,
+    "date": null,
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "lan",
+    "kind": "zone",
+    "parent": null,
+    "classes": [
+     "lan"
+    ],
+    "title": "LAN interne",
+    "tag": null,
+    "items": [],
+    "at": null,
+    "size": null,
+    "step": 3,
+    "fx": "up",
+    "date": null,
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "core",
+    "kind": "card",
+    "parent": "lan",
+    "classes": [
+     "t1"
+    ],
+    "title": "Switch cœur",
+    "tag": null,
+    "items": [
+     "10.10.0.0/16 VLAN 10",
+     "10.20.0.0/16 VLAN 20"
+    ],
+    "at": [
+     560,
+     360
+    ],
+    "size": null,
+    "step": null,
+    "fx": null,
+    "date": null,
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "srv",
+    "kind": "card",
+    "parent": "lan",
+    "classes": [
+     "t2"
+    ],
+    "title": "Serveurs internes",
+    "tag": null,
+    "items": [
+     "10.30.0.0/24"
+    ],
+    "at": [
+     380,
+     560
+    ],
+    "size": null,
+    "step": 4,
+    "fx": "zoom",
+    "date": null,
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "users",
+    "kind": "card",
+    "parent": "lan",
+    "classes": [
+     "t3"
+    ],
+    "title": "Postes",
+    "tag": null,
+    "items": [
+     "~400 postes"
+    ],
+    "at": [
+     620,
+     560
+    ],
+    "size": null,
+    "step": 4,
+    "fx": "zoom",
+    "date": null,
+    "start": null,
+    "end": null
+   },
+   {
+    "id": "voip",
+    "kind": "card",
+    "parent": "lan",
+    "classes": [
+     "t3"
+    ],
+    "title": "Téléphonie IP",
+    "tag": null,
+    "items": [
+     "~150 postes"
+    ],
+    "at": [
+     840,
+     560
+    ],
+    "size": null,
+    "step": 4,
+    "fx": "zoom",
+    "date": null,
+    "start": null,
+    "end": null
+   }
+  ],
+  "edges": [
+   {
+    "id": "internet->fw",
+    "from": "internet",
+    "to": "fw",
+    "classes": [
+     "wan",
+     "thick"
+    ],
+    "label": "WAN",
+    "via": null,
+    "side": null,
+    "step": null,
+    "fx": null
+   },
+   {
+    "id": "fw->web",
+    "from": "fw",
+    "to": "web",
+    "classes": [
+     "secure",
+     "dot"
+    ],
+    "label": "HTTPS",
+    "via": null,
+    "side": "left-top",
+    "step": null,
+    "fx": null
+   },
+   {
+    "id": "fw->mail",
+    "from": "fw",
+    "to": "mail",
+    "classes": [
+     "secure",
+     "dotted"
+    ],
+    "label": "SMTP",
+    "via": [
+     [
+      300,
+      420
+     ]
+    ],
+    "side": "left-top",
+    "step": null,
+    "fx": null
+   },
+   {
+    "id": "fw->core",
+    "from": "fw",
+    "to": "core",
+    "classes": [
+     "flow"
+    ],
+    "label": "transit",
+    "via": null,
+    "side": null,
+    "step": null,
+    "fx": null
+   },
+   {
+    "id": "core->srv",
+    "from": "core",
+    "to": "srv",
+    "classes": [
+     "both"
+    ],
+    "label": "",
+    "via": null,
+    "side": null,
+    "step": null,
+    "fx": null
+   },
+   {
+    "id": "core->users",
+    "from": "core",
+    "to": "users",
+    "classes": [],
+    "label": "",
+    "via": null,
+    "side": null,
+    "step": null,
+    "fx": null
+   },
+   {
+    "id": "core->voip",
+    "from": "core",
+    "to": "voip",
+    "classes": [
+     "dashed",
+     "nohead"
+    ],
+    "label": "",
+    "via": null,
+    "side": "right-top",
+    "step": null,
+    "fx": null
+   }
+  ]
+ },
+ "layout": {
+  "engine": "elk",
+  "router": "avoid",
+  "sizes": {
+   "internet": {
+    "w": 170,
+    "h": 48
+   },
+   "fw": {
+    "w": 220,
+    "h": 94
+   },
+   "web": {
+    "w": 170,
+    "h": 74
+   },
+   "mail": {
+    "w": 170,
+    "h": 74
+   },
+   "core": {
+    "w": 177,
+    "h": 94
+   },
+   "srv": {
+    "w": 191,
+    "h": 74
+   },
+   "users": {
+    "w": 170,
+    "h": 74
+   },
+   "voip": {
+    "w": 170,
+    "h": 74
+   }
+  },
+  "nodes": {
+   "internet": [
+    380,
+    20,
+    170,
+    48
+   ],
+   "fw": [
+    355,
+    150,
+    220,
+    94
+   ],
+   "web": [
+    40,
+    330,
+    170,
+    74
+   ],
+   "mail": [
+    40,
+    470,
+    170,
+    74
+   ],
+   "core": [
+    560,
+    360,
+    177,
+    94
+   ],
+   "srv": [
+    380,
+    560,
+    191,
+    74
+   ],
+   "users": [
+    620,
+    560,
+    170,
+    74
+   ],
+   "voip": [
+    840,
+    560,
+    170,
+    74
+   ],
+   "dmz": [
+    18,
+    284,
+    214,
+    282
+   ],
+   "lan": [
+    358,
+    314,
+    674,
+    342
+   ]
+  },
+  "edges": {
+   "internet->fw": [
+    [
+     465,
+     68
+    ],
+    [
+     465,
+     150
+    ]
+   ],
+   "fw->web": [
+    [
+     355,
+     190.2
+    ],
+    [
+     125.3,
+     190.2
+    ],
+    [
+     125.3,
+     330
+    ]
+   ],
+   "fw->mail": [
+    [
+     355,
+     204.2
+    ],
+    [
+     300,
+     204.2
+    ],
+    [
+     300,
+     438
+    ],
+    [
+     125.3,
+     438
+    ],
+    [
+     125.3,
+     470
+    ]
+   ],
+   "fw->core": [
+    [
+     465,
+     244
+    ],
+    [
+     465,
+     400
+    ],
+    [
+     560,
+     400
+    ]
+   ],
+   "core->srv": [
+    [
+     560,
+     414
+    ],
+    [
+     475.5,
+     414
+    ],
+    [
+     475.5,
+     560
+    ]
+   ],
+   "core->users": [
+    [
+     648.5,
+     454
+    ],
+    [
+     648.5,
+     507
+    ],
+    [
+     705,
+     507
+    ],
+    [
+     705,
+     560
+    ]
+   ],
+   "core->voip": [
+    [
+     737,
+     407.2
+    ],
+    [
+     925.3,
+     407.2
+    ],
+    [
+     925.3,
+     560
+    ]
+   ]
+  }
+ }
+}

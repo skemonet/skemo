@@ -1,0 +1,41 @@
+<h1>Chronological frieze</h1>
+<p class="lead">One central axis for long spans — decades, centuries, millennia — with eras as bands and events above and below.
+  Dates before the common era are negative years.</p>
+
+<skemo name="frieze-small" stacked></skemo>
+
+<h2>Options</h2>
+<table>
+  <tr><th>Attribute</th><th>On</th><th>Meaning</th></tr>
+  <tr><td><code>layout="frieze"</code></td><td>diagram</td><td>enables the mode</td></tr>
+  <tr><td><code>start</code>, <code>end</code></td><td>diagram</td><td>bounds of the axis, in years; by default the extreme dates. <code>end</code> is
+    included: <code>end="2017"</code> stops on the 2018 graduation</td></tr>
+  <tr><td><code>scale</code></td><td>diagram</td><td><code>year</code> · <code>decade</code> · <code>century</code> (default) ·
+    <code>millennium</code>; graduations keep at least 90 px apart</td></tr>
+  <tr><td><code>width</code></td><td>diagram</td><td>imposed width of the axis</td></tr>
+  <tr><td><code>date</code></td><td>card</td><td><strong>event</strong>: a card centred on its date, linked to the axis by a stem</td></tr>
+  <tr><td><code>start</code>, <code>end</code></td><td>card</td><td><strong>era</strong>: a band on the axis</td></tr>
+</table>
+
+<h2>Dates</h2>
+<p>A year, negative before the common era, optionally followed by <code>-MM</code> or <code>-MM-DD</code>:
+  <code>date="-44-03-15"</code>. <strong>There is no year 0</strong>: 1 BC is followed by AD 1, and <code>0</code> is an error.
+  As in timelines, <code>end</code> is included: <code>end="476"</code> runs to the end of 476. Two eras that share a boundary year
+  (<code>-509 → -27</code>, then <code>-27 → 476</code>) overlap by less than 2 pixels and touch, on one row.</p>
+
+<h2>Placement</h2>
+<ul>
+  <li>Eras stack in rows under the axis, longest first; a name too long for its band goes to its right.</li>
+  <li>Events go up or down, to the side that needs the lowest level, alternating on a tie; the stem stays on the exact date.</li>
+  <li>At century scale, centuries are labelled in Roman numerals, in the diagram's language.</li>
+  <li>Arrows are allowed, for the rare cause-and-effect link.</li>
+</ul>
+
+<h2>Grouping events <em>(preview)</em></h2>
+<skemo name="frieze-zone"></skemo>
+<p>A zone frames its events and their stems, with its title on top. Its events all go to one side of the axis (above, unless
+  another zone already holds that side over the same dates); the other events of that period go to the other side. Zones do not
+  nest in a frieze.</p>
+
+<h2>A larger example</h2>
+<skemo name="frieze" figure></skemo>

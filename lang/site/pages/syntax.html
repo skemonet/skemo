@@ -1,0 +1,61 @@
+<h1>Syntax</h1>
+<p class="lead">A <code>.skemo</code> file is a valid <a href="https://pugjs.org/">Pug</a> document that uses a handful of tags and
+  lines written <code>| text</code>. Each line is one element; indentation says what contains what; the text of lines follows
+  Markdown.</p>
+
+<skemo name="syntax"></skemo>
+
+<h2>Tags and lines</h2>
+<table>
+  <tr><th>Write</th><th>Role</th><th>Content</th></tr>
+  <tr><td><code>diagram(…)</code></td><td>optional first line: global options</td><td>everything else, indented below</td></tr>
+  <tr><td><code>card#id.type</code></td><td>a card</td><td>text = title · <code>| …</code> = content lines · <code>to(…)</code> = arrows leaving it</td></tr>
+  <tr><td><code>zone#id.type</code></td><td>a group</td><td>text = title · <code>| …</code> = description lines · indented cards and zones</td></tr>
+  <tr><td><code>to(target).type</code></td><td>an arrow, inside its source card</td><td>text = label (optional)</td></tr>
+  <tr><td><code>| text</code></td><td>a line of the card, zone or title above it</td><td>Markdown emphasis; a line ending with <code>|</code> is a table row</td></tr>
+</table>
+<p><code>title</code>, <code>cards</code> and <code>stack</code> complete the set: see <a href="cards-and-zones.html">Cards and zones</a>.
+  Classes stick to the symbol that opens: <code>|.warn text</code> gives a line the class <code>warn</code>; <code>| .env</code>
+  (a space first) is the text “.env”.</p>
+
+<h2>Anatomy of a line</h2>
+<pre><code>card#fw.t0.critical(tag="Edge" at="40,120") Perimeter firewall   @2:up
+│    │  │           │                       │                    └ animation marker (optional)
+│    │  │           │                       └ text: the title
+│    │  │           └ attributes: one group, in parentheses
+│    │  └ classes: the card's types, styled in CSS (several allowed)
+│    └ id: unique, used as an arrow target
+└ tag</code></pre>
+<ul>
+  <li><strong>Id</strong>: <code>#</code> followed by letters, digits, <code>_</code> or <code>-</code>. Every card or zone that an arrow
+    targets needs one, and ids are unique in the file.</li>
+  <li><strong>Classes</strong>: <code>.name</code>, as many as you like. They are CSS classes: see <a href="styling.html">Styling</a>.</li>
+  <li><strong>Attributes</strong>: <code>name="value"</code>, separated by spaces or commas. A bare name is an arrow target in
+    <code>to(a b)</code>. Values take double or single quotes; numbers may go without.</li>
+  <li><strong>Text</strong>: everything after the first space that follows the tag.</li>
+</ul>
+
+<h2>One attribute group per tag</h2>
+<p>Attributes go in a single pair of parentheses, right after the id or the classes:</p>
+<pre><code>to(core side="right-top").dashed      ✓
+to(core).dashed(side="right-top")     ✗ error: several attribute groups</code></pre>
+
+<h2>Indentation</h2>
+<p>Nesting follows indentation. Use 2 spaces (recommended) or tabs, but never both in one file. A zone contains cards and zones;
+  a card contains only lines <code>|</code> and <code>to(…)</code> arrows.</p>
+
+<h2>Comments</h2>
+<pre><code>//- a comment, not rendered (its indented block is ignored too)
+// also a comment</code></pre>
+
+<h2>Older spellings</h2>
+<p>Files written before the language took its current form still open: <code>li text</code> is read as <code>| text</code>,
+  <code>from</code>/<code>to</code> on <code>diagram</code> as <code>start</code>/<code>end</code>, <code>step=</code>/<code>fx=</code>
+  as <code>@</code> markers. <code>skemo fmt</code> rewrites them.</p>
+
+<h2>Formatting</h2>
+<p><code>skemo fmt file.skemo</code> rewrites a file in canonical form (indentation, attribute order, markers);
+  <code>skemo fmt --check</code> only reports whether it is formatted. Comments and the order of elements are kept.</p>
+
+<h2>File extension</h2>
+<p><code>.skemo</code>. The content stays valid Pug, so an editor can use its Pug highlighting.</p>

@@ -1,0 +1,266 @@
+{
+ "options": {
+  "layout": "frise",
+  "from": "-800",
+  "to": "600",
+  "scale": "century",
+  "width": "1300"
+ },
+ "nodes": [
+  {
+   "id": "royaute",
+   "kind": "card",
+   "parent": null,
+   "classes": [
+    "roy"
+   ],
+   "title": "Royauté",
+   "tag": null,
+   "items": [],
+   "at": null,
+   "size": null,
+   "step": 1,
+   "fx": null,
+   "date": null,
+   "start": "-753",
+   "end": "-509"
+  },
+  {
+   "id": "republique",
+   "kind": "card",
+   "parent": null,
+   "classes": [
+    "rep"
+   ],
+   "title": "République",
+   "tag": null,
+   "items": [],
+   "at": null,
+   "size": null,
+   "step": 1,
+   "fx": null,
+   "date": null,
+   "start": "-509",
+   "end": "-27"
+  },
+  {
+   "id": "empire",
+   "kind": "card",
+   "parent": null,
+   "classes": [
+    "emp"
+   ],
+   "title": "Empire",
+   "tag": null,
+   "items": [],
+   "at": null,
+   "size": null,
+   "step": 1,
+   "fx": null,
+   "date": null,
+   "start": "-27",
+   "end": "476"
+  },
+  {
+   "id": "puniques",
+   "kind": "card",
+   "parent": null,
+   "classes": [
+    "guerre"
+   ],
+   "title": "Guerres puniques",
+   "tag": null,
+   "items": [],
+   "at": null,
+   "size": null,
+   "step": 1,
+   "fx": null,
+   "date": null,
+   "start": "-264",
+   "end": "-146"
+  },
+  {
+   "id": "crise",
+   "kind": "card",
+   "parent": null,
+   "classes": [
+    "guerre"
+   ],
+   "title": "Crise du IIIᵉ s.",
+   "tag": null,
+   "items": [],
+   "at": null,
+   "size": null,
+   "step": 1,
+   "fx": null,
+   "date": null,
+   "start": "235",
+   "end": "284"
+  },
+  {
+   "id": "fondation",
+   "kind": "card",
+   "parent": null,
+   "classes": [
+    "evt"
+   ],
+   "title": "Fondation de Rome",
+   "tag": null,
+   "items": [
+    "selon la tradition"
+   ],
+   "at": null,
+   "size": null,
+   "step": 2,
+   "fx": null,
+   "date": "-753",
+   "start": null,
+   "end": null
+  },
+  {
+   "id": "gaulois",
+   "kind": "card",
+   "parent": null,
+   "classes": [
+    "evt"
+   ],
+   "title": "Sac de Rome par les Gaulois",
+   "tag": null,
+   "items": [],
+   "at": null,
+   "size": null,
+   "step": 2,
+   "fx": null,
+   "date": "-390",
+   "start": null,
+   "end": null
+  },
+  {
+   "id": "cesar",
+   "kind": "card",
+   "parent": null,
+   "classes": [
+    "evt"
+   ],
+   "title": "Mort de César",
+   "tag": null,
+   "items": [
+    "Ides de mars"
+   ],
+   "at": null,
+   "size": null,
+   "step": 3,
+   "fx": null,
+   "date": "-44-03-15",
+   "start": null,
+   "end": null
+  },
+  {
+   "id": "auguste",
+   "kind": "card",
+   "parent": null,
+   "classes": [
+    "evt"
+   ],
+   "title": "Auguste, premier empereur",
+   "tag": null,
+   "items": [],
+   "at": null,
+   "size": null,
+   "step": 3,
+   "fx": null,
+   "date": "-27",
+   "start": null,
+   "end": null
+  },
+  {
+   "id": "vesuve",
+   "kind": "card",
+   "parent": null,
+   "classes": [
+    "evt"
+   ],
+   "title": "Éruption du Vésuve",
+   "tag": null,
+   "items": [
+    "Pompéi ensevelie"
+   ],
+   "at": null,
+   "size": null,
+   "step": 4,
+   "fx": null,
+   "date": "79-10-24",
+   "start": null,
+   "end": null
+  },
+  {
+   "id": "caracalla",
+   "kind": "card",
+   "parent": null,
+   "classes": [
+    "evt"
+   ],
+   "title": "Édit de Caracalla",
+   "tag": null,
+   "items": [],
+   "at": null,
+   "size": null,
+   "step": 4,
+   "fx": null,
+   "date": "212",
+   "start": null,
+   "end": null
+  },
+  {
+   "id": "partage",
+   "kind": "card",
+   "parent": null,
+   "classes": [
+    "evt"
+   ],
+   "title": "Partage de l'Empire",
+   "tag": null,
+   "items": [],
+   "at": null,
+   "size": null,
+   "step": 5,
+   "fx": null,
+   "date": "395",
+   "start": null,
+   "end": null
+  },
+  {
+   "id": "chute",
+   "kind": "card",
+   "parent": null,
+   "classes": [
+    "fin"
+   ],
+   "title": "Chute de l'Empire d'Occident",
+   "tag": null,
+   "items": [],
+   "at": null,
+   "size": null,
+   "step": 5,
+   "fx": null,
+   "date": "476-09-04",
+   "start": null,
+   "end": null
+  }
+ ],
+ "edges": [
+  {
+   "id": "partage->chute",
+   "from": "partage",
+   "to": "chute",
+   "classes": [
+    "dashed"
+   ],
+   "label": "",
+   "via": null,
+   "side": null,
+   "step": null,
+   "fx": null
+  }
+ ]
+}

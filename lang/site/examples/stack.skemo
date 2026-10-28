@@ -1,0 +1,12 @@
+diagram(dir="down")
+  card#kubectl kubectl
+    to(api)
+  zone#cluster Cluster
+    zone#cp(wrap="1") Control plane
+      card#api Kubernetes API server
+      card#k0 Kubelet
+      card#d0 Docker
+    zone#w1(wrap="1") Worker
+      card#a1 Application
+      card#k1 Kubelet
+      card#d1 Docker

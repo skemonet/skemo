@@ -1,0 +1,20 @@
+[package]
+name = "skemo-router"
+version = "0.1.0-rc.2"
+edition = "2024"
+description = "Orthogonal connector router: rectangles, traversable regions, waypoints"
+license = "MIT OR Apache-2.0"
+repository.workspace = true
+homepage.workspace = true
+readme = "README.md"
+keywords = ["routing", "orthogonal", "connector", "diagram", "graph"]
+categories = ["algorithms", "graphics", "visualization"]
+publish = false   # not published on crates.io yet
+
+[dependencies]
+
+[dev-dependencies]
+serde_json = "1"
+
+[lints]
+workspace = true

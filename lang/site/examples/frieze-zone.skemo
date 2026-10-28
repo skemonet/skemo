@@ -1,0 +1,7 @@
+diagram(layout="frieze" start="2014" end="2016" scale="year" width="800" lang="en")
+  card#lxc(date="2014-02") LXC
+  card#docker(date="2014-06") Docker
+  zone#orch Orchestrators
+    card#compose(date="2014-10") Docker Compose
+    card#k8s(date="2015-07") Kubernetes
+    card#swarm(date="2015-11") Docker Swarm
