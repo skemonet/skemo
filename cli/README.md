@@ -24,7 +24,7 @@ embedded, and the output is **identical from one machine to the next**.
 
 ## Installation
 
-The project is a pre-release (`0.1.0-rc.2`). Release binaries (Linux x86_64 and ARM, macOS ARM, Windows, with
+The project is a pre-release (`0.1.0-rc.3`). Release binaries (Linux x86_64 and ARM, macOS ARM, Windows, with
 SHA-256 checksums) are on the repository's [releases page](https://github.com/skemonet/skemo/releases).
 
 **From source** (recent Rust, edition 2024, i.e. 1.85 or later; [rustup.rs](https://rustup.rs)):

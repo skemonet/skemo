@@ -5,7 +5,14 @@ and the project uses [Semantic Versioning](https://semver.org/) (pre-1.0: minor 
 
 ## [Unreleased]
 
-## [0.1.0-rc.2] — first public release
+## [0.1.0-rc.3] — 2026-10-29
+
+First release from the public repository.
+
+- CI: actionlint installed from its release; longer timeout for the quality job.
+- engine: range check written for clippy 1.97 (`manual_range_contains`).
+
+## [0.1.0-rc.2] — first public version of the code
 
 The first public version of skemo, as one repository.
 
@@ -26,5 +33,6 @@ The first public version of skemo, as one repository.
   `icons`, `licences`; messages in the system language; release binaries for Linux, macOS and Windows.
 - **Agent skill**: `cli/skill/skemo/`, for AI agents that write diagrams.
 
-[Unreleased]: https://github.com/skemonet/skemo/compare/v0.1.0-rc.2...HEAD
-[0.1.0-rc.2]: https://github.com/skemonet/skemo/releases/tag/v0.1.0-rc.2
+[Unreleased]: https://github.com/skemonet/skemo/compare/v0.1.0-rc.3...HEAD
+[0.1.0-rc.3]: https://github.com/skemonet/skemo/releases/tag/v0.1.0-rc.3
+[0.1.0-rc.2]: https://github.com/skemonet/skemo/tree/28d0a43
