@@ -9,7 +9,7 @@ embedded, and the output is **identical from one machine to the next**.
 
 | The text | The result |
 |---|---|
-| <pre>diagram(dir="down")<br><br>  card#internet.cloud Internet<br>    to(fw) WAN<br><br>  card#fw.firewall Firewall<br>    li 203.0.113.10/29<br>    to(web)<br>    to(base)<br><br>  zone#internal.internal Internal network<br>    card#web.server Web server<br>      li 10.0.0.10<br>      to(base)<br>    card#base.server Database<br>      li 10.0.0.20</pre> | <img src="docs/example.png" width="280" alt="Diagram produced by skemo"> |
+| <pre>diagram(dir="down")<br><br>  card#internet.cloud Internet<br>    to(fw) WAN<br><br>  card#fw.firewall Firewall<br>    &#124; 203.0.113.10/29<br>    to(web)<br>    to(base)<br><br>  zone#internal.internal Internal network<br>    card#web.server Web server<br>      &#124; 10.0.0.10<br>      to(base)<br>    card#base.server Database<br>      &#124; 10.0.0.20</pre> | <img src="docs/example.png" width="280" alt="Diagram produced by skemo"> |
 
 ## Why skemo?
 
@@ -57,14 +57,17 @@ skemo watch example.skemo --css custom.css      # live preview in the browser, r
 
 ### The format in 30 seconds
 
-A `.skemo` file is **Pug** restricted to four tags:
+A `.skemo` file is **Pug** restricted to seven tags, with content lines written `| text`:
 
 | Tag | Role |
 |---|---|
-| `card#id.type Title` | a card; its `li` children are content lines |
-| `zone#id.type Title` | a group containing cards or other zones (by indentation) |
+| `card#id.type Title` | a card; its `\|` lines are content lines (Markdown emphasis; a line ending in `\|` is a table row) |
+| `cards#id.type Title` | a card drawn as a pile of several instances; `count="N"` adds a `×N` badge |
+| `zone#id.type Title` | a group containing cards or other zones (by indentation); its `\|` lines are description lines |
+| `stack` | an invisible group that lays its children one after the other |
 | `to(target).type Label` | an arrow, written inside its source card |
-| `diagram(dir="down")` | global options (direction, theme, `timeline`, `frise` or `mindmap` mode) |
+| `title Text` | the diagram's title, under `diagram`; its `\|` lines are subtitle lines |
+| `diagram(dir="down")` | global options (direction, theme, `timeline`, `frieze` or `mindmap` layout) |
 
 Useful attributes: `at="x,y"` (pinned position), `side="bottom-top"` (attachment sides), `via="x,y"` (waypoint),
 `tag="Owner"` (badge), `join="trunk"` (several targets sharing one trunk). The `.type` classes are CSS classes: see the `custom.css` created by `skemo init`, and

@@ -11,7 +11,7 @@ HTML animated step by step, GIF or animated PNG**. The layout and the arrows are
 
 | The text | The result |
 |---|---|
-| <pre>diagram(dir="down")<br><br>  card#internet.cloud Internet<br>    to(fw) WAN<br><br>  card#fw.firewall Firewall<br>    li 203.0.113.10/29<br>    to(web)<br>    to(base)<br><br>  zone#internal.internal Internal network<br>    card#web.server Web server<br>      li 10.0.0.10<br>      to(base)<br>    card#base.server Database<br>      li 10.0.0.20</pre> | <img src="cli/docs/example.png" width="280" alt="Diagram produced by skemo"> |
+| <pre>diagram(dir="down")<br><br>  card#internet.cloud Internet<br>    to(fw) WAN<br><br>  card#fw.firewall Firewall<br>    &#124; 203.0.113.10/29<br>    to(web)<br>    to(base)<br><br>  zone#internal.internal Internal network<br>    card#web.server Web server<br>      &#124; 10.0.0.10<br>      to(base)<br>    card#base.server Database<br>      &#124; 10.0.0.20</pre> | <img src="cli/docs/example.png" width="280" alt="Diagram produced by skemo"> |
 
 - **Text is the source**: a diagram is read, diffed and reviewed like code.
 - **Automatic layout, hand-tuned where you want**: cards place themselves; pin what you care about (`at=`),

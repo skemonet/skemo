@@ -14,15 +14,15 @@
   card#internet.cloud Internet
     to(fw).wan WAN
   card#fw.t0 Pare-feu
-    li 203.0.113.10/29
+    | 203.0.113.10/29
     to(web)
     to(core) transit
   zone#dmz.dmz DMZ
     card#web.t1 Serveur Web
-      li 172.16.0.10
+      | 172.16.0.10
   zone#lan.lan LAN interne
     card#core.t1 Switch cœur
-      li 10.10.0.0/16 VLAN 10
+      | 10.10.0.0/16 VLAN 10
 </textarea>
 <div id="right">
   <div id="bar">
