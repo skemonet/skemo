@@ -422,8 +422,7 @@ fn flat_step(
     let along = |p: (f64, f64)| if horiz { p.0 } else { p.1 };
     let jog = (level(b) - level(c)).abs();
     if !(horiz || vert)
-        || jog < 0.5
-        || jog > MAX_JOG
+        || !(0.5..=MAX_JOG).contains(&jog)
         || (along(b) - along(a)).signum() != (along(d) - along(c)).signum()
     {
         return None;
