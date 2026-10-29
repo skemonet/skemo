@@ -109,7 +109,9 @@ tfoot td { font-weight: 700; }
 .gallery figcaption { font-size: .9rem; color: var(--muted); padding: 8px 6px 2px; }
 
 .steps { counter-reset: step; list-style: none; padding: 0; margin: 28px 0 0; display: grid; gap: 14px; }
-.steps li { counter-increment: step; position: relative; padding-left: 48px; }
+.steps li { counter-increment: step; position: relative; padding-left: 48px; min-width: 0; }
+/* grid items shrink below their content, so long code lines scroll inside their block on phones */
+.grid > *, .pair > * { min-width: 0; }
 .steps li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 32px; height: 32px; border-radius: 50%; background: var(--brand-soft); color: var(--brand-ink); font-weight: 700; display: grid; place-items: center; }
 
 .faq details { border-bottom: 1px solid var(--line); padding: 16px 0; }
