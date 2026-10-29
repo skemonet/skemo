@@ -22,7 +22,8 @@ jobs:
   quality:
     name: quality
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # the coverage stage rebuilds the workspace instrumented: about 45 min on a cold cache
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { persist-credentials: false }
@@ -46,5 +47,12 @@ jobs:
         with: { persist-credentials: false, fetch-depth: 0 }
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
       - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
-        with: { tool: "cargo-deny,actionlint" }
+        with: { tool: "cargo-deny" }
+      # install-action does not ship actionlint: the release binary, checked against its SHA-256
+      - name: actionlint
+        run: |
+          v=1.7.8; f="actionlint_${v}_linux_amd64.tar.gz"
+          curl -fsSL -o "$f" "https://github.com/rhysd/actionlint/releases/download/v$v/$f"
+          echo "be92c2652ab7b6d08425428797ceabeb16e31a781c07bc388456b4e592f3e36a  $f" | sha256sum -c
+          tar xzf "$f" actionlint && mv actionlint "$HOME/.cargo/bin/" && rm "$f"
       - run: tools/ci.sh security
