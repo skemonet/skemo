@@ -5,6 +5,10 @@ and the project uses [Semantic Versioning](https://semver.org/) (pre-1.0: minor 
 
 ## [Unreleased]
 
+- Release binaries named by system and processor, the same in every release: `skemo-linux-x86_64`,
+  `skemo-linux-arm64`, `skemo-macos-arm64`, `skemo-windows-x86_64.exe` (until 0.1.0-rc.3:
+  `skemo-<version>-<target>`; `install.sh` reads both). The release notes say which file to take.
+
 ## [0.1.0-rc.3] — 2026-10-29
 
 First release from the public repository.

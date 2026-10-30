@@ -16,10 +16,10 @@ need() { command -v "$1" >/dev/null 2>&1 || die "$1 is required"; }
 need curl; need uname
 
 case "$(uname -s)-$(uname -m)" in
-  Linux-x86_64) target=x86_64-unknown-linux-musl ;;
-  Linux-aarch64 | Linux-arm64) target=aarch64-unknown-linux-musl ;;
-  Darwin-arm64) target=aarch64-apple-darwin ;;
-  *) die "no binary for $(uname -s) $(uname -m) (Windows: download skemo-<version>-x86_64-pc-windows-msvc.exe from the releases page)" ;;
+  Linux-x86_64) asset=skemo-linux-x86_64 target=x86_64-unknown-linux-musl ;;
+  Linux-aarch64 | Linux-arm64) asset=skemo-linux-arm64 target=aarch64-unknown-linux-musl ;;
+  Darwin-arm64) asset=skemo-macos-arm64 target=aarch64-apple-darwin ;;
+  *) die "no binary for $(uname -s) $(uname -m) (Windows: download skemo-windows-x86_64.exe from the releases page)" ;;
 esac
 
 auth=""
@@ -34,8 +34,7 @@ if [ -z "$tag" ]; then
   tag="$(get "$api/releases?per_page=1" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -n 1)"
   [ -n "$tag" ] || die "no release found"
 fi
-name="skemo-$tag-$target"
-echo "installing skemo $tag ($target) into $bin_dir"
+echo "installing skemo $tag ($asset) into $bin_dir"
 
 release="$(get "$api/releases/tags/$tag")"
 asset_url() { # asset file name -> API url of the asset
@@ -43,8 +42,10 @@ asset_url() { # asset file name -> API url of the asset
 }
 
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
-url="$(asset_url "$name")"
-[ -n "$url" ] || die "asset $name not found in release $tag"
+# releases up to v0.1.0-rc.3 named their binaries skemo-<version>-<target>
+name="$asset"; url="$(asset_url "$name")"
+[ -n "$url" ] || { name="skemo-$tag-$target"; url="$(asset_url "$name")"; }
+[ -n "$url" ] || die "asset $asset not found in release $tag"
 get "$url" application/octet-stream > "$tmp/skemo"
 
 # the release's description holds one line per binary: "<sha256>  <name>"

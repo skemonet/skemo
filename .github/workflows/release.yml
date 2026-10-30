@@ -23,10 +23,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { target: x86_64-unknown-linux-musl, os: ubuntu-latest, musl: true }
-          - { target: aarch64-unknown-linux-musl, os: ubuntu-24.04-arm, musl: true }
-          - { target: aarch64-apple-darwin, os: macos-latest }
-          - { target: x86_64-pc-windows-msvc, os: windows-latest }
+          # asset: the file name in the release, the same from one version to the next (the release
+          # carries the version), so that releases/latest/download/<asset> is a stable link
+          - { target: x86_64-unknown-linux-musl, os: ubuntu-latest, musl: true, asset: skemo-linux-x86_64 }
+          - { target: aarch64-unknown-linux-musl, os: ubuntu-24.04-arm, musl: true, asset: skemo-linux-arm64 }
+          - { target: aarch64-apple-darwin, os: macos-latest, asset: skemo-macos-arm64 }
+          - { target: x86_64-pc-windows-msvc, os: windows-latest, asset: skemo-windows-x86_64.exe }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -41,11 +43,9 @@ jobs:
       - name: Binary
         shell: bash
         run: |
-          name="skemo-${GITHUB_REF_NAME}-${{ matrix.target }}"
-          exe=skemo; ext=""
-          [ "${{ runner.os }}" = Windows ] && exe=skemo.exe && ext=.exe
+          exe=skemo; [ "${{ runner.os }}" = Windows ] && exe=skemo.exe
           mkdir -p dist
-          cp "target/${{ matrix.target }}/release/$exe" "dist/$name$ext"
+          cp "target/${{ matrix.target }}/release/$exe" "dist/${{ matrix.asset }}"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: skemo-${{ matrix.target }}
@@ -67,6 +67,16 @@ jobs:
           # the description: what to download, and the SHA-256 of each binary, one line each
           {
             echo "One binary per platform: download it, make it executable, run it."
+            echo
+            echo "| Your machine | File |"
+            echo "|---|---|"
+            echo "| Linux, Intel or AMD | \`skemo-linux-x86_64\` |"
+            echo "| Linux, ARM (Raspberry Pi 4/5, Graviton…) | \`skemo-linux-arm64\` |"
+            echo "| Mac with Apple silicon (M1 and later) | \`skemo-macos-arm64\` |"
+            echo "| Windows, Intel or AMD | \`skemo-windows-x86_64.exe\` |"
+            echo
+            echo "Linux and macOS in one line: \`curl -fsSL https://raw.githubusercontent.com/skemonet/skemo/main/cli/install.sh | sh\`"
+            echo
             echo "Check it against its line below (\`sha256sum -c\`, or \`shasum -a 256 -c\` on macOS)."
             echo "The licences of what it embeds (fonts, icons, Rust crates): \`skemo licences\`."
             echo
