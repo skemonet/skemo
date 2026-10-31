@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>skemo — text diagrams, fewer tokens</title>
+<meta name="description" content="skemo turns a few lines of text into a polished diagram. Your AI agent writes the structure, skemo does the layout on your CPU: about {{tokens:ratio}}× fewer tokens than drawing the picture as SVG.">
+<meta property="og:title" content="skemo — text diagrams, fewer tokens">
+<meta property="og:description" content="Your AI agent writes a few lines of text; skemo lays them out and renders PNG, SVG, WebP or animated HTML. {{tokens:saving_percent}} % fewer tokens than SVG.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="brand/icon-light.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="./"><picture><source srcset="brand/logo-dark.png" media="(prefers-color-scheme: dark)"><img src="brand/logo-light.png" height="28" width="136" alt="skemo"></picture></a>
+    <nav aria-label="Main">
+      <a href="#tokens">Why fewer tokens</a>
+      <a href="#features">Features</a>
+      <a href="#agents">For AI agents</a>
+      <a href="https://docs.skemo.net/">Documentation</a>
+      <a href="https://github.com/skemonet">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<section class="hero">
+  <div class="wrap">
+    <span class="eyebrow">Text diagrams · pre-release {{version}}</span>
+    <h1>Diagrams that cost your AI<br><em>{{tokens:ratio}}× fewer tokens.</em></h1>
+    <p class="lead">An AI agent that draws a diagram as SVG writes every coordinate, every path, every colour. With skemo it writes a
+      few lines of readable text, and a small engine on your own machine does the layout, the routing and the rendering in
+      milliseconds. Same picture, a fraction of the tokens — and of the energy behind them.</p>
+    <div class="actions">
+      <a class="btn primary" href="#install">Install skemo</a>
+      <a class="btn ghost" href="#agents">Add the agent skill</a>
+      <a class="btn ghost" href="https://docs.skemo.net/">Read the docs</a>
+    </div>
+    <div style="margin-top:48px">{{diagram:hero}}</div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <span class="eyebrow">How it reads</span>
+    <h2>Write the structure. skemo draws the rest.</h2>
+    <p class="lead">A <code>.skemo</code> file is plain text: cards, zones that group them, and arrows written inside the card they
+      leave. No coordinates unless you want them. The look is CSS: one card type is one line.</p>
+    <div class="pair">
+      <div><p class="label">network.skemo — {{example:network:skemo_tokens}} tokens</p>{{source:network}}</div>
+      <div><p class="label">skemo network.skemo → network.png</p>{{diagram:network}}<p class="muted" style="font-size:.9rem;margin-top:8px">The same picture as SVG: {{example:network:svg_tokens}} tokens.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="tokens">
+  <div class="wrap">
+    <span class="eyebrow">Fewer tokens, less CO₂</span>
+    <h2>Every token not generated is energy not spent.</h2>
+    <p class="lead">Generating text is the expensive part of using a language model: each output token is a full pass through the
+      model on a data-centre GPU. When the model draws the picture itself, most of those tokens are coordinates. skemo moves that
+      work to a deterministic program that runs on your CPU in a few milliseconds.</p>
+
+    <div class="figures">
+      <div class="figure"><b>{{tokens:saving_percent}} %</b><span>fewer tokens than writing the same picture as SVG</span></div>
+      <div class="figure"><b>×{{tokens:ratio}}</b><span>over the 8 gallery diagrams below, all their tokens counted together</span></div>
+      <div class="figure"><b>1 line</b><span>to change a label or move a card: nothing else is rewritten</span></div>
+      <div class="figure"><b>0</b><span>GPU, network or cloud service needed to render</span></div>
+    </div>
+
+    {{chart}}
+
+    <div class="grid two" style="margin-top:32px">
+      <div class="tile">
+        <h3>{{icon:pencil-line}} Edits stay small</h3>
+        <p>Add a card and skemo re-lays out the diagram; only the arrows attached to what changed move. Your agent edits one line
+          instead of regenerating a whole drawing — and the diff in your repository stays one line too.</p>
+      </div>
+      <div class="tile">
+        <h3>{{icon:circle-check}} Checked without looking</h3>
+        <p><code>skemo check</code> reports unknown targets, duplicate ids or bad dates as precise, line-numbered messages. The agent
+          fixes text, not pixels, and does not need to send screenshots back to the model to find overlapping boxes.</p>
+      </div>
+    </div>
+
+    <details class="faq" style="margin-top:28px">
+      <summary>How these numbers are measured</summary>
+      <p>For each gallery example we count the tokens of the <code>.skemo</code> source plus its CSS, and the tokens of the SVG that
+        skemo renders from it — the same picture with every coordinate written out, which is what a model has to produce when it
+        draws directly. That SVG is first reduced to what a careful hand would write: no embedded source, no class or data
+        attributes, the font declared once, coordinates to one decimal. Both sides are counted with the same byte-pair-like approximation (words, groups of up to three digits,
+        punctuation); real tokenizers give different absolute counts, but the ratio between the two routes is what matters. The
+        script is <code>site/tools/measure_tokens.py</code>, and the build of this page reruns it: the figures are never typed by
+        hand. They count the diagram's text only: on a whole task, where reading the input, the skill and the rendered images
+        dominates, the saving is smaller ({{task:saving_percent}} % on our first measured task, see the questions below).</p>
+    </details>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <span class="eyebrow">Features</span>
+    <h2>A small tool that does one thing carefully.</h2>
+    <div class="grid">
+      <div class="tile"><h3>{{icon:layout-dashboard}} Automatic layout</h3><p>Cards place themselves and arrows route around
+        obstacles. Pin only what you care about with <code>at="x,y"</code>, force a side or a waypoint on an arrow.</p></div>
+      <div class="tile"><h3>{{icon:palette}} Styled with CSS</h3><p>A type is a class: <code>.server { --c: #5B6CFF; }</code>.
+        Tints, borders and inks derive from one accent, so light, dark and print themes come for free.</p></div>
+      <div class="tile"><h3>{{icon:contrast}} Readable by design</h3><p>A built-in contrast check, a print theme that survives black
+        and white, and types that never rely on colour alone.</p></div>
+      <div class="tile"><h3>{{icon:presentation}} Step by step</h3><p>Add <code>@1</code>, <code>@2:up</code>,
+        <code>@3-5:focus</code> to unfold a diagram in a talk, as HTML, GIF, animated PNG or animated WebP.</p></div>
+      <div class="tile"><h3>{{icon:calendar-range}} More than boxes</h3><p>Timelines with lanes, chronological friezes down to
+        BC dates, mind maps and organisation charts, from the same four tags.</p></div>
+      <div class="tile"><h3>{{icon:package}} One binary, offline</h3><p>No Node, no browser, no Graphviz: fonts and theme are
+        embedded and the output is identical from one machine to the next. Also available as WebAssembly.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <span class="eyebrow">Gallery</span>
+    <h2>Rendered by skemo, as you see them.</h2>
+    <p class="lead">Every picture on this page is generated from its text when the site is built.</p>
+    <div class="gallery">
+      <figure class="wide">{{diagram:process}}<figcaption>A process, left to right, with a custom theme</figcaption></figure>
+      <figure>{{diagram:mindmap}}<figcaption>A mind map: the tree comes from the arrows</figcaption></figure>
+      <figure class="wide">{{diagram:timeline}}<figcaption>A timeline with lanes, milestones and periods</figcaption></figure>
+      <figure>{{diagram:hyperedge}}<figcaption>An organisation chart with shared trunks</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section id="agents">
+  <div class="wrap">
+    <span class="eyebrow">For AI agents</span>
+    <h2>Teach your agent skemo in one file.</h2>
+    <p class="lead">The skemo skill tells a coding agent (Claude Code, or any agent that reads <code>SKILL.md</code> skills) how to
+      write a diagram, check it and render it, with the rules that keep files short.</p>
+    <ol class="steps">
+      <li>Install the <code>skemo</code> binary (below) so the agent can run it.</li>
+      <li>Copy the skill into your skills folder:
+        <pre class="code"><code>mkdir -p ~/.claude/skills/skemo/references
+curl -fsSL https://skemo.net/skill/skemo/SKILL.md -o ~/.claude/skills/skemo/SKILL.md
+curl -fsSL https://skemo.net/skill/skemo/references/format.md -o ~/.claude/skills/skemo/references/format.md</code></pre></li>
+      <li>Ask for a diagram: <em>“draw our deployment as a skemo diagram”</em>. The agent writes the <code>.skemo</code> file,
+        runs <code>skemo check</code>, then renders it.</li>
+    </ol>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <span class="eyebrow">Install</span>
+    <h2>Up and running in a minute.</h2>
+    <div class="grid two">
+      <div><p class="label">Linux and macOS</p>
+        <pre class="code"><code>curl -fsSL https://raw.githubusercontent.com/skemonet/skemo/main/cli/install.sh | sh</code></pre>
+        <p class="muted" style="margin-top:10px;font-size:.92rem">Installs into <code>~/.local/bin</code> after checking the SHA-256.
+          Windows: take the <code>.exe</code> from the releases page.</p></div>
+      <div><p class="label">First diagram</p>
+        <pre class="code"><code>skemo init my-diagram
+cd my-diagram
+skemo example.skemo --css custom.css    # → example.png
+skemo watch example.skemo               # live preview</code></pre></div>
+    </div>
+  </div>
+</section>
+
+<section class="faq">
+  <div class="wrap">
+    <span class="eyebrow">Questions</span>
+    <h2>Good to know</h2>
+    <details><summary>How is it different from Mermaid?</summary>
+      <p>Both are text. skemo is built for diagrams people show: the look is plain CSS, layout is stable when you edit (only the arrows
+        of what changed move), positions can be pinned by hand or from the editor and written back into the text, and rendering
+        needs no browser. Both keep the source short, which is what an agent pays for.</p></details>
+    <details><summary>Does the agent need to see the image?</summary>
+      <p>It looks, as a person would: in our test on a Terraform platform the agent read every image it rendered. What changes is what
+        it fixes there. <code>skemo check</code> catches structural mistakes as text and the layout is automatic, so the agent
+        reads the picture to judge it, not to move boxes by hand.</p></details>
+    <details><summary>Is it free?</summary>
+      <p>skemo is in pre-release ({{version}}). The language library and the router are licensed MIT OR Apache-2.0; the licence of the
+        rest is being settled before the first stable release.</p></details>
+    <details><summary>What do the token figures measure?</summary>
+      <p>The figures above compare the text of a diagram: a <code>.skemo</code> source against the SVG of the same picture. A whole
+        task costs more than its output: reading the input, the skill and the rendered images. Measured on a whole task (an
+        architecture diagram from a Terraform export, {{task:runs}} run, same model with and without the skill), the agent with
+        skemo spent {{task:saving_percent}} % fewer tokens ({{task:tokens_with}} against {{task:tokens_without}}) and was
+        {{task:speedup}}× faster. More tasks will be measured the same way.</p></details>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>skemo · text diagrams · <a href="https://docs.skemo.net/">docs.skemo.net</a></span>
+    <span>Fonts: Inter, JetBrains Mono (SIL OFL 1.1) · Icons: Lucide (ISC) · This page: no tracker, no cookie, no script.</span>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -4,7 +4,9 @@
 
 <h2>Why it saves tokens</h2>
 <p>To draw a diagram directly, a model has to write every coordinate, path and colour of the picture. Measured on the gallery
-  examples, the SVG of a diagram is about <strong>17 times</strong> longer, in tokens, than the skemo source it is rendered from.
+  examples, the SVG of a diagram, written as lean as a careful hand would, is about <strong>12 times</strong> longer, in tokens, than
+  the skemo source it is rendered from (<a href="https://skemo.net/#tokens">how it is measured</a>). Over a whole task, where reading
+  the input and looking at the images dominate, the first measurement gave about a third fewer tokens.
   Every output token is a pass of the model on a GPU: fewer tokens means less time, less cost and less energy. Edits shrink even
   more: renaming a card or adding one is a single changed line, where a drawn picture has to be regenerated.</p>
 

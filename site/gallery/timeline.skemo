@@ -1,0 +1,32 @@
+//- Timeline: the project's own roadmap (milestones + periods, lanes = repositories)
+diagram(layout="timeline" start="2026-10" end="2027-06" scale="month" today="2026-10-15")
+
+  card#launch.milestone(date="2026-10-14") Specs delivered
+
+  zone#router.lane Router
+    card#r0.spike(start="2026-10-16" end="2026-10-31") R0 · hightower spike
+      to(valid)
+    card#r1.dev(start="2026-11-10" end="2026-12-20") R1 → R2 · routing + spacing
+      | sides, via, regions, nudging
+    card#r3.dev(start="2027-02" end="2027-03") R3 · incremental + WASM
+
+  zone#engine.lane Engine
+    card#e0.spike(start="2026-10-16" end="2026-11-07") E0 · elk-rs, measurement, rendering spikes
+      to(valid)
+    card#e1.dev(start="2026-11-10" end="2026-12-15") E1 · measurement + layout
+      to(e2)
+    card#e2.dev(start="2026-12-16" end="2027-01-31") E2 → E3 · routing + rendering
+      to(cli2)
+    card#e5.dev(start="2027-02" end="2027-04") E4 → E5 · steps + WASM
+      to(editor)
+
+  zone#lang.lane Language
+    card#l1.dev(start="2026-10-16" end="2026-11-20") L1 · parser + diagnostics
+    card#l2.dev(start="2026-11-21" end="2026-12-31") L2 · styles
+    card#l3.dev(start="2027-02" end="2027-03") L3 · surgical editing
+
+  zone#product.lane Deliverables
+    card#valid.decision(date="2026-11-09") Validation of the choices
+      | D-005 · D-007 · router option
+    card#cli2.milestone(date="2027-02-01") CLI: first PNG rendering
+    card#editor.milestone(date="2027-05-03") Editor kick-off

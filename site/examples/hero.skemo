@@ -1,0 +1,19 @@
+//- The skemo pipeline, drawn by skemo
+diagram(dir="right" lang="en")
+
+  card#agent.ai(icon="bot") Your AI agent
+    | writes ~250 tokens of text
+    to(source)
+
+  card#source.text(icon="file-code") diagram.skemo
+    | cards, zones, arrows
+    | types styled in CSS
+    to(engine)
+
+  zone#cpu.local skemo, on your CPU
+    card#engine.step(icon="cpu") Layout + routing
+      | deterministic, offline
+      to(out) ~50 ms
+
+  card#out.output(icon="image") PNG · SVG · WebP · HTML
+    | light, dark and print

@@ -1,0 +1,9 @@
+{
+  "what": "The same Terraform export (106 resources) turned into an architecture diagram by Claude Opus 5.5, with and without the skemo skill, each in an empty folder: tokens and wall time of the whole task (reading the export and the skill, writing, rendering, looking at the images).",
+  "source": "measured by the maintainers on 2026-10-28",
+  "runs": 1,
+  "tokens_without": 104000,
+  "tokens_with": 66000,
+  "seconds_without": 408,
+  "seconds_with": 102
+}

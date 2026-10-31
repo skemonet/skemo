@@ -1,0 +1,32 @@
+//- Pinned positions (at=), tweaked arrows (via=, side=) and arrow styles
+diagram(dir="down")
+
+  card#internet.cloud(at="380,20") Internet
+    to(fw).wan.thick WAN
+
+  card#fw.t0(at="355,150") Perimeter firewall
+    | 203.0.113.10/29
+    | 10.0.0.1/24
+    to(web side="left-top").secure.dot HTTPS
+    to(mail side="left-top" via="300,420").secure.dotted SMTP
+    to(core).flow transit
+
+  zone#dmz.dmz DMZ
+    card#web.t1(at="40,330") Web server
+      | 172.16.0.10
+    card#mail.t1(at="40,470") Mail server
+      | 172.16.0.20
+
+  zone#lan.lan Internal LAN
+    card#core.t1(at="560,360") Core switch
+      | 10.10.0.0/16 VLAN 10
+      | 10.20.0.0/16 VLAN 20
+      to(srv).both
+      to(users)
+      to(voip side="right-top").dashed.nohead
+    card#srv.t2(at="380,560") Internal servers
+      | 10.30.0.0/24
+    card#users.t3(at="620,560") Workstations
+      | ~400 workstations
+    card#voip.t3(at="840,560") IP telephony
+      | ~150 phones

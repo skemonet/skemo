@@ -1,0 +1,22 @@
+//- Non-network example: a process, from left to right
+diagram(dir="right")
+
+  zone#hr.hr Human resources
+    card#post.step Post the job offer
+      | D+0
+      to(screen)
+    card#screen.step Screen the CVs
+      | ~120 applications
+      to(interview) 15 shortlisted
+
+  zone#team.team Team
+    card#interview.step Interviews
+      | 2 rounds
+      to(decision)
+    card#decision.choice Decision
+      | committee
+      to(send).ok yes
+      to(screen).ko.dashed no
+
+  card#send.end(tag="END") Offer sent
+    | D+30

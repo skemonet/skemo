@@ -1,0 +1,9 @@
+/* Custom theme: overrides the default theme */
+:root { --bg: #FBFAF7; --font: 'Inter', sans-serif; --radius: 18px; }
+.step   { --c: #5B6CFF; --label: "STEP"; }
+.choice { --c: #E8590C; --label: "?"; }
+.end    { --c: #2B8A3E; }
+.hr     { --z-bg: #F3F0FF; --z-border: #D0C6FF; --z-ink: #5F3DC4; }
+.team   { --z-bg: #EBFBEE; --z-border: #B2F2BB; --z-ink: #2B8A3E; }
+.edge.ok { color: #2B8A3E; }
+.edge.ko { color: #E8590C; }

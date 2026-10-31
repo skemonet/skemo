@@ -1,0 +1,23 @@
+//- Chronological frieze: ancient Rome (negative years = BC)
+diagram(layout="frieze" start="-800" end="600" scale="century" width="1300")
+
+  //- Eras: bands on the axis (stacked if they overlap)
+  card#monarchy.roy(start="-753" end="-509") Monarchy
+  card#republic.rep(start="-509" end="-27") Republic
+  card#empire.emp(start="-27" end="476") Empire
+  card#punic.war(start="-264" end="-146") Punic Wars
+  card#crisis.war(start="235" end="284") Third-century crisis
+
+  //- Events: above or below the axis, depending on the room
+  card#founding.evt(date="-753") Founding of Rome
+    | according to tradition
+  card#gauls.evt(date="-390") Sack of Rome by the Gauls
+  card#caesar.evt(date="-44-03-15") Death of Caesar
+    | Ides of March
+  card#augustus.evt(date="-27") Augustus, first emperor
+  card#vesuvius.evt(date="79-10-24") Eruption of Vesuvius
+    | Pompeii buried
+  card#caracalla.evt(date="212") Edict of Caracalla
+  card#split.evt(date="395") Division of the Empire
+    to(fall).dashed
+  card#fall.end(date="476-09-04") Fall of the Western Empire

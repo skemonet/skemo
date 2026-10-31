@@ -6,3 +6,5 @@ router/demo/wasm/pkg/
 .cargo-home/
 dist/
 SHA256SUMS
+site/dist/
+__pycache__/

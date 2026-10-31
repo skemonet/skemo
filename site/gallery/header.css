@@ -1,0 +1,5 @@
+.segment { --c: #4E9A3E; --label: "Segment"; }
+.t0gw    { --c: #E07B24; --label: "Tier-0 Gateway"; }
+.uplink  { --c: #7B5CC4; }
+/* arrows leaving or entering an uplink take its colour */
+.edge.from-uplink, .edge.to-uplink { color: #7B5CC4; }

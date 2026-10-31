@@ -24,7 +24,7 @@ embedded, and the output is **identical from one machine to the next**.
 
 ## Installation
 
-The project is a pre-release (`0.1.0-rc.3`). Release binaries (Linux x86_64 and ARM, macOS ARM, Windows, with
+The project is a pre-release (`0.1.0-rc.4`). Release binaries (Linux x86_64 and ARM, macOS ARM, Windows, with
 SHA-256 checksums) are on the repository's [releases page](https://github.com/skemonet/skemo/releases).
 
 **From source** (recent Rust, edition 2024, i.e. 1.85 or later; [rustup.rs](https://rustup.rs)):
@@ -79,7 +79,7 @@ documentation is the site built from `lang/site/` (docs.skemo.net).
 
 [`skill/skemo/`](skill/skemo/SKILL.md) is a public agent skill (the `SKILL.md` format of Claude Code and other
 agents): it teaches an agent to write `.skemo` files, check them and render them, instead of drawing SVG by hand,
-which costs about 17 times more output tokens. Install it by copying the folder into `~/.claude/skills/` (or
+which costs about 12 times more output tokens for the diagram itself (about a third more over a whole task). Install it by copying the folder into `~/.claude/skills/` (or
 `.claude/skills/` in a project). `tests/skill.rs` renders every example of the skill, so it cannot drift from the
 binary.
 
