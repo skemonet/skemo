@@ -5,7 +5,9 @@ and the project uses [Semantic Versioning](https://semver.org/) (pre-1.0: minor 
 
 ## [Unreleased]
 
-## [0.1.0-rc.4] — 2026-10-31
+## [0.1.0-rc.5] — 2026-10-31
+
+The tag v0.1.0-rc.4 has no release (its publication failed).
 
 - Release binaries named by system and processor, the same in every release: `skemo-linux-x86_64`,
   `skemo-linux-arm64`, `skemo-macos-arm64`, `skemo-windows-x86_64.exe` (until 0.1.0-rc.3:
@@ -42,7 +44,7 @@ The first public version of skemo, as one repository.
   `icons`, `licences`; messages in the system language; release binaries for Linux, macOS and Windows.
 - **Agent skill**: `cli/skill/skemo/`, for AI agents that write diagrams.
 
-[Unreleased]: https://github.com/skemonet/skemo/compare/v0.1.0-rc.4...HEAD
-[0.1.0-rc.4]: https://github.com/skemonet/skemo/compare/v0.1.0-rc.3...v0.1.0-rc.4
+[Unreleased]: https://github.com/skemonet/skemo/compare/v0.1.0-rc.5...HEAD
+[0.1.0-rc.5]: https://github.com/skemonet/skemo/compare/v0.1.0-rc.3...v0.1.0-rc.5
 [0.1.0-rc.3]: https://github.com/skemonet/skemo/releases/tag/v0.1.0-rc.3
 [0.1.0-rc.2]: https://github.com/skemonet/skemo/tree/28d0a43
