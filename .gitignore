@@ -8,3 +8,4 @@ dist/
 SHA256SUMS
 site/dist/
 __pycache__/
+release.json

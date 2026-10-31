@@ -55,7 +55,9 @@ if id=$(gh "$api/releases/tags/$tag" 2> /dev/null | jq -er .id); then
 else
   body=$(jq -n --arg t "$tag" --arg c "${CI_COMMIT_SHA:-}" --arg n "$notes" --argjson p "$pre" \
     '{tag_name: $t, name: ("skemo " + $t), body: $n, prerelease: $p} + (if $c == "" then {} else {target_commitish: $c} end)')
-  id=$(printf '%s' "$body" | gh -X POST "$api/releases" --data-binary @- | jq -er .id)
+  # stdin carries the token (gh), so the body goes through a file
+  printf '%s' "$body" > ../release.json
+  id=$(gh -X POST "$api/releases" --data-binary @../release.json | jq -er .id)
   echo "release $tag created (id $id)"
 fi
 
