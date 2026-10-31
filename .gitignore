@@ -3,3 +3,6 @@ lang/out/
 engine/crates/engine-wasm/demo/pkg/
 router/demo/wasm/target/
 router/demo/wasm/pkg/
+.cargo-home/
+dist/
+SHA256SUMS

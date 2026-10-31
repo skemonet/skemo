@@ -51,7 +51,7 @@ smoke_test() {
 check_no_unsafe() {
   step "unsafe forbidden"
   if grep -rnE '\bunsafe\b' --include='*.rs' . 2> /dev/null \
-    | grep -vE '/target/' | grep -vE ':\s*//|forbid\(unsafe_code\)|unsafe_code = "forbid"' \
+    | grep -vE '/(target|\.cargo-home)/' | grep -vE ':\s*//|forbid\(unsafe_code\)|unsafe_code = "forbid"' \
     | grep -vE '"[^"]*\bunsafe\b[^"]*"'; then
     echo "unsafe code is present (see above)" >&2; return 1
   fi
@@ -63,6 +63,7 @@ check_no_unsafe() {
 # event data interpolated into a shell script.
 check_workflows() {
   step "GitHub workflows"
+  compgen -G '.github/workflows/*.yml' > /dev/null || { echo "(no GitHub workflow)"; return 0; }
   local f bad=0
   for f in .github/workflows/*.yml; do
     [ -e "$f" ] || continue

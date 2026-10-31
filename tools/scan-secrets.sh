@@ -23,7 +23,9 @@ pattern=$(IFS='|'; echo "${PATTERNS[*]}")
 allow=$(IFS='|'; echo "${ALLOW[*]}")
 
 {
-  git ls-files -z | grep -zvE '(^|/)(Cargo\.lock|.*\.(png|gif|apng|woff2?|ttf|otf|wasm))$' \
+  # the tracked files, or every file when the folder is not a git checkout (a CI build folder)
+  { git ls-files -z 2> /dev/null || find . -path ./target -prune -o -path ./.git -prune -o -path ./.cargo-home -prune -o -type f -print0; } \
+    | grep -zvE '(^|/)(Cargo\.lock|.*\.(png|gif|apng|woff2?|ttf|otf|wasm))$' \
     | xargs -0 grep -InE -e "$pattern" 2> /dev/null || true
   if [ "${1:-}" = "--history" ]; then
     git log --all -p --no-color --unified=0 --format='' 2> /dev/null \

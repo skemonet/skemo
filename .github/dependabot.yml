@@ -1,10 +1,7 @@
-# Automatic updates: Cargo dependencies and GitHub actions (pinned by hash).
+# Weekly pull requests for Cargo dependency updates (the CI runs elsewhere: .gitlab-ci.yml).
 version: 2
 updates:
   - package-ecosystem: cargo
     directory: /
     schedule: { interval: weekly }
     open-pull-requests-limit: 5
-  - package-ecosystem: github-actions
-    directory: /
-    schedule: { interval: weekly }

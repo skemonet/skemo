@@ -46,7 +46,7 @@ Global options: `--quiet`, `--color auto|always|never`, `--lang en|fr`, `--versi
 | C-NF-1 | **Single binary**, static if possible (musl on Linux). Targets: Linux x86_64/arm64, macOS arm64, Windows x86_64 |
 | C-NF-2 | Default theme and **fonts embedded** in the binary |
 | C-NF-3 | Size < 25 MB (indicative); start-up < 50 ms; rendering of the examples < 300 ms |
-| C-NF-4 | Automated releases: one binary per platform, the SHA-256 of each in the release's description (done: `release.yml`; archives and `.sha256` files until `v0.1.0-rc.2`); installation by the `install.sh` script (`curl … | sh`, checksum verified; done) and by `cargo install` (to come, after publication) |
+| C-NF-4 | Automated releases: one binary per platform, the SHA-256 of each in the release's description (done: `.gitlab-ci.yml` and `tools/release.sh`; archives and `.sha256` files until `v0.1.0-rc.2`); installation by the `install.sh` script (`curl … | sh`, checksum verified; done) and by `cargo install` (to come, after publication) |
 | C-NF-5 | `watch` mode only embeds a mini HTTP server (`tiny_http`) and polls the files every 300 ms (no `notify` dependency) |
 
 ## 4. Tests
