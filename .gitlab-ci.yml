@@ -1,6 +1,8 @@
 # The skemo pipeline, run by the maintainers' CI (gitlab-ci-local with podman; no GitLab server).
-# Every push runs the checks of tools/ci.sh (identical locally: `tools/ci.sh`); a vX.Y.Z tag also
-# builds the four binaries and publishes them in the GitHub release of the tag (tools/release.sh).
+# Every push to a branch runs the checks of tools/ci.sh (identical locally: `tools/ci.sh`); a vX.Y.Z
+# tag builds the four binaries and publishes them in the GitHub release of the tag (tools/release.sh).
+# A tag does not run the checks again (with them the pipeline would pass the CI's 2 h limit): push it
+# on a commit whose branch pipeline is green.
 #
 # Images (built by the CI's ci-images repository): skemo-check for tools/ci.sh (rustfmt, clippy,
 # llvm-tools, cargo-llvm-cov, cargo-deny, the wasm32 target, wasm-bindgen-cli 0.2.129 as engine-wasm,
@@ -20,13 +22,18 @@ default:
     key: cargo-registry
     paths: [.cargo-home/registry/]
 
-quality:
+.checks:
   stage: check
+  rules:
+    - if: '$CI_COMMIT_TAG == null'
+
+quality:
+  extends: .checks
   script:
     - tools/ci.sh quality
 
 security:
-  stage: check
+  extends: .checks
   script:
     - tools/ci.sh security
 
@@ -34,7 +41,7 @@ security:
 build:
   stage: build
   image: localhost/ci/rust:1.99.1-4
-  needs: [quality, security]
+  needs: []
   rules:
     - if: '$CI_COMMIT_TAG =~ /^v[0-9]/'
   script:
