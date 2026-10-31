@@ -11,10 +11,17 @@ tag="${CI_COMMIT_TAG:?a tag pipeline only}"
 : "${GITHUB_TOKEN:?missing: add GITHUB_TOKEN to the tag variables of the CI}"
 api="https://api.github.com/repos/$repo"
 
-# curl with the token read from stdin (never on the command line nor in the log)
+# curl with the token read from stdin (never on the command line nor in the log); on an HTTP error,
+# GitHub's message goes to stderr and the call fails
 gh() {
-  printf 'header = "Authorization: Bearer %s"\nheader = "Accept: application/vnd.github+json"\n' "$GITHUB_TOKEN" \
-    | curl -fsS -K - "$@"
+  out=$(mktemp)
+  code=$(printf 'header = "Authorization: Bearer %s"\nheader = "Accept: application/vnd.github+json"\n' "$GITHUB_TOKEN" \
+    | curl -sS -K - -o "$out" -w '%{http_code}' "$@") || { rm -f "$out"; return 1; }
+  case "$code" in
+    2??) cat "$out"; rm -f "$out" ;;
+    *) echo "GitHub API: HTTP $code: $(jq -c '{message, errors}' "$out" 2> /dev/null || head -c 300 "$out")" >&2
+       rm -f "$out"; return 1 ;;
+  esac
 }
 
 cd dist
@@ -42,6 +49,7 @@ $(cat ../SHA256SUMS)
 EOF
 )
 
+gh "$api/git/ref/tags/$tag" > /dev/null || { echo "tag $tag not readable on GitHub: push it there first (or check the token)" >&2; exit 1; }
 if id=$(gh "$api/releases/tags/$tag" 2> /dev/null | jq -er .id); then
   echo "release $tag exists (id $id)"
 else
