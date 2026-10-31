@@ -1050,7 +1050,7 @@ checksum = "33f4fe9184a62d842c9ef383018f3306d8ba224fd9d836f56d7288308847c256"
 
 [[package]]
 name = "skemo-cli"
-version = "0.1.0-rc.3"
+version = "0.1.0-rc.4"
 dependencies = [
  "assert_cmd",
  "clap",
@@ -1062,7 +1062,7 @@ dependencies = [
 
 [[package]]
 name = "skemo-engine"
-version = "0.1.0-rc.3"
+version = "0.1.0-rc.4"
 dependencies = [
  "gif",
  "harfrust 0.15.0",
@@ -1078,7 +1078,7 @@ dependencies = [
 
 [[package]]
 name = "skemo-engine-wasm"
-version = "0.1.0-rc.3"
+version = "0.1.0-rc.4"
 dependencies = [
  "serde_json",
  "skemo-engine",
@@ -1088,7 +1088,7 @@ dependencies = [
 
 [[package]]
 name = "skemo-lang"
-version = "0.1.0-rc.3"
+version = "0.1.0-rc.4"
 dependencies = [
  "insta",
  "serde",
@@ -1097,7 +1097,7 @@ dependencies = [
 
 [[package]]
 name = "skemo-router"
-version = "0.1.0-rc.3"
+version = "0.1.0-rc.4"
 dependencies = [
  "serde_json",
 ]
