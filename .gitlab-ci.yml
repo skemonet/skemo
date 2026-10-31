@@ -2,13 +2,12 @@
 # Every push runs the checks of tools/ci.sh (identical locally: `tools/ci.sh`); a vX.Y.Z tag also
 # builds the four binaries and publishes them in the GitHub release of the tag (tools/release.sh).
 #
-# The Rust image must hold: rust with rustfmt, clippy and llvm-tools; the targets wasm32-unknown-unknown,
-# x86_64/aarch64-unknown-linux-musl, aarch64-apple-darwin and x86_64-pc-windows-gnu; cargo-zigbuild,
-# cargo-llvm-cov, cargo-deny, wasm-bindgen-cli 0.2.129 (the version of engine-wasm) and Node.js.
+# Images (built by the CI's ci-images repository): skemo-check for tools/ci.sh (rustfmt, clippy,
+# llvm-tools, cargo-llvm-cov, cargo-deny, the wasm32 target, wasm-bindgen-cli 0.2.129 as engine-wasm,
+# Node.js); rust for the binaries (cargo-zigbuild; musl, darwin and windows-gnu targets).
 # Secret (tag pipelines only): GITHUB_TOKEN, allowed to write the contents of skemonet/skemo.
 
 variables:
-  RUST_IMAGE: localhost/ci/rust:1.99.1-4
   GITHUB_REPO: skemonet/skemo
   CARGO_HOME: $CI_PROJECT_DIR/.cargo-home
   CARGO_TERM_COLOR: always
@@ -16,7 +15,7 @@ variables:
 stages: [check, build, release]
 
 default:
-  image: $RUST_IMAGE
+  image: localhost/ci/skemo-check:1
   cache:
     key: cargo-registry
     paths: [.cargo-home/registry/]
@@ -34,6 +33,7 @@ security:
 # The four binaries, one after the other (the CI's memory is shared between jobs).
 build:
   stage: build
+  image: localhost/ci/rust:1.99.1-4
   needs: [quality, security]
   rules:
     - if: '$CI_COMMIT_TAG =~ /^v[0-9]/'
