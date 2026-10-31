@@ -21,7 +21,7 @@
       <a href="#features">Features</a>
       <a href="#agents">For AI agents</a>
       <a href="https://docs.skemo.net/">Documentation</a>
-      <a href="https://github.com/skemonet">GitHub</a>
+      <a href="https://github.com/skemonet/skemo">GitHub</a>
     </nav>
   </div>
 </header>
@@ -67,7 +67,7 @@
 
     <div class="figures">
       <div class="figure"><b>{{tokens:saving_percent}} %</b><span>fewer tokens than writing the same picture as SVG</span></div>
-      <div class="figure"><b>×{{tokens:ratio}}</b><span>over the 8 gallery diagrams below, all their tokens counted together</span></div>
+      <div class="figure"><b>×{{tokens:ratio}}</b><span>over the {{tokens:count}} gallery diagrams below, all their tokens counted together</span></div>
       <div class="figure"><b>1 line</b><span>to change a label or move a card: nothing else is rewritten</span></div>
       <div class="figure"><b>0</b><span>GPU, network or cloud service needed to render</span></div>
     </div>
@@ -185,8 +185,8 @@ skemo watch example.skemo               # live preview</code></pre></div>
         it fixes there. <code>skemo check</code> catches structural mistakes as text and the layout is automatic, so the agent
         reads the picture to judge it, not to move boxes by hand.</p></details>
     <details><summary>Is it free?</summary>
-      <p>skemo is in pre-release ({{version}}). The language library and the router are licensed MIT OR Apache-2.0; the licence of the
-        rest is being settled before the first stable release.</p></details>
+      <p>Yes. skemo is open source, licensed MIT OR Apache-2.0, and in pre-release ({{version}}): the format may still change
+        before 1.0. The embedded fonts are under the SIL Open Font License, the icons under ISC.</p></details>
     <details><summary>What do the token figures measure?</summary>
       <p>The figures above compare the text of a diagram: a <code>.skemo</code> source against the SVG of the same picture. A whole
         task costs more than its output: reading the input, the skill and the rendered images. Measured on a whole task (an

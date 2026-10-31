@@ -133,6 +133,7 @@ def main() -> None:
     (dist / "fonts").mkdir(parents=True)
 
     data = measure_tokens.measure(skemo, GALLERY)
+    data["count"] = len(data["examples"])
     (dist / "tokens.json").write_text(json.dumps(data, indent=2) + "\n")
     version = subprocess.run([skemo, "--version"], check=True, capture_output=True, text=True).stdout.split()[-1]
 

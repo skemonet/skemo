@@ -2,7 +2,7 @@
 diagram(dir="right" lang="en")
 
   card#agent.ai(icon="bot") Your AI agent
-    | writes ~250 tokens of text
+    | writes a few hundred tokens of text
     to(source)
 
   card#source.text(icon="file-code") diagram.skemo
