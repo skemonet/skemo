@@ -246,12 +246,12 @@ card.wide .title::before { content: none; }
 .edge.link.from-note { color: color-mix(in srgb, #D4A017 80%, var(--ink)); }
 .edge.dotted .line { stroke-dasharray: 1.5 4; stroke-linecap: round; }
 .edge.thick .line  { stroke-width: 3; }
-.edge.flow .line   { stroke-dasharray: 6 5; animation: flow 1s linear infinite; }   /* flux animé */
+.edge.flow .line   { stroke-dasharray: 6 5; --flow: on; }    /* dashes running to the head, moved by the engine (D-079) */
+.edge.pulse .line  { --pulse: on; }                        /* a glowing dot from the source to the head (D-079) */
 .edge.both .tail   { display: inline; }        /* double pointe */
 .edge.nohead .head, .edge.link .head { display: none; }   /* simple trait ; .link = rattachement pointillé sans pointe */
 .edge.dot .origin  { display: inline; }        /* rond au départ */
 .edge.secure { color: #2E9E6B; }
-@keyframes flow { to { stroke-dashoffset: -11; } }
 
 /* ---------- Animations (mode présentation) ---------- */
 [data-step] { transition: opacity .45s ease, transform .45s ease; }

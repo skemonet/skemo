@@ -64,7 +64,7 @@ The language **owns** the type system and the theme. The engine asks it: "for th
 | F-STYLE-2 | Custom CSS applied after the theme (cascade, specificity, order) | M |
 | F-STYLE-3 | Types in CSS: `--c` (accent colour), `--label` (badge); `tag="…"` replaces `--label`; card without badge = `no-tag` class | M |
 | F-STYLE-4 | Zones: `--z-bg`, `--z-border`, `--z-ink`; margins `--zone-pad`, `--zone-head` | M |
-| F-STYLE-5 | Theme arrow styles: `.dashed .dotted .thick .flow .both .nohead .dot` (+ examples `.wan .secure`); colour through `color` | M |
+| F-STYLE-5 | Theme arrow styles: `.dashed .dotted .thick .flow .pulse .both .nohead .dot` (`.flow` and `.pulse` move, D-079) (+ examples `.wan .secure`); colour through `color` | M |
 | F-STYLE-6 | **Resolved style** per element, on the "geometric" subset: `padding*`, `border*-width`, `font-family`, `font-size`, `font-weight`, `line-height`, `letter-spacing`, `min-width`, `max-width`, `li` margins, CSS variables. The rest of the CSS is passed as is to the HTML rendering | M |
 | F-STYLE-7 | Rule "IP at the start of an `li` → `span.mono`", extensible (IPv6, dates, amounts) | S |
 | F-STYLE-8 | Dark mode (`prefers-color-scheme`) in the default theme | S |

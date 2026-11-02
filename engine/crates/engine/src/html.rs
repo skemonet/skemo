@@ -10,6 +10,7 @@ use crate::arrow::{arrow, edge_classes, triangle_path};
 use crate::diagram::Diagram;
 use crate::fonts::{FILES, select, weight_range};
 use crate::measure::text_style;
+use crate::motion::{Clock, Keyframes};
 use crate::svg::{esc, n};
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
@@ -807,8 +808,11 @@ fn li_text(d: &Diagram, li: &crate::scene::LiEl, body: &mut String) {
     body.push_str(&esc(&li.rest));
 }
 
-/// Arrows (same drawing as the SVG), in an `<svg>` laid on the stage.
+/// Arrows (same drawing as the SVG), in an `<svg>` laid on the stage, with the keyframes of
+/// the arrows in motion (D-079).
 fn edges_svg(d: &Diagram, (w, h): (f64, f64), body: &mut String) {
+    let mut kf = Keyframes::new(&crate::svg::prefix(d));
+    let period = crate::motion::period(d);
     let _ = write!(
         body,
         "<svg class=\"edges\" viewBox=\"0 0 {} {}\" width=\"{}\" height=\"{}\">",
@@ -822,14 +826,24 @@ fn edges_svg(d: &Diagram, (w, h): (f64, f64), body: &mut String) {
             continue;
         };
         if r.len() >= 2 {
-            edge_html(d, e, r, body);
+            edge_html(d, e, r, (&mut kf, period), body);
         }
+    }
+    let css = kf.css();
+    if !css.is_empty() {
+        let _ = write!(body, "<style>{css}</style>");
     }
     body.push_str("</svg>");
 }
 
 /// An arrow: rounded line, arrival head, start head (tail) and origin dot.
-fn edge_html(d: &Diagram, e: &skemo_lang::Edge, route: &[(f64, f64)], body: &mut String) {
+fn edge_html(
+    d: &Diagram,
+    e: &skemo_lang::Edge,
+    route: &[(f64, f64)],
+    (kf, period): (&mut Keyframes, Option<f64>),
+    body: &mut String,
+) {
     let pts: Vec<(f64, f64)> = route
         .iter()
         .map(|p| (p.0 + d.frame.ox, p.1 + d.frame.oy))
@@ -838,8 +852,10 @@ fn edge_html(d: &Diagram, e: &skemo_lang::Edge, route: &[(f64, f64)], body: &mut
     let sharp =
         crate::route::junctions_on(&d.routes, &d.edge_groups, &e.id, (d.frame.ox, d.frame.oy));
     // a group's shared trunk and its dots are drawn once (D-049)
-    let line = crate::arrow::drawn_line(d, &e.id, &a, &pts);
-    let (line, own_head) = crate::arrow::unshared(d, e, &line);
+    let full = crate::arrow::drawn_line(d, &e.id, &a, &pts);
+    let (line, own_head) = crate::arrow::unshared(d, e, &full);
+    let hops = crate::arrow::hops(d, &e.id, (d.frame.ox, d.frame.oy));
+    let (flow, pulse) = moving(d, e, &full, &sharp, &hops, kf, period);
     let head = if own_head {
         triangle_path(&a.head)
     } else {
@@ -860,16 +876,11 @@ fn edge_html(d: &Diagram, e: &skemo_lang::Edge, route: &[(f64, f64)], body: &mut
     }
     let _ = write!(
         body,
-        "<g class=\"{}\" data-id=\"{}\"{}><path class=\"line\" d=\"{}\"/>{dots}<path class=\"head\" d=\"{}\"/><path class=\"tail\" d=\"{}\"/><circle class=\"origin\" cx=\"{}\" cy=\"{}\" r=\"3.5\"/></g>",
+        "<g class=\"{}\" data-id=\"{}\"{}><path class=\"line\" d=\"{}\"{flow}/>{dots}{pulse}<path class=\"head\" d=\"{}\"/><path class=\"tail\" d=\"{}\"/><circle class=\"origin\" cx=\"{}\" cy=\"{}\" r=\"3.5\"/></g>",
         esc(&edge_classes(d, e).join(" ")),
         esc(&e.id),
         anim_attrs(d, &e.id),
-        crate::svg::rounded_path_hops(
-            &line,
-            8.0,
-            &sharp,
-            &crate::arrow::hops(d, &e.id, (d.frame.ox, d.frame.oy))
-        ),
+        crate::svg::rounded_path_hops(&line, 8.0, &sharp, &hops),
         head,
         triangle_path(&a.tail),
         n(a.origin.0),
@@ -878,6 +889,32 @@ fn edge_html(d: &Diagram, e: &skemo_lang::Edge, route: &[(f64, f64)], body: &mut
     if e.href.is_some() {
         body.push_str("</a>");
     }
+}
+
+/// The motion of an arrow (D-079): the `style` that runs a flow's dashes and the dot of a pulse
+/// along the whole line; empty when it does not move.
+fn moving(
+    d: &Diagram,
+    e: &skemo_lang::Edge,
+    full: &[(f64, f64)],
+    sharp: &[(f64, f64)],
+    hops: &[(f64, f64)],
+    kf: &mut Keyframes,
+    period: Option<f64>,
+) -> (String, String) {
+    let (Some(el), Some(period)) = (d.scene.edges.get(&e.id), period) else {
+        return (String::new(), String::new());
+    };
+    let c = d.scene.style(el.line);
+    let flow =
+        crate::motion::flow(c).map_or_else(String::new, |f| kf.animate(f.period, f.seconds()));
+    let pulse = crate::motion::pulse(c).map_or_else(String::new, |p| {
+        let path = crate::svg::rounded_path_hops(full, 8.0, sharp, hops);
+        let len = crate::motion::length(full, hops.len());
+        let dark = crate::motion::dark(d);
+        crate::motion::pulse_svg(&p, &path, len, Clock::Css, period, dark, kf)
+    });
+    (flow, pulse)
 }
 
 fn edge_labels(d: &Diagram, body: &mut String) {

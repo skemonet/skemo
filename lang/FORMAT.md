@@ -565,6 +565,10 @@ The default theme is overridden by a custom CSS, with the normal cascade.
 | `--tl-deps` *(preview, D-048)* | `.stage` | timeline: `drop` draws dependencies straight down (or up) from the end of a bar, then into the target |
 | `--curve` *(preview, D-048)* | `.edge .line` | `on`: one smooth curve from end to end (mind map) |
 | `--shape` on `.edge .head` *(preview, D-048)* | arrow head | `dot`: a dot where the arrow ends instead of a head (mind map leaves) |
+| `--flow` *(preview, D-079)* | `.edge .line` | `on`: the line's dashes run towards the head (§4.3, `.flow`) |
+| `--flow-speed` *(preview, D-079)* | arrow class | how far the dashes run in one second (default `11px`) |
+| `--pulse` *(preview, D-079)* | `.edge .line` | `on`: one glowing dot runs along the line from the source to the head (§4.3, `.pulse`) |
+| `--pulse-speed`, `--pulse-size`, `--pulse-color` *(preview, D-079)* | arrow class | how far the dot runs in one second (default `120px`), its diameter (default `6px`), its colour (default: the line's) |
 
 ### 4.2 Rendered structure (available selectors)
 
@@ -592,6 +596,7 @@ The default theme is overridden by a custom CSS, with the normal cascade.
                 > path.head              arrival head
                 > path.tail              start head (hidden except .both)
                 > circle.origin          start dot (hidden except .dot)
+                > g.pulse > path         the moving dot of `.pulse` (HTML, SVG with --motion, frames; D-079)
   .edge-label                            label; inside its .edge (HTML: a display:contents wrapper with the arrow's classes), D-049
 
   timeline mode:
@@ -617,11 +622,23 @@ Heads use `currentColor`: an arrow's colour is set with `color`.
 
 ### 4.3 Provided arrow styles (combinable)
 
-`.dashed` `.dotted` `.thick` `.flow` (animated dashes) `.both` (double head) `.nohead` (no head) `.dot` (dot at the start) `.link` (attachment: dotted without head, e.g. note → card), plus colour examples `.wan` and `.secure`.
+`.dashed` `.dotted` `.thick` `.flow` (animated dashes) `.pulse` (a moving dot) `.both` (double head) `.nohead` (no head) `.dot` (dot at the start) `.link` (attachment: dotted without head, e.g. note → card), plus colour examples `.wan` and `.secure`.
+
+**Arrows in motion** *(preview, D-079)*: `.flow` and `.pulse` loop for as long as the diagram is shown.
+
+- `.flow`: the line's dashes run towards the head, `--flow-speed` px per second.
+- `.pulse`: one glowing dot (a bright core in a soft halo) runs along a solid line from the source to the head, then starts again; never more than one dot on an arrow. Every dot runs at the same speed (`--pulse-speed`), so a long arrow takes longer: the dots of all arrows leave their sources together and the next round starts when the slowest has arrived. The dot follows the line's bridges.
+
+```css
+.edge.orders { --pulse-color: #E8590C; --pulse-size: 7px; --pulse-speed: 200px; }
+.edge.sync .line { --pulse: on; }      /* any class can move: --flow: on needs dashes */
+```
+
+Where it plays: the HTML always (stopped for a reader who asks for less motion, `prefers-reduced-motion`); the SVG only when asked (`--motion` on the command line; a `<style>` of CSS keyframes, which also plays inside an `<img>`); GIF, APNG and animated WebP as frames (`--fps`), a diagram without steps becoming one loop. A still image (PNG, still WebP, SVG without `--motion`) draws a moving arrow as a **plain solid line**: no dashes, no dot.
 
 ### 4.4 Animation: what the engine writes
 
-The engine **marks** the elements; it animates nothing itself in SVG.
+The engine **marks** the elements; it animates nothing itself in SVG, except the arrows in motion when asked (`--motion`, §4.3).
 
 **SVG output**:
 - each node is a `<g>` that contains all its visuals; its children are **nested** in it (zone ⊃ cards ⊃ lines);
@@ -642,7 +659,7 @@ Rules:
 - an element that only has a `data-focus` (without its own appearance) carries no `data-step`;
 - `data-until` follows the same logic: it is only written if the effective end is **earlier than that of the group containing it** (so almost always for a link that inherits the end of an endpoint);
 - **decorative elements attached** to a node outside its group (axis diamond of a timeline, stem and dot of a frieze) carry that node's animation attributes and `data-for="<id>"`;
-- the engine adds **no animation-related class or style, and no script** to the SVG. Type classes (`card t1`, `edge wan from-t0`) remain, since they belong to style, not animation.
+- the engine adds **no animation-related class or style, and no script** to the SVG. Type classes (`card t1`, `edge wan from-t0`) remain, since they belong to style, not animation. The one exception is `--motion` (D-079): one `<style>` of keyframes, an inline `animation` on each moving line and a `g.pulse` per dot.
 
 **Root of the SVG** *(D-041)*: `data-states` = the ordered steps as written (`["1","2.5"]`), as on the HTML `.stage`, so that an integration (reveal.js fragments) can map `2.5` to its own index; absent on a static diagram. Fonts: `font-family` lists a generic fallback; `--embed-fonts` (CLI) embeds the fonts used (about 0.8 MB per weight).
 

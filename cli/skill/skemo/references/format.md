@@ -151,9 +151,14 @@ An arrow is written **inside its source card**: `to(target).classes Label`.
 | `href="…"` | the arrow is a link |
 | `#id` | explicit id: `to#e1(core)`; otherwise `source->target` (`#2`, `#3`… for duplicates) |
 
-Provided styles, combinable: `.dashed` `.dotted` `.thick` `.flow` (animated dashes) `.both` (head at both
-ends) `.nohead` `.dot` (dot at the start) `.link` (dotted, no head: attaches a note), colour examples
-`.wan` (red, thicker) and `.secure` (green).
+Provided styles, combinable: `.dashed` `.dotted` `.thick` `.flow` (dashes running to the head) `.pulse`
+(a glowing dot running from the source to the head) `.both` (head at both ends) `.nohead` `.dot` (dot at
+the start) `.link` (dotted, no head: attaches a note), colour examples `.wan` (red, thicker) and `.secure`
+(green).
+
+`.flow` and `.pulse` move in HTML, GIF, APNG and animated WebP, and in SVG only with `--motion`; a still
+image (PNG, SVG without `--motion`) draws them as solid lines. Tuning, on the arrow's class:
+`--flow-speed: 30px` (px per second), `--pulse-speed: 200px`, `--pulse-size: 7px`, `--pulse-color: #E8590C`.
 
 Every arrow also gets the classes `from-<type>` and `to-<type>` of its endpoints:
 `.edge.from-uplink { color: #7B5CC4; }` colours every arrow leaving an `.uplink` card.

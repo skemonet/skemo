@@ -3,15 +3,18 @@
 //! Decorative subset translated: backgrounds, borders (width and colour per side, dotted), radii,
 //! concrete colours (`color-mix` resolved by `lang`), shadow (`box-shadow` → filter), badges,
 //! chips, header band, arrows (strokes, dashes, heads, origin dot).
-//! Not translated (documented): gradients, background images, transforms, CSS animations (`.flow`
-//! is rendered as fixed dashes), `text-decoration`, partial `opacity` of elements.
+//! Not translated (documented): gradients, background images, transforms, CSS animations,
+//! `text-decoration`, partial `opacity` of elements. The arrows in motion (`.flow`, `.pulse`,
+//! D-079) are the engine's own: still by default, played by CSS keyframes when asked
+//! ([`render_with`], `--motion`), drawn at their instant in the frames of an animated image.
 //!
 //! Structure: one `<g>` per node, children nested (zone ⊃ cards ⊃ lines); links in a separate
 //! group, above. `data-id` (never `id`); animation attributes only on the animated elements; no
-//! class, style or animation script.
+//! class, style or animation script (but the keyframes of `--motion`).
 
 use crate::anim::{Presence, View};
 use crate::diagram::Diagram;
+use crate::motion::{Clock, Keyframes};
 use skemo_lang::Kind;
 use std::fmt::Write as _;
 
@@ -58,6 +61,11 @@ pub(super) struct Ctx<'a> {
     pub(super) raster: bool,
     /// Image of a state or a transition (`None` = full diagram, marked for the animation).
     pub(super) view: Option<&'a View>,
+    /// The instant of the arrows in motion, and their loop (s; `None` when nothing moves).
+    pub(super) clock: Clock,
+    pub(super) period: Option<f64>,
+    pub(super) dark: bool,
+    pub(super) keyframes: Keyframes,
 }
 
 fn presence(ctx: &Ctx, key: &str) -> Presence {
@@ -93,7 +101,7 @@ fn presence_attrs(p: Presence, cx: f64, cy: f64) -> String {
 
 /// Stable prefix of the internal identifiers (`<defs>`), to avoid collisions between several
 /// diagrams of one page.
-fn prefix(d: &Diagram) -> String {
+pub(crate) fn prefix(d: &Diagram) -> String {
     let mut h: u64 = 0xcbf29ce484222325;
     for b in serde_json::to_string(&d.model).unwrap_or_default().bytes() {
         h ^= u64::from(b);
@@ -102,15 +110,22 @@ fn prefix(d: &Diagram) -> String {
     format!("sk{:08x}", h as u32)
 }
 
-/// SVG rendering of the diagram.
+/// SVG rendering of the diagram, a still image.
 pub fn render(d: &Diagram) -> String {
-    render_inner(d, false, None, false)
+    render_inner(d, false, None, false, Clock::Still)
 }
 
 /// SVG rendering with the fonts it uses embedded (`@font-face` as data URIs), so that the text
 /// matches the measured boxes on a machine without Inter. Heavy: about 0.8 MB per weight used.
 pub fn render_with_fonts(d: &Diagram) -> String {
-    render_inner(d, false, None, true)
+    render_inner(d, false, None, true, Clock::Still)
+}
+
+/// SVG rendering, fonts embedded or not, with the arrows in motion played by CSS keyframes when
+/// `motion` (D-079: only when the user asks for it; a still image otherwise).
+pub fn render_with(d: &Diagram, fonts: bool, motion: bool) -> String {
+    let clock = if motion { Clock::Css } else { Clock::Still };
+    render_inner(d, false, None, fonts, clock)
 }
 
 /// Variant for resvg (PNG, WebP): shadows without SVG filters. A still image of an animated
@@ -118,12 +133,17 @@ pub fn render_with_fonts(d: &Diagram) -> String {
 /// the lines that replace each other on one another (user's choice, defect 15). The SVG keeps
 /// every element, marked for integrations (F-ANIM-3).
 pub fn render_for_raster(d: &Diagram) -> String {
-    render_inner(d, true, last_state(d).as_ref(), false)
+    render_inner(d, true, last_state(d).as_ref(), false, Clock::Still)
 }
 
 /// Image of a state or a transition (`view`), for the PNG and the GIF.
 pub fn render_view(d: &Diagram, view: &View, raster: bool) -> String {
-    render_inner(d, raster, Some(view), false)
+    render_inner(d, raster, Some(view), false, Clock::Still)
+}
+
+/// A frame of an animated image: the view, with the arrows in motion at instant `t` (s).
+pub fn render_frame(d: &Diagram, view: &View, t: f64) -> String {
+    render_inner(d, true, Some(view), false, Clock::At(t))
 }
 
 /// The view of an animated diagram's last step.
@@ -149,7 +169,14 @@ fn states_attr(d: &Diagram) -> String {
     )
 }
 
-fn render_inner(d: &Diagram, raster: bool, view: Option<&View>, fonts: bool) -> String {
+fn render_inner(
+    d: &Diagram,
+    raster: bool,
+    view: Option<&View>,
+    fonts: bool,
+    clock: Clock,
+) -> String {
+    let prefix = prefix(d);
     let mut ctx = Ctx {
         view,
         raster,
@@ -157,7 +184,13 @@ fn render_inner(d: &Diagram, raster: bool, view: Option<&View>, fonts: bool) -> 
         out: String::new(),
         filters: Vec::new(),
         defs: Vec::new(),
-        prefix: prefix(d),
+        clock,
+        period: (clock != Clock::Still)
+            .then(|| crate::motion::period(d))
+            .flatten(),
+        dark: crate::motion::dark(d),
+        keyframes: Keyframes::new(&prefix),
+        prefix,
     };
     let stage = d.scene.style(d.scene.stage).clone();
     let bg = background(&stage).or_else(|| stage.var_color("--bg"));
@@ -202,6 +235,10 @@ fn render_inner(d: &Diagram, raster: bool, view: Option<&View>, fonts: bool) -> 
     ctx.out.push_str("</g>");
     tl_over(&mut ctx);
     fr_over(&mut ctx);
+    let keyframes = ctx.keyframes.css();
+    if !keyframes.is_empty() {
+        ctx.defs.insert(0, format!("<style>{keyframes}</style>"));
+    }
     if fonts {
         ctx.defs
             .insert(0, format!("<style>{}</style>", crate::html::font_faces(d)));

@@ -174,6 +174,11 @@ const FR: &[(&str, &str, &str)] = &[
     ),
     (
         "render",
+        "motion",
+        "SVG : animer les flèches en mouvement (`.flow`, `.pulse`) par des images clés CSS ; sans elle, le SVG est une image fixe, ses flèches en mouvement tracées en trait plein",
+    ),
+    (
+        "render",
         "contrast",
         "Contraste des textes : `high` assombrit (ou éclaircit) chaque texte sous le seuil WCAG (4,5:1 ; 3:1 sur un aplat d'accent), sans toucher au placement",
     ),

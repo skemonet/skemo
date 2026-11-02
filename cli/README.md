@@ -87,7 +87,7 @@ binary.
 
 | Command | Role |
 |---|---|
-| `skemo f.skemo` (= `skemo render f.skemo`) | **default command**: writes `f.png` next to the source. `-o out.{png,svg,html,gif,apng,webp}` picks another file and format (the extension decides; `.webp` is lossless: animated if the diagram has steps, still otherwise); `--format svg` changes the default extension |
+| `skemo f.skemo` (= `skemo render f.skemo`) | **default command**: writes `f.png` next to the source. `-o out.{png,svg,html,gif,apng,webp}` picks another file and format (the extension decides; `.webp` is lossless: animated if the diagram has steps or arrows in motion, still otherwise); `--format svg` changes the default extension |
 | `skemo check f.skemo…` | diagnostics (exit code 1 on errors); `--contrast` checks text legibility |
 | `skemo fmt f.skemo… [--check]` | canonical formatting (indentation, attribute order) |
 | `skemo watch f.skemo` | live preview on `127.0.0.1:8710` |
@@ -96,7 +96,7 @@ binary.
 | `skemo init [folder]` | creates a sample diagram and a commented CSS file |
 
 `render` options: `--css custom.css` (repeatable), `--theme light|dark|print|auto`, `--scale 2`,
-`--transparent` (SVG, PNG, APNG without background), `--contrast high` (darkens texts below the WCAG threshold),
+`--transparent` (SVG, PNG, APNG without background), `--motion` (SVG: play the `.flow` and `.pulse` arrows), `--contrast high` (darkens texts below the WCAG threshold),
 `--step 2.5` (one animation state), `--animated` (one PNG per step), `--board` (contact sheet of the steps),
 `--base-theme theme.css`, `--deny-warnings`. Details: `skemo render --help`.
 

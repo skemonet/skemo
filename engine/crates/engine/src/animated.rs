@@ -1,9 +1,12 @@
 //! Animated outputs (F-ANIM-5, 6, 8): one PNG per state (no effects, with the focus) and an
-//! animated GIF (with effects). Deterministic: same input → same bytes.
+//! animated GIF (with effects). The arrows in motion (D-079) run through every frame: a diagram
+//! without steps becomes one loop of their period, and the holds of a diagram with steps become
+//! frames too. Deterministic: same input → same bytes.
 
+use crate::anim::View;
 use crate::diagram::Diagram;
 use crate::png::svg_to_png;
-use crate::svg::render_view;
+use crate::svg::{render_frame, render_view};
 use resvg::tiny_skia;
 use serde_json::{Value, json};
 use skemo_lang::tr;
@@ -102,8 +105,36 @@ fn rgba(svg: &str, scale: f32) -> Result<(u16, u16, Vec<u8>), String> {
     Ok((pix.width() as u16, pix.height() as u16, data))
 }
 
-/// Frames of the animation: (SVG, duration in s), states chained with their effects (F-ANIM-6).
+/// Frames of the animation: (SVG, duration in s), states chained with their effects (F-ANIM-6),
+/// and the arrows in motion at each frame's instant, one clock from the first frame to the last.
 pub fn frames(d: &Diagram, o: &GifOptions) -> Vec<(String, f64)> {
+    let mut views = timeline(d, o);
+    let Some(period) = crate::motion::period(d) else {
+        return views
+            .iter()
+            .map(|(v, secs)| (render_view(d, v, true), *secs))
+            .collect();
+    };
+    if let [(_, secs)] = views.as_mut_slice() {
+        // without steps: one loop of the motion
+        *secs = period;
+    }
+    let dt = 1.0 / f64::from(o.fps.max(1));
+    let mut out = Vec::new();
+    let mut t = 0.0;
+    for (v, secs) in &views {
+        let k = ((secs / dt).round() as usize).max(1);
+        let step = secs / k as f64;
+        for _ in 0..k {
+            out.push((render_frame(d, v, t), step));
+            t += step;
+        }
+    }
+    out
+}
+
+/// The views of the animation and how long each one shows: states chained with their effects.
+fn timeline(d: &Diagram, o: &GifOptions) -> Vec<(View, f64)> {
     let dim = dim_opacity(d);
     let states: Vec<f64> = if d.anim.states.is_empty() {
         vec![0.0]
@@ -114,7 +145,7 @@ pub fn frames(d: &Diagram, o: &GifOptions) -> Vec<(String, f64)> {
     for (k, &s) in states.iter().enumerate() {
         let last = k + 1 == states.len();
         out.push((
-            render_view(d, &d.anim.view_at(&d.model, s, dim), true),
+            d.anim.view_at(&d.model, s, dim),
             if last { o.final_hold } else { o.hold },
         ));
         if last {
@@ -135,7 +166,7 @@ pub fn frames(d: &Diagram, o: &GifOptions) -> Vec<(String, f64)> {
         for i in 1..n {
             let t = i as f64 / n as f64;
             out.push((
-                render_view(d, &d.anim.view_between(&d.model, s, s1, t, dim), true),
+                d.anim.view_between(&d.model, s, s1, t, dim),
                 1.0 / f64::from(o.fps),
             ));
         }
@@ -143,7 +174,8 @@ pub fn frames(d: &Diagram, o: &GifOptions) -> Vec<(String, f64)> {
     out
 }
 
-/// Animated GIF: states chained with their effects.
+/// Animated GIF: states chained with their effects. Each frame after the first only holds the
+/// rectangle that changed, laid over the previous one (disposal: keep).
 pub fn gif(d: &Diagram, o: &GifOptions) -> Result<Vec<u8>, String> {
     let frames = frames(d, o);
     let mut out = Vec::new();
@@ -157,14 +189,37 @@ pub fn gif(d: &Diagram, o: &GifOptions) -> Result<Vec<u8>, String> {
             enc.set_repeat(gif::Repeat::Infinite)
                 .map_err(|e| format!("GIF : {e}"))?;
         }
+        let (wu, hu) = (usize::from(w), usize::from(h));
+        let mut prev: Option<Vec<u8>> = None;
         for (svg, dur) in &frames {
-            let (w, h, mut px) = rgba(svg, o.scale)?;
-            let mut f = gif::Frame::from_rgba_speed(w, h, &mut px, 10);
+            let (_, _, px) = rgba(svg, o.scale)?;
+            let rgb = rgb_of(&px);
+            let (x0, y0, x1, y1) = match &prev {
+                None => (0, 0, wu, hu),
+                Some(p) => changed(p, &rgb, wu, hu),
+            };
+            let mut sub = Vec::with_capacity((x1 - x0) * (y1 - y0) * 4);
+            for y in y0..y1 {
+                sub.extend_from_slice(&px[(y * wu + x0) * 4..(y * wu + x1) * 4]);
+            }
+            let mut f =
+                gif::Frame::from_rgba_speed((x1 - x0) as u16, (y1 - y0) as u16, &mut sub, 10);
+            (f.left, f.top) = (x0 as u16, y0 as u16);
             f.delay = ((dur * 100.0).round() as u16).max(2);
             enc.write_frame(&f).map_err(|e| format!("GIF : {e}"))?;
+            prev = Some(rgb);
         }
     }
     Ok(out)
+}
+
+/// RGB bytes of RGBA pixels.
+fn rgb_of(px: &[u8]) -> Vec<u8> {
+    px.as_chunks::<4>()
+        .0
+        .iter()
+        .flat_map(|c| [c[0], c[1], c[2]])
+        .collect()
 }
 
 /// Rectangle (x0, y0, x1, y1) of the pixels that differ between two RGB frames; at least 1 × 1.
@@ -214,12 +269,7 @@ pub fn apng(d: &Diagram, o: &GifOptions) -> Result<Vec<u8>, String> {
         let mut prev: Option<Vec<u8>> = None;
         for (svg, dur) in &frames {
             let (_, _, px) = rgba(svg, o.scale)?;
-            let rgb: Vec<u8> = px
-                .as_chunks::<4>()
-                .0
-                .iter()
-                .flat_map(|c| [c[0], c[1], c[2]])
-                .collect();
+            let rgb = rgb_of(&px);
             let (x0, y0, x1, y1) = match &prev {
                 None => (0, 0, w, h),
                 Some(p) => changed(p, &rgb, w, h),

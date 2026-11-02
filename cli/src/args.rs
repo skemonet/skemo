@@ -157,10 +157,21 @@ pub struct RenderArgs {
     /// for HTML and GIF
     #[arg(long)]
     pub transparent: bool,
+    #[command(flatten)]
+    pub svg: SvgArgs,
     /// Text contrast: `high` darkens (or lightens) every text below the WCAG threshold
     /// (4.5:1; 3:1 on an accent fill), without touching the layout
     #[arg(long, value_enum, default_value_t = ContrastArg::Standard)]
     pub contrast: ContrastArg,
+}
+
+/// SVG options.
+#[derive(Args)]
+pub struct SvgArgs {
+    /// SVG: play the arrows in motion (`.flow`, `.pulse`) with CSS keyframes; without it the SVG
+    /// is a still image, its moving arrows drawn as solid lines
+    #[arg(long)]
+    pub motion: bool,
 }
 
 /// Fonts in the HTML and SVG outputs.

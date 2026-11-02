@@ -25,6 +25,7 @@ pub mod layout;
 pub mod lines;
 pub mod measure;
 pub mod mindmap;
+pub mod motion;
 #[cfg(feature = "png")]
 pub mod png;
 pub mod reorder;

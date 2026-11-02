@@ -5,6 +5,12 @@ diagram(dir="right")
   card#a2 A
     to(b2).dotted dotted
   card#b2 B
+  card#a3 A
+    to(b3).flow flow
+  card#b3 B
+  card#a7 A
+    to(b7).pulse pulse
+  card#b7 B
   card#a4 A
     to(b4).both both
   card#b4 B

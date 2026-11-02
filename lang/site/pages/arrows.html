@@ -16,7 +16,8 @@ card#queue Queue</code></pre>
   <tr><th>Class</th><th>Effect</th></tr>
   <tr><td><code>.dashed</code>, <code>.dotted</code></td><td>dashed or dotted line</td></tr>
   <tr><td><code>.thick</code></td><td>thicker line</td></tr>
-  <tr><td><code>.flow</code></td><td>moving dashes (animated in HTML)</td></tr>
+  <tr><td><code>.flow</code></td><td>dashes running towards the head</td></tr>
+  <tr><td><code>.pulse</code></td><td>a glowing dot running from the source to the head</td></tr>
   <tr><td><code>.both</code></td><td>a head at both ends</td></tr>
   <tr><td><code>.nohead</code></td><td>no head</td></tr>
   <tr><td><code>.dot</code></td><td>a dot at the start</td></tr>
@@ -26,6 +27,14 @@ card#queue Queue</code></pre>
 <p>Classes combine (<code>to(b).dashed.both</code>). Your own classes colour arrows through CSS:
   <code>.edge.important { color: #E8590C; }</code>. When the direction or the kind of an arrow matters, give it a line style too,
   not only a colour, so it reads in black and white.</p>
+
+<h2>Arrows in motion <em>(preview)</em></h2>
+<p><code>.flow</code> and <code>.pulse</code> loop for as long as the diagram is shown. Every dot runs at the same speed, so the
+  dots of all arrows leave together and a long arrow takes longer. They play in the HTML (stopped for a reader who asks for
+  less motion), in GIF, APNG and animated WebP, and in the SVG when you ask for it with <code>--motion</code>. A still image
+  draws them as plain solid lines.</p>
+<pre><code>.edge.orders { --pulse-color: #E8590C; --pulse-size: 7px; --pulse-speed: 200px; }
+.edge.flow   { --flow-speed: 30px; }   /* px per second */</code></pre>
 
 <h2>Several targets</h2>
 <skemo name="multi"></skemo>

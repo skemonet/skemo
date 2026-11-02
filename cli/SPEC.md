@@ -20,6 +20,7 @@
 | `  --base-theme <file.css>` | replaces the default theme | S |
 | `  --contrast high` | enhanced contrast: texts below the WCAG threshold are darkened or lightened, layout unchanged (D-026) | S |
 | `  --transparent` | transparent background (SVG, PNG, APNG, contact sheet); no effect in HTML and GIF (D-029) | S |
+| `  --motion` (SVG) | plays the arrows in motion (`.flow`, `.pulse`) with CSS keyframes; without it the SVG is a still image, moving arrows drawn solid (D-079). Other formats: a warning (HTML, GIF, APNG, animated WebP always play them; PNG never) | S |
 | `  --board` (PNG) | contact sheet of the steps (one state per row) | S |
 | `skemo check --contrast <file> [--css …]` | checks the contrast in the 3 themes and lists the faulty types | S |
 | `skemo check <file>…` | validates without rendering; diagnostics; non-zero exit code on error | M |

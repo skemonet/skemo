@@ -36,6 +36,12 @@ pub fn run(out: &Out, a: &RenderArgs) -> Result<(), Fail> {
             "--transparent est sans effet en HTML et en GIF : le fond du thème est conservé"
         ));
     }
+    if a.svg.motion && fmt != Format::Svg {
+        out.warn(&tr!(
+            "--motion only applies to SVG: HTML, GIF, APNG and animated WebP always play the arrows in motion, PNG never",
+            "--motion ne s'applique qu'au SVG : HTML, GIF, APNG et WebP animé jouent toujours les flèches en mouvement, le PNG jamais"
+        ));
+    }
     if a.deny_warnings && warnings > 0 {
         return Err(Fail(
             1,
@@ -121,11 +127,7 @@ fn svg(out: &Out, a: &RenderArgs, d: &Diagram, src: Option<&Bundle>) -> Result<(
             "--step est sans objet en SVG (le SVG contient tous les états, marqués)"
         ));
     }
-    let svg = if a.fonts.embed_fonts {
-        skemo_engine::svg::render_with_fonts(d)
-    } else {
-        skemo_engine::svg::render(d)
-    };
+    let svg = skemo_engine::svg::render_with(d, a.fonts.embed_fonts, a.svg.motion);
     write_out(&a.output, &with_source(svg.into_bytes(), src))
 }
 
@@ -153,14 +155,14 @@ fn png(a: &RenderArgs, d: &Diagram, src: Option<&Bundle>) -> Result<(), Fail> {
     }
 }
 
-/// Lossless WebP: the state asked for (`--step`), the animation if the diagram has several states,
-/// otherwise the still image.
+/// Lossless WebP: the state asked for (`--step`), the animation if the diagram has several states
+/// or arrows in motion, otherwise the still image.
 fn webp(a: &RenderArgs, d: &Diagram, src: Option<&Bundle>) -> Result<(), Fail> {
     if let Some(s) = &a.png.step {
         let bytes = skemo_engine::webp::state(d, s, a.scale.unwrap_or(2.0)).map_err(Fail::usage)?;
         return write_out(&a.output, &with_source(bytes, src));
     }
-    let bytes = if d.anim.states.len() > 1 {
+    let bytes = if d.anim.states.len() > 1 || skemo_engine::motion::period(d).is_some() {
         skemo_engine::webp::animated(d, &gif_options(a))
     } else {
         skemo_engine::webp::render(d, a.scale.unwrap_or(2.0))

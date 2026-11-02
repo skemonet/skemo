@@ -87,7 +87,7 @@ class Renderer:
     def svg(self, name: str, theme: str) -> str:
         src = EXAMPLES / f"{name}.skemo"
         cmd = [self.skemo, "--lang", "en", "render", str(src), "-q", "--format", "svg", "-o", "-",
-               "--theme", theme, "--deny-warnings"]
+               "--theme", theme, "--deny-warnings", "--motion"]
         css = src.with_suffix(".css")
         if css.exists():
             cmd += ["--css", str(css)]

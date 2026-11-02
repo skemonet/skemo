@@ -87,7 +87,7 @@ diagram(dir="right" lang="en")
 | `label="RDS PostgreSQL 16"` | (pre-release) the card's category, above its name; default: the type's `--label` |
 | `//- text` | comment |
 
-Arrow styles, combinable: `.dashed` `.dotted` `.thick` `.flow` (animated) `.both` (two heads)
+Arrow styles, combinable: `.dashed` `.dotted` `.thick` `.flow` (moving dashes) `.pulse` (moving dot) `.both` (two heads)
 `.nohead` `.dot` (dot at start) `.link` (dotted, no head: annotation). Predefined card classes:
 `.note` (dashed annotation), `.chip` (pill), `.info` (small box); zone class `.bare` (no frame,
 caption below). Default theme types: `.t0` to `.t3`, `.cloud`, `.dmz`, `.lan`.

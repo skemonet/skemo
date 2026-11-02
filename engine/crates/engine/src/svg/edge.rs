@@ -4,7 +4,8 @@ use super::*;
 use crate::anim::Presence;
 use crate::arrow::{arrow, edge_classes, own_dots, triangle_path, unshared};
 use crate::geometry::{self};
-use skemo_lang::style::{Computed, parse_length};
+use crate::motion::Clock;
+use skemo_lang::style::Computed;
 
 pub(super) fn edge(ctx: &mut Ctx, e: &skemo_lang::Edge) {
     let d = ctx.d;
@@ -56,6 +57,9 @@ pub(super) fn edge(ctx: &mut Ctx, e: &skemo_lang::Edge) {
     let dots = own_dots(d, e, &sharp);
     let hops = hops_of(d, &e.id, curved);
     edge_line(ctx, el.line, &line, &pr, &sharp, &dots, &hops);
+    if pr.draw > 0.95 {
+        pulse(ctx, &e.id, el.line, &pts, &sharp, &hops);
+    }
     let hc = d.scene.style(el.head);
     // `--shape: dot` on the head: a dot where the arrow ends (the mind map's leaves)
     if !own_head {
@@ -110,6 +114,55 @@ pub(super) fn edge(ctx: &mut Ctx, e: &skemo_lang::Edge) {
     super::node::link_close(ctx, e.href.as_deref());
 }
 
+/// The dot of `.pulse` along the arrow's whole line, a shared trunk included, for the route
+/// `pts` (nothing in a still image).
+fn pulse(
+    ctx: &mut Ctx,
+    id: &str,
+    line_el: usize,
+    pts: &[(f64, f64)],
+    sharp: &[(f64, f64)],
+    hops: &[(f64, f64)],
+) {
+    let (Some(p), Some(period)) = (crate::motion::pulse(ctx.d.scene.style(line_el)), ctx.period)
+    else {
+        return;
+    };
+    let line = if crate::arrow::curved(ctx.d, line_el) {
+        pts.to_vec()
+    } else {
+        crate::arrow::drawn_line(ctx.d, id, &arrow(pts), pts)
+    };
+    let line = &line;
+    let path = line_path(ctx.d, line_el, line, sharp, hops);
+    let len = crate::motion::length(line, hops.len());
+    let svg = crate::motion::pulse_svg(
+        &p,
+        &path,
+        len,
+        ctx.clock,
+        period,
+        ctx.dark,
+        &mut ctx.keyframes,
+    );
+    ctx.out.push_str(&svg);
+}
+
+/// The `d` of a line: one curve (`--curve: on`) or rounded corners with bridges.
+fn line_path(
+    d: &Diagram,
+    line_el: usize,
+    line: &[(f64, f64)],
+    sharp: &[(f64, f64)],
+    hops: &[(f64, f64)],
+) -> String {
+    if crate::arrow::curved(d, line_el) && line.len() >= 2 {
+        curve_path(line)
+    } else {
+        rounded_path_hops(line, 8.0, sharp, hops)
+    }
+}
+
 /// The bridges of an arrow's line where it crosses others (none on a curved line).
 fn hops_of(d: &Diagram, id: &str, curved: bool) -> Vec<(f64, f64)> {
     if curved {
@@ -138,7 +191,7 @@ fn edge_line(
         .or_else(|| lc.get("stroke-width")?.trim().parse::<f64>().ok())
         .filter(|w| w.is_finite() && *w >= 0.0)
         .unwrap_or(1.0);
-    let mut extra = style_stroke_attrs(lc);
+    let mut extra = stroke_motion(ctx, line_el);
     if pr.draw < 0.999 {
         // progressive drawing (draw effect): only a fraction of the stroke is visible
         // a bridge is a half circle where the line ran straight across its diameter
@@ -153,11 +206,7 @@ fn edge_line(
     }
     // `--curve: on` (the mind map's theme, D-048 M1): one smooth curve from end to end, leaving
     // and arriving along the route's first and last segments
-    let d = if crate::arrow::curved(ctx.d, line_el) && line.len() >= 2 {
-        curve_path(line)
-    } else {
-        rounded_path_hops(line, 8.0, sharp, hops)
-    };
+    let d = line_path(ctx.d, line_el, line, sharp, hops);
     let _ = write!(
         ctx.out,
         "<path class=\"line\" d=\"{}\" fill=\"none\"{} stroke-width=\"{}\"{extra}/>",
@@ -180,24 +229,34 @@ fn edge_line(
     }
 }
 
-/// `stroke-dasharray` and `stroke-linecap` asked by the style, in user units (px): no
-/// `pathLength`, which librsvg and other renderers ignore.
-fn style_stroke_attrs(lc: &Computed) -> String {
-    let mut extra = String::new();
-    if let Some(da) = lc.get("stroke-dasharray").filter(|v| *v != "none") {
-        let parts: Vec<String> = da
-            .replace(',', " ")
-            .split_whitespace()
-            .filter_map(|t| {
-                t.parse::<f64>()
-                    .ok()
-                    .or_else(|| parse_length(t, lc.font_size(), None))
-            })
-            .map(n)
-            .collect();
-        if !parts.is_empty() {
-            let _ = write!(extra, " stroke-dasharray=\"{}\"", parts.join(" "));
+/// The stroke's dashes and caps, and the motion of a flow (D-079): a still image draws a flowing
+/// line solid, a frame shifts its dashes to the frame's instant, `--motion` animates them.
+fn stroke_motion(ctx: &mut Ctx, line_el: usize) -> String {
+    let lc = ctx.d.scene.style(line_el);
+    let Some(f) = crate::motion::flow(lc) else {
+        return style_stroke_attrs(lc, true);
+    };
+    match ctx.clock {
+        Clock::Still => style_stroke_attrs(lc, false),
+        Clock::At(t) => format!(
+            "{} stroke-dashoffset=\"{}\"",
+            style_stroke_attrs(lc, true),
+            n(f.offset(t))
+        ),
+        Clock::Css => {
+            let attrs = style_stroke_attrs(lc, true);
+            attrs + &ctx.keyframes.animate(f.period, f.seconds())
         }
+    }
+}
+
+/// `stroke-dasharray` (when `dashed`) and `stroke-linecap` asked by the style, in user units
+/// (px): no `pathLength`, which librsvg and other renderers ignore.
+fn style_stroke_attrs(lc: &Computed, dashed: bool) -> String {
+    let mut extra = String::new();
+    let parts: Vec<String> = crate::motion::dashes(lc).into_iter().map(n).collect();
+    if dashed && !parts.is_empty() {
+        let _ = write!(extra, " stroke-dasharray=\"{}\"", parts.join(" "));
     }
     if let Some(lcap) = lc.get("stroke-linecap") {
         let _ = write!(extra, " stroke-linecap=\"{}\"", esc(lcap));

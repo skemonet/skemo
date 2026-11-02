@@ -5,6 +5,14 @@ and the project uses [Semantic Versioning](https://semver.org/) (pre-1.0: minor 
 
 ## [Unreleased]
 
+- **Arrows in motion** (D-079): `.pulse`, a new arrow style, runs one glowing dot along the line from the source
+  to the head, every dot at the same speed; `.flow` dashes now run at a set speed. Tuned in CSS with
+  `--flow-speed`, `--pulse-speed`, `--pulse-size` and `--pulse-color`. They play in HTML, GIF, APNG and
+  animated WebP (a diagram without steps becomes one loop), and in SVG only with the new `--motion` option.
+  **Changed**: a still image (PNG, still WebP, SVG without `--motion`) draws a `.flow` arrow as a solid line,
+  no longer as fixed dashes.
+- GIF: each frame after the first only holds the rectangle that changed, as APNG and WebP already did.
+
 ## [0.1.0-rc.6] — 2026-10-31
 
 The tags v0.1.0-rc.4 and v0.1.0-rc.5 have no release (their publication failed).
