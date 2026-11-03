@@ -50,9 +50,9 @@ smoke_test() {
   step "smoke test: the skemo binary"
   cargo build --profile $PROFILE --locked -p skemo-cli
   local d bin=target/$PROFILE/skemo; d=$(mktemp -d)
-  $bin init "$d/x" > /dev/null 2>&1
-  $bin render "$d/x/example.skemo" --css "$d/x/custom.css" -o "$d/x.svg" --deny-warnings
-  $bin check "$d/x/example.skemo"
+  $bin init "$d/x/diagram.skemo" --css > /dev/null 2>&1
+  $bin render "$d/x/diagram.skemo" -o "$d/x.svg" --deny-warnings
+  $bin lint "$d/x/diagram.skemo"
   rm -rf "$d"
 }
 

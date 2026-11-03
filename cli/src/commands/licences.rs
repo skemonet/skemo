@@ -1,4 +1,4 @@
-//! `skemo licences`: the licences and copyright notices of what the binary embeds (the fonts,
+//! `skemo --licences`: the licences and copyright notices of what the binary embeds (the fonts,
 //! the icons, the Rust crates compiled in), so that they travel with the binary alone.
 
 use crate::common::{Fail, write_out};

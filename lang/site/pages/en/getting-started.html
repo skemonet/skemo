@@ -24,14 +24,15 @@ skemo hello.skemo -o hello.svg    # the extension picks the format: svg, webp, h
   <code>card#a</code> draws <code>a → b</code>.</p>
 
 <h2>Start from a sample</h2>
-<pre><code>skemo init my-diagram     # example.skemo and a commented custom.css; overwrites nothing
-cd my-diagram
-skemo example.skemo --css custom.css
-skemo watch example.skemo --css custom.css   # live preview on http://127.0.0.1:8710</code></pre>
+<pre><code>skemo init demo.skemo --css   # demo.skemo and skemo_style.css, which it includes; overwrites nothing
+skemo demo.skemo
+skemo demo.skemo --watch        # live preview on http://127.0.0.1:8710</code></pre>
+<p>The diagram names its stylesheet on its first line, <code>diagram(dir="down" css="skemo_style.css")</code>: the
+  file sits next to it. Without <code>--css</code>, <code>init</code> writes the diagram alone.</p>
 <p><code>watch</code> re-renders on every save and the browser page reloads by itself.</p>
 
 <h2>Check before rendering</h2>
-<pre><code>skemo check example.skemo</code></pre>
+<pre><code>skemo lint example.skemo</code></pre>
 <p>Errors come with their line, their column and a hint, for instance <code>unknown target « databse »: did you mean
   « database »?</code>. The exit code is 1 when there are errors. See <a href="diagnostics.html">Errors and warnings</a>.</p>
 

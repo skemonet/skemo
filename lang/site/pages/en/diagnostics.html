@@ -1,10 +1,10 @@
 <!--
 title: skemo errors and warnings explained
 nav: Errors and warnings
-description: What skemo check reports: line, column, a caret under the culprit and a hint, with the list of error and warning codes.
+description: What skemo lint reports: line, column, a caret under the culprit and a hint, with the list of error and warning codes.
 -->
 <h1>Errors and warnings</h1>
-<p class="lead"><code>skemo check</code> and every render report problems with the file, the line, the column, a caret under the
+<p class="lead"><code>skemo lint</code> and every render report problems with the file, the line, the column, a caret under the
   culprit and, often, a hint.</p>
 <pre><code>error[unknown-target]: unknown target « b »
   ┌─ diagram.skemo:2:6
@@ -46,7 +46,7 @@ description: What skemo check reports: line, column, a caret under the culprit a
   <tr><td><code>at-ignored</code></td><td><code>at=</code> in a mode where positions are computed</td></tr>
   <tr><td><code>draw-on-node</code></td><td>the <code>draw</code> effect on something other than an arrow (<code>fade</code> is used)</td></tr>
   <tr><td><code>unknown-icon</code>, <code>icon-ignored</code></td><td>an icon name that does not exist, or an icon on an arrow or a line</td></tr>
-  <tr><td><code>legacy-step</code></td><td>old <code>step=</code>/<code>fx=</code> notation: <code>skemo fmt</code> converts it</td></tr>
+  <tr><td><code>legacy-step</code></td><td>old <code>step=</code>/<code>fx=</code> notation: <code>skemo lint --fix</code> converts it</td></tr>
   <tr><td><code>unknown-attribute</code></td><td><code>diagram(engine=…)</code>, <code>router=…</code> or <code>elk=…</code>: options of the prototype, no longer read</td></tr>
   <tr><td><code>bad-table</code> <em>(preview)</em></td><td>a table row that cannot be read as written: <code>^^</code> in the first row, a row starting with <code>||</code>, a separator out of place or with another number of columns, a one-cell table between lines of text (write <code>\|</code> for a final bar)</td></tr>
   <tr><td><code>bad-at</code> <em>(preview)</em></td><td><code>at=</code> that is neither coordinates nor a compass point, or a compass point on an element that is not at the top level</td></tr>

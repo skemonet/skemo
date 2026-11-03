@@ -55,8 +55,43 @@ pub fn read_file(p: &Path) -> Result<String, String> {
     })
 }
 
-pub fn read_css(paths: &[PathBuf]) -> Result<Vec<String>, String> {
-    paths.iter().map(|p| read_file(p)).collect()
+/// Checks a stylesheet name written in a source (`diagram(css=…)`): a relative path that stays
+/// inside the source's folder, like an image's (D-046). Returns the reason it is refused.
+pub fn check_css_name(name: &str) -> Result<(), String> {
+    let abs = name.starts_with(['/', '\\']) || name.as_bytes().get(1) == Some(&b':');
+    if name.contains("://")
+        || abs
+        || name.split(['/', '\\']).any(|p| p == "..")
+        || name.contains('\0')
+    {
+        return Err(tr!(
+            "stylesheet « {name} »: a path relative to the source file, inside its folder, is expected",
+            "feuille de style « {name} » : un chemin relatif au fichier source, dans son dossier, est attendu"
+        ));
+    }
+    Ok(())
+}
+
+/// Stylesheets a source includes: `diagram(css="a.css b.css")`, in writing order.
+pub fn included_css(src: &str) -> Vec<String> {
+    skemo_lang::parse(src)
+        .model
+        .option("css")
+        .map(|v| v.split_whitespace().map(String::from).collect())
+        .unwrap_or_default()
+}
+
+/// Paths of the stylesheets `file` includes, next to it (none for standard input or an image).
+pub fn included_css_paths(file: &str) -> Vec<PathBuf> {
+    let Ok(src) = std::fs::read_to_string(file) else {
+        return Vec::new();
+    };
+    let base = Path::new(file).parent().unwrap_or(Path::new(""));
+    included_css(&src)
+        .into_iter()
+        .filter(|n| check_css_name(n).is_ok())
+        .map(|n| base.join(n))
+        .collect()
 }
 
 /// Writes `data` to `path` (`-`: standard output), creating the missing folders.
@@ -209,12 +244,12 @@ pub fn load(i: &Inputs) -> Result<Loaded, Fail> {
         b
     };
     if !i.css.is_empty() || b.css.is_empty() {
-        b.css = i
-            .css
-            .iter()
-            .map(|p| read_file(p).map(|c| named(p, c)))
-            .collect::<Result<_, _>>()
-            .map_err(Fail::usage)?;
+        // the stylesheets the source includes first, then those of the command line over them
+        let mut css = included(i.file, &b)?;
+        for p in i.css {
+            css.push(read_file(p).map(|c| named(p, c)).map_err(Fail::usage)?);
+        }
+        b.css = css;
     }
     if let Some(p) = i.base_theme {
         b.base_theme = Some(named(p, read_file(p).map_err(Fail::usage)?));
@@ -268,6 +303,26 @@ pub fn load(i: &Inputs) -> Result<Loaded, Fail> {
         options,
         bundle: b,
     })
+}
+
+/// The stylesheets the source includes (`diagram(css=…)`), read next to it; from an image, those
+/// of its bundle with the same names.
+fn included(file: &str, b: &Bundle) -> Result<Vec<NamedText>, Fail> {
+    let base = Path::new(file).parent().filter(|_| file != "-");
+    let mut out = Vec::new();
+    for name in included_css(&b.source) {
+        check_css_name(&name).map_err(Fail::usage)?;
+        let p = base.map_or_else(|| PathBuf::from(&name), |d| d.join(&name));
+        match b
+            .css
+            .iter()
+            .find(|c| Some(c.name.as_str()) == p.file_name().and_then(|n| n.to_str()))
+        {
+            Some(c) => out.push(c.clone()),
+            None => out.push(named(&p, read_file(&p).map_err(Fail::usage)?)),
+        }
+    }
+    Ok(out)
 }
 
 /// Image files used as icons (D-046): read next to the source (relative paths inside its folder),

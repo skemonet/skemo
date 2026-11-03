@@ -1,11 +1,12 @@
-//! `skemo check`: diagnostics of the files, and contrast of the texts in the three themes.
+//! `skemo lint`: diagnostics of the files, contrast of the texts in the three themes, and with
+//! `--fix` the files rewritten in canonical form (`--dry`: only reported).
 
-use crate::args::{CheckArgs, ThemeArg};
-use crate::common::{Fail, Inputs, prepare, read_source};
+use crate::args::{LintArgs, ThemeArg};
+use crate::common::{Fail, Inputs, prepare, read_source, write_out};
 use crate::out::Out;
 use skemo_lang::tr;
 
-pub fn run(out: &Out, a: &CheckArgs) -> Result<(), Fail> {
+pub fn run(out: &Out, a: &LintArgs) -> Result<(), Fail> {
     let mut failed = false;
     for f in &a.files {
         let src = match read_source(f) {
@@ -16,6 +17,9 @@ pub fn run(out: &Out, a: &CheckArgs) -> Result<(), Fail> {
                 continue;
             }
         };
+        if a.canon.fix {
+            failed |= fix(out, a, f, &src)?;
+        }
         let doc = skemo_lang::parse(&src);
         for d in &doc.diagnostics {
             out.diag(&src, f, d);
@@ -30,13 +34,33 @@ pub fn run(out: &Out, a: &CheckArgs) -> Result<(), Fail> {
         if a.contrast && !doc.has_errors() {
             failed |= report_contrast(out, a, f);
         }
+        if let Some(target) = a.fit.as_deref().filter(|_| !doc.has_errors()) {
+            super::fit::run(out, a, f, target)?;
+        }
     }
     if failed { Err(Fail::source()) } else { Ok(()) }
 }
 
+/// Rewrites `f` in canonical form (`-`: on the standard output), or with `--dry` reports that it
+/// is not; true if that failed the file. A file that does not parse is left to the diagnostics.
+fn fix(out: &Out, a: &LintArgs, f: &str, src: &str) -> Result<bool, Fail> {
+    match skemo_lang::fmt::format(src) {
+        Ok(formatted) if formatted == src => Ok(false),
+        Ok(_) if a.canon.dry => {
+            out.warn(&tr!(
+                "{f} is not in canonical form (skemo lint --fix)",
+                "{f} n'est pas en forme canonique (skemo lint --fix)"
+            ));
+            Ok(true)
+        }
+        Ok(formatted) => write_out(f, formatted.as_bytes()).map(|()| false),
+        Err(_) => Ok(false),
+    }
+}
+
 /// Warnings of the placement (overlaps, `wrap`, `fit`), which the analysis alone does not see;
 /// true if there are any.
-fn layout_warnings(out: &Out, a: &CheckArgs, file: &str) -> bool {
+fn layout_warnings(out: &Out, a: &LintArgs, file: &str) -> bool {
     let inputs = Inputs::new(file, &a.css, a.base_theme.as_ref());
     let Ok((d, _, _)) = prepare(&out.silenced(), inputs) else {
         return false;
@@ -79,7 +103,7 @@ fn unknown_icons(out: &Out, src: &str, file: &str, doc: &skemo_lang::Document) -
 }
 
 /// Contrast defects of the file in the three themes; true if there are any.
-fn report_contrast(out: &Out, a: &CheckArgs, file: &str) -> bool {
+fn report_contrast(out: &Out, a: &LintArgs, file: &str) -> bool {
     let quiet = out.silenced();
     let mut found = false;
     for th in [ThemeArg::Light, ThemeArg::Dark, ThemeArg::Print] {

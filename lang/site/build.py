@@ -227,7 +227,7 @@ class Renderer:
 
     def command(self, name: str) -> list[str]:
         src, css = self.files(name)
-        cmd = [self.skemo, "--lang", self.lang, "render", str(src), "-q", "--deny-warnings"]
+        cmd = ["env", f"SKEMO_LANG={self.lang}", self.skemo, "render", str(src), "-q", "--deny-warnings"]
         return cmd + (["--css", str(css)] if css else [])
 
     def img_folder(self) -> pathlib.Path:

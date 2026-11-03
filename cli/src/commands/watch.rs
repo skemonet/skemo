@@ -1,7 +1,7 @@
-//! `skemo watch`: live preview. Watches the source and the CSS files (by polling, every 300 ms),
+//! `skemo render --watch`: live preview. Watches the source and the CSS files (by polling, every 300 ms),
 //! renders again on each change and serves the HTML on `127.0.0.1` (never on the network).
 
-use crate::args::{ThemeArg, WatchArgs};
+use crate::args::{RenderArgs, ThemeArg};
 use crate::common::{Fail, Inputs, prepare, with_source, write_out};
 use crate::out::Out;
 use skemo_engine::html::HtmlOptions;
@@ -26,14 +26,14 @@ struct Builder {
     out: Out,
 }
 
-pub fn run(out: &Out, a: &WatchArgs) -> Result<(), Fail> {
+pub fn run(out: &Out, a: &RenderArgs) -> Result<(), Fail> {
     if a.file == "-" {
         return Err(Fail::usage(tr!(
-            "watch: a file is required",
-            "watch : un fichier est nécessaire"
+            "--watch: a file is required",
+            "--watch : un fichier est nécessaire"
         )));
     }
-    let server = tiny_http::Server::http(("127.0.0.1", a.port))
+    let server = tiny_http::Server::http(("127.0.0.1", a.live.port))
         .map_err(|e| Fail::internal(tr!("local server: {e}", "serveur local : {e}")))?;
     if !out.quiet {
         eprintln!(
@@ -41,7 +41,7 @@ pub fn run(out: &Out, a: &WatchArgs) -> Result<(), Fail> {
             tr!(
                 "preview: http://127.0.0.1:{}/  (Ctrl+C to stop)",
                 "aperçu : http://127.0.0.1:{}/  (Ctrl+C pour arrêter)",
-                a.port
+                a.live.port
             )
         );
     }
@@ -49,12 +49,13 @@ pub fn run(out: &Out, a: &WatchArgs) -> Result<(), Fail> {
         file: a.file.clone(),
         css: a.css.clone(),
         base: a.base_theme.clone(),
-        output: a.output.clone(),
+        output: Some(a.output.clone()).filter(|o| !o.is_empty()),
         theme: a.theme,
         out: *out,
     };
     let state: Shared = Arc::new(Mutex::new((1, builder.build())));
     let mut watched = vec![PathBuf::from(&a.file)];
+    watched.extend(crate::common::included_css_paths(&a.file));
     watched.extend(a.css.iter().cloned());
     watched.extend(a.base_theme.clone());
     spawn_watcher(watched, builder, Arc::clone(&state));

@@ -8,8 +8,9 @@ description: A diagram type is a CSS class with an accent colour and a label. Ca
   from them.</p>
 
 <skemo name="types"></skemo>
-<p>Render with the stylesheet: <code>skemo types.skemo --css types.css</code>. <code>--css</code> can be repeated; files apply
-  after the default theme, with the normal cascade.</p>
+<p>The diagram includes its stylesheet by name, next to it: <code>diagram(css="types.css")</code> (several names separated
+  by spaces). Or give it when rendering: <code>skemo types.skemo --css types.css</code>, which can be repeated and applies after
+  the diagram's own. Files apply after the default theme, with the normal cascade.</p>
 
 <h2>A type in one line</h2>
 <pre><code>.server { --c: #5B6CFF; --label: "SERVER"; }</code></pre>
@@ -36,8 +37,8 @@ description: A diagram type is a CSS class with an accent colour and a label. Ca
   <tr><td><code>--font-scale</code></td><td><code>.stage</code></td><td>multiplies every text size of the theme, <code>1.4</code>
     for a projected slide (<em>preview</em>); also <code>skemo render --font-scale 1.4</code></td></tr>
 </table>
-<p><code>skemo theme --print</code> prints the whole default theme: a good starting point for a theme of your own, which
-  <code>--base-theme</code> then uses instead of the default one.</p>
+<p><code>skemo init demo.skemo --css-full</code> writes the whole default theme next to the diagram, included by it: a good
+  starting point for a theme of your own. Given to <code>--base-theme</code>, such a file replaces the default theme instead.</p>
 
 <h2>Arrows</h2>
 <p>An arrow's colour is its <code>color</code>; heads follow it. Lines are SVG paths:</p>

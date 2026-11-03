@@ -75,8 +75,9 @@ Rules:
 | `layout` | `graph` (default) · `timeline` · `frieze` · `mindmap` | — | layout mode (§3.6, §3.7, §3.9) |
 | `look` | `band` `header` `classic` `eyebrow` | `band` | look of the cards of the diagram (§4.5) |
 | `zones` *(preview, D-045)* | `stretch` | — | sibling zones stacked along the direction (one above the other with `dir` down or up) take the width of the widest (the height with right or left), like layers drawn by hand. Only the frames grow; no card moves. Zones side by side and pinned zones (`at` + `size`) are left alone |
+| `css` *(D-082)* | file names, separated by spaces | — | stylesheets of the diagram, applied after the theme and in this order: paths relative to the `.skemo` file, inside its folder (no `..`, no absolute path). The CLI reads them (and `--css` after them) and embeds them in what it renders; the libraries leave the option to their caller |
 | `theme` | `light` (default) · `dark` · `auto` · `print` | `light` | theme (§4.6); `auto` follows the system (HTML only); the CLI can impose it (`--theme`) |
-| `fit` *(preview, D-041, D-043)* | ratio `16:9`, `4:3`, `1.5`, or box `1280x720` | — | target box: **a check, never an automatic change** (stability). What counts is the size of the text once the diagram is fitted in the box: when a written setting (`dir`, `wrap`) would show it at least 15 % larger, the engine warns and names it (with a box in px: the text size before and after); `skemo fit --write` puts it in the file. A setting that would make the arrows harder to follow (a card hidden by `wrap`, many more bends) is never suggested (D-044). When the proportions are more than 15 % off the target and no setting helps, the engine says so too (D-045) |
+| `fit` *(preview, D-041, D-043)* | ratio `16:9`, `4:3`, `1.5`, or box `1280x720` | — | target box: **a check, never an automatic change** (stability). What counts is the size of the text once the diagram is fitted in the box: when a written setting (`dir`, `wrap`) would show it at least 15 % larger, the engine warns and names it (with a box in px: the text size before and after); `skemo lint --fit --fix` puts it in the file. A setting that would make the arrows harder to follow (a card hidden by `wrap`, many more bends) is never suggested (D-044). When the proportions are more than 15 % off the target and no setting helps, the engine says so too (D-045) |
 
 ### 3.2 `card` and `zone`
 
@@ -620,6 +621,8 @@ The default theme is overridden by a custom CSS, with the normal cascade.
 
 Heads use `currentColor`: an arrow's colour is set with `color`.
 
+These part names (`.head`, `.title`, `.tag`, `.type`, `.kind`, `.count`, `.sub`, `.mono`, `.swatch`, `.sample`, `.pill`, `.icon`, `.state-mark`, `.link-mark`, `.label`, `.line`, `.tail`, `.origin`, `.edge-label`) are not for a card, zone or arrow's own class: a rule on `.head` would style the head of every card and arrow too. Such a class gives the warning `part-class`.
+
 ### 4.3 Provided arrow styles (combinable)
 
 `.dashed` `.dotted` `.thick` `.flow` (animated dashes) `.pulse` (a moving dot) `.both` (double head) `.nohead` (no head) `.dot` (dot at the start) `.link` (attachment: dotted without head, e.g. note → card), plus colour examples `.wan` and `.secure`.
@@ -733,7 +736,7 @@ Timeline: `fixtures/timeline.pug` + `fixtures/timeline.css`. Frieze: `fixtures/f
 
 ## 7. Read for compatibility, not part of the language *(v0.8)*
 
-The prototype's files (`fixtures/*.pug`, the oracle, which is never modified) and files written before v0.8 use spellings that are no longer part of the language. The parser still reads them, without documenting them to users; `skemo fmt` rewrites them in v0.8 form.
+The prototype's files (`fixtures/*.pug`, the oracle, which is never modified) and files written before v0.8 use spellings that are no longer part of the language. The parser still reads them, without documenting them to users; `skemo lint --fix` rewrites them in v0.8 form.
 
 | Old spelling | Read as | Note |
 |---|---|---|

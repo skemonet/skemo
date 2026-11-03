@@ -31,7 +31,7 @@ curl -fsSL https://skemo.net/skill/skemo/references/format.md -o ~/.claude/skill
 <h2>Ce que fait l’agent</h2>
 <ol>
   <li>Il écrit <code>nom.skemo</code> (et un petit <code>nom.css</code> pour ses types), sans coordonnées.</li>
-  <li>Il lance <code>skemo check nom.skemo</code> et corrige les lignes signalées.</li>
+  <li>Il lance <code>skemo lint nom.skemo</code> et corrige les lignes signalées.</li>
   <li>Il rend avec <code>skemo nom.skemo</code> (PNG) ou <code>-o nom.svg</code>, et regarde l’image pour en juger.</li>
   <li>Les changements suivants sont des modifications de lignes dans le même fichier.</li>
 </ol>
@@ -42,7 +42,7 @@ curl -fsSL https://skemo.net/skill/skemo/references/format.md -o ~/.claude/skill
     déploiement »</em>.</li>
   <li>Demandez des types en CSS plutôt que des couleurs sur chaque carte.</li>
   <li>Gardez le fichier <code>.skemo</code> dans le dépôt à côté de la documentation qu’il illustre, et refaites son rendu en CI avec
-    <code>skemo check --deny-warnings</code> ou <code>skemo render --deny-warnings</code>.</li>
+    <code>skemo lint --deny-warnings</code> ou <code>skemo render --deny-warnings</code>.</li>
 </ul>
 
 <h2>Voir aussi</h2>

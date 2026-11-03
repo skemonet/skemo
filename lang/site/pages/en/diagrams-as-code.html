@@ -21,11 +21,11 @@ description: Keep diagrams as text next to the code: reviewed in pull requests, 
 </ul>
 
 <h2>Check and render in CI</h2>
-<pre><code>skemo check docs/*.skemo --deny-warnings          # exit code 1 on any problem
+<pre><code>skemo lint docs/*.skemo --deny-warnings          # exit code 1 on any problem
 skemo render docs/architecture.skemo -o docs/architecture.svg --deny-warnings</code></pre>
 <p>A GitHub Actions step, for instance:</p>
 <pre><code>- run: curl -fsSL https://raw.githubusercontent.com/skemonet/skemo/main/cli/install.sh | sh
-- run: ~/.local/bin/skemo check docs/*.skemo --deny-warnings</code></pre>
+- run: ~/.local/bin/skemo lint docs/*.skemo --deny-warnings</code></pre>
 
 <h2>Outputs</h2>
 <table>
@@ -42,12 +42,12 @@ skemo render docs/architecture.skemo -o docs/architecture.svg --deny-warnings</c
   <code>--no-source</code> when the source must not travel with the image.</p>
 
 <h2>Live preview while you write</h2>
-<pre><code>skemo watch docs/architecture.skemo --css docs/architecture.css   # http://127.0.0.1:8710</code></pre>
-<p>The page reloads on every save. <code>skemo fmt</code> keeps files in one canonical form, so diffs stay small.</p>
+<pre><code>skemo docs/architecture.skemo --watch --css docs/architecture.css   # http://127.0.0.1:8710</code></pre>
+<p>The page reloads on every save. <code>skemo lint --fix</code> keeps files in one canonical form, so diffs stay small.</p>
 
 <h2>See also</h2>
 <ul>
   <li><a href="cli.html">Command line</a>: every command and option.</li>
   <li><a href="ai-agents.html">AI agents</a>: let a coding agent write and update the files.</li>
-  <li><a href="diagnostics.html">Errors and warnings</a>: what <code>skemo check</code> reports.</li>
+  <li><a href="diagnostics.html">Errors and warnings</a>: what <code>skemo lint</code> reports.</li>
 </ul>

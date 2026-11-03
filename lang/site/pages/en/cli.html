@@ -10,21 +10,20 @@ description: Every skemo command and option: render to PNG, SVG, WebP, GIF, APNG
 <h2>Commands</h2>
 <table>
   <tr><th>Command</th><th>Role</th></tr>
+  <tr><td><code>skemo init [file] [--css [name]]</code></td><td>a sample diagram (<code>diagram.skemo</code>); with <code>--css</code>, a commented stylesheet it includes (<code>skemo_style.css</code>); overwrites nothing</td></tr>
   <tr><td><code>skemo f.skemo</code></td><td>same as <code>skemo render f.skemo</code>: writes <code>f.png</code> next to the source</td></tr>
   <tr><td><code>skemo render f.skemo -o out.ext</code></td><td>the extension picks the format: <code>png</code> <code>svg</code>
     <code>webp</code> <code>html</code> <code>gif</code> <code>apng</code></td></tr>
-  <tr><td><code>skemo check f.skemo…</code></td><td>diagnostics only (exit code 1 on errors); <code>--contrast</code> adds the
+  <tr><td><code>skemo lint f.skemo…</code></td><td>diagnostics only (exit code 1 on errors); <code>--contrast</code> adds the
     legibility check</td></tr>
-  <tr><td><code>skemo fmt f.skemo… [--check]</code></td><td>canonical formatting</td></tr>
-  <tr><td><code>skemo watch f.skemo</code></td><td>live preview on <code>http://127.0.0.1:8710</code>, reloaded on every save</td></tr>
+  <tr><td><code>skemo lint --fix f.skemo… [--dry]</code></td><td>canonical formatting</td></tr>
+  <tr><td><code>skemo f.skemo --watch</code></td><td>live preview on <code>http://127.0.0.1:8710</code>, reloaded on every save</td></tr>
   <tr><td><code>skemo layout f.skemo --json</code></td><td>model, positions and routes as JSON</td></tr>
-  <tr><td><code>skemo fit f.skemo [--target 16:9] [--write]</code></td><td>settings (<code>dir</code>, <code>wrap</code>) that
-    bring the diagram to a target aspect ratio; <code>--write</code> applies the best one (<em>preview</em>)</td></tr>
+  <tr><td><code>skemo lint f.skemo --fit [16:9] [--fix]</code></td><td>settings (<code>dir</code>, <code>wrap</code>) that
+    bring the diagram to a target aspect ratio; <code>--fix</code> applies the best one (<em>preview</em>)</td></tr>
   <tr><td><code>skemo extract image.png [-o folder]</code></td><td>gives back the source and stylesheets embedded in an
     image rendered by skemo, to edit them (<code>--stdout</code>: the source only)</td></tr>
-  <tr><td><code>skemo icons [query]</code></td><td>the built-in icons, filtered by name or tag</td></tr>
-  <tr><td><code>skemo theme --print</code></td><td>the default theme, a starting point for your own</td></tr>
-  <tr><td><code>skemo init [folder]</code></td><td>a sample diagram and a commented CSS file; overwrites nothing</td></tr>
+  <tr><td><code>skemo icons [query]</code></td><td>the built-in icons, filtered by name or tag; <code>--json</code> for editors and completion (not listed in <code>--help</code>)</td></tr>
 </table>
 
 <h2>Render options</h2>
@@ -69,9 +68,15 @@ skemo render diagram.png -o new.svg # any command also takes the image instead o
   <tr><td><code>3</code></td><td>internal error</td></tr>
 </table>
 
+<h2>Shell completion</h2>
+<p><code>skemo completions bash</code> (or <code>zsh</code>, <code>fish</code>, <code>elvish</code>, <code>powershell</code>) prints a
+  completion script; it is not listed in <code>--help</code>. Load it from your shell's startup file:</p>
+<pre><code>eval "$(skemo completions bash)"      # ~/.bashrc
+source &lt;(skemo completions zsh)       # ~/.zshrc</code></pre>
+
 <h2>Language</h2>
 <p>Help, diagnostics and messages follow the system language (<code>LANG</code>, <code>LC_ALL</code>… as usual; English and French
-  today). <code>--lang en|fr</code> or <code>SKEMO_LANG=fr</code> overrides it. Labels the engine draws (months, centuries) follow it
+  today). <code>SKEMO_LANG=fr</code> overrides it. Labels the engine draws (months, centuries) follow it
   too, unless the diagram pins them with <code>diagram(lang="en")</code>.</p>
 
 <h2>Determinism</h2>

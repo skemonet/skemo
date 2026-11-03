@@ -26,7 +26,7 @@ description: Every skemo diagram renders in light, dark, print and auto themes, 
 <p>The print theme may change dimensions slightly (thicker borders): the layout is computed for the theme you ask for.</p>
 
 <h2>Contrast</h2>
-<pre><code>skemo check --contrast diagram.skemo           # reports texts below the WCAG threshold
+<pre><code>skemo lint --contrast diagram.skemo           # reports texts below the WCAG threshold
 skemo render --contrast high diagram.skemo     # darkens (or lightens) those texts, layout unchanged</code></pre>
 <p>The threshold is 4.5:1 for text, 3:1 for text on an accent fill and for icons. A custom accent that is too light is reported,
   with the element and the measured ratio.</p>

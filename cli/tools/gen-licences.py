@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Writes src/crates.txt: the Rust crates compiled into `skemo` (normal dependencies of skemo-cli,
 every platform, the project's own skemo-* crates left out), one per line: name, version, licence.
-`skemo licences` prints it; `tests/licences.rs` checks it against Cargo.lock.
+`skemo --licences` prints it; `tests/licences.rs` checks it against Cargo.lock.
 
 Run it again after a dependency change: `python3 tools/gen-licences.py` (needs cargo, offline)."""
 import json

@@ -48,10 +48,11 @@ piped      := "| " text                        ; appended to the parent's title
 | `dir` | `down` `right` `up` `left` | `down` | main direction of the layout |
 | `layout` | `graph` `timeline` `frieze` `mindmap` | `graph` | layout mode |
 | `look` | `band` `header` `classic` `eyebrow` | `band` | card look for the whole diagram |
+| `css` | `style.css` (several: space-separated) | | stylesheets next to the file, applied after the theme; `--css` adds more after them |
 | `theme` | `light` `dark` `print` `auto` | `light` | `auto` follows the system (HTML only); the CLI `--theme` overrides it |
 | `lang` | `en` `fr` | the user's language | language of labels the engine draws (months, centuries, "BC") |
 | `elk` | JSON of raw ELK options | | fine tuning; avoid in shared files |
-| `fit` | `16:9`, `4:3`, `1.5`, `1280x720` | | target box (pre-release): a warning names the `dir`/`wrap` setting that shows the text largest once fitted; `skemo fit --write` applies it; when nothing helps and the proportions are over 15 % off, it says so. Never changes the layout by itself |
+| `fit` | `16:9`, `4:3`, `1.5`, `1280x720` | | target box (pre-release): a warning names the `dir`/`wrap` setting that shows the text largest once fitted; `skemo lint --fit --fix` applies it; when nothing helps and the proportions are over 15 % off, it says so. Never changes the layout by itself |
 
 `diagram(…)` is optional; when present, everything else is indented below it.
 
@@ -186,7 +187,7 @@ Layout is automatic. Pin only what the user wants fixed:
 ## 6. Styling with CSS
 
 Pass stylesheets with `--css file.css` (repeatable); they apply after the default theme with the normal
-cascade. Print the default theme with `skemo theme --print`.
+cascade. `skemo init f.skemo --css-full` writes the whole default theme, included by the diagram.
 
 A type defines only its **accent** and its **label**; backgrounds, borders and inks are derived:
 
@@ -233,7 +234,7 @@ Rendered selectors, for advanced CSS: `card`, `zone`, `card > .title`, `card li`
 | `print` | white background, black ink, darker fills: readable in black and white; also applied when printing the HTML |
 | `auto` | HTML follows the reader's system; PNG and SVG render as `light` |
 
-`skemo check --contrast f.skemo` reports texts below WCAG 4.5:1 (3:1 on accent fills).
+`skemo lint --contrast f.skemo` reports texts below WCAG 4.5:1 (3:1 on accent fills).
 `skemo render --contrast high` darkens or lightens those texts without changing the layout.
 Information must never be carried by colour alone: give types a `--label` and meaningful arrows a style.
 
@@ -348,7 +349,7 @@ zone#lan(href="#core") LAN
 
 ## 13. Diagnostics
 
-`skemo check` prints errors and warnings with file, line, column, a caret and often a hint; exit code 1 on
+`skemo lint` prints errors and warnings with file, line, column, a caret and often a hint; exit code 1 on
 errors. Blocking errors:
 
 | Code / cause | Fix |
@@ -365,30 +366,29 @@ errors. Blocking errors:
 Warnings never block: `unknown-icon`, `icon-ignored`, overlaps of pinned cards, markers earlier than their
 parent, `at=` in a mode where it has no effect, unreachable mindmap cards.
 
-`skemo fmt f.skemo` rewrites the file in canonical form (`--check` only reports).
+`skemo lint --fix f.skemo` rewrites the file in canonical form (`--dry` only reports).
 
 ## 14. Command line
 
 | Command | Role |
 |---|---|
+| `skemo init [file] [--css [name]]` | sample diagram; `--css`: a commented stylesheet it includes (`skemo_style.css`) |
 | `skemo f.skemo` | render `f.png` next to the source (same as `skemo render f.skemo`) |
 | `skemo render f.skemo -o out.ext` | format from the extension: `png` `svg` `webp` `html` `gif` `apng` |
-| `skemo check f.skemo…` | diagnostics only; `--contrast` adds the legibility check |
-| `skemo fmt f.skemo… [--check]` | canonical formatting |
-| `skemo watch f.skemo` | live preview on `http://127.0.0.1:8710`, reloads on save |
+| `skemo lint f.skemo…` | diagnostics only; `--contrast` adds the legibility check |
+| `skemo lint --fix f.skemo… [--dry]` | canonical formatting |
+| `skemo f.skemo --watch` | live preview on `http://127.0.0.1:8710`, reloads on save |
 | `skemo layout f.skemo --json` | positions and routes as JSON |
-| `skemo fit f.skemo [--target 16:9\|1280x720] [--write]` | settings that show the text larger in a target box (pre-release) |
+| `skemo lint f.skemo --fit [16:9\|1280x720] [--fix]` | settings that show the text larger in a target box (pre-release) |
 | `skemo extract image.png [-o dir]` | source and stylesheets embedded in a rendered image (`--stdout`: source only) |
-| `skemo icons [query]` | list built-in icons |
-| `skemo theme --print` | print the default theme CSS |
-| `skemo init [folder]` | sample diagram and commented CSS |
+| `skemo icons [query] [--json]` | list built-in icons (not listed in `--help`) |
 
-Render options: `--css f.css` (repeatable), `--theme light|dark|print|auto`, `--scale 2` (raster
+Render options: `--css f.css` (repeatable, after the diagram's own `diagram(css=…)`), `--theme light|dark|print|auto`, `--scale 2` (raster
 resolution), `--transparent`, `--contrast high`, `--step N`, `--animated`, `--board`, `--base-theme t.css`,
 `--deny-warnings`, `--no-fonts` (HTML), `--embed-fonts` (SVG: fonts inside, ~0.8 MB per weight),
 `--font-scale 1.4` (every text size; for slides). The SVG root carries `data-states` (ordered steps).
 Every output embeds its source and stylesheets (PNG iTXt chunk, SVG `<metadata>`, WebP/GIF/HTML too);
 `--no-source` leaves them out; any command accepts such an image instead of a `.skemo`. `-` as input reads standard input; `-o -` with `--format` writes to
-standard output. Messages follow the system language; `--lang en|fr` overrides.
+standard output. Messages follow the system language; `SKEMO_LANG=en|fr` overrides.
 
 Exit codes: 0 OK, 1 errors in the file, 2 wrong usage, 3 internal error.

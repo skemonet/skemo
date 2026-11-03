@@ -107,12 +107,12 @@ fn check_errors_exit_1() {
         "nombres-mal-formes",
     ] {
         bin()
-            .args(["check", dir.join(format!("{f}.skemo")).to_str().unwrap()])
+            .args(["lint", dir.join(format!("{f}.skemo")).to_str().unwrap()])
             .assert()
             .code(1);
     }
     bin()
-        .args(["check", fx("reseau.pug").to_str().unwrap()])
+        .args(["lint", fx("reseau.pug").to_str().unwrap()])
         .assert()
         .success();
 }
@@ -156,42 +156,69 @@ fn layout_json_and_stdin() {
 }
 
 #[test]
-fn theme_print() {
-    let out = bin()
-        .args(["theme", "--print"])
+fn init_css_full_writes_the_whole_theme() {
+    let dir = tmp("init-full");
+    let _ = std::fs::remove_dir_all(&dir);
+    let src = dir.join("d.skemo");
+    bin()
+        .args(["init", src.to_str().unwrap(), "--css-full", "t.css"])
         .assert()
-        .success()
-        .get_output()
-        .stdout
-        .clone();
-    assert!(String::from_utf8(out).unwrap().contains(".stage"));
+        .success();
+    let css = std::fs::read_to_string(dir.join("t.css")).unwrap();
+    assert!(
+        css.contains(".stage") && css.len() > 5_000,
+        "the whole theme"
+    );
+    assert!(
+        std::fs::read_to_string(&src)
+            .unwrap()
+            .contains("css=\"t.css\"")
+    );
+    // one stylesheet or the other
+    bin()
+        .args([
+            "init",
+            dir.join("e.skemo").to_str().unwrap(),
+            "--css",
+            "--css-full",
+        ])
+        .assert()
+        .code(2);
 }
 
 #[test]
-fn fmt_check_and_write() {
+fn lint_fix_dry_and_write() {
     let src = "card#a(step=2) A\n    to(b)\ncard#b B\n";
     let f = tmp("fmt.pug");
     std::fs::write(&f, src).unwrap();
     bin()
-        .args(["fmt", "--check", f.to_str().unwrap()])
+        .args(["lint", "--fix", "--dry", f.to_str().unwrap()])
         .assert()
         .code(1);
-    bin().args(["fmt", f.to_str().unwrap()]).assert().success();
+    bin()
+        .args(["lint", "--fix", f.to_str().unwrap()])
+        .assert()
+        .success();
     assert_eq!(
         std::fs::read_to_string(&f).unwrap(),
         "card#a A @2\n  to(b)\ncard#b B\n"
     );
     bin()
-        .args(["fmt", "--check", f.to_str().unwrap()])
+        .args(["lint", "--fix", "--dry", f.to_str().unwrap()])
         .assert()
         .success();
+    // --dry alone is refused: it only qualifies --fix
+    bin()
+        .args(["lint", "--dry", f.to_str().unwrap()])
+        .assert()
+        .code(2);
 }
 
 #[test]
 fn contrast_check() {
     // the default theme has known defects (DMZ zone title): code 1 and report
     let out = bin()
-        .args(["check", "--contrast", fx("reseau.pug").to_str().unwrap()])
+        .args(["lint", "--contrast", fx("reseau.pug").to_str().unwrap()])
         .assert()
         .code(1)
         .get_output()
@@ -202,7 +229,7 @@ fn contrast_check() {
     let f = tmp("simple.pug");
     std::fs::write(&f, "card#a Un\n  to(b)\ncard#b Deux\n").unwrap();
     bin()
-        .args(["check", "--contrast", f.to_str().unwrap()])
+        .args(["lint", "--contrast", f.to_str().unwrap()])
         .assert()
         .success();
 }
@@ -302,33 +329,126 @@ fn render_high_contrast_changes_only_colors() {
 fn init_creates_a_renderable_example_and_never_overwrites() {
     let dir = tmp("init-dir");
     let _ = std::fs::remove_dir_all(&dir);
+    let src = dir.join("demo.skemo");
     bin()
-        .args(["init", dir.to_str().unwrap()])
+        .args(["init", src.to_str().unwrap(), "--css"])
         .assert()
         .success();
-    let (src, css) = (dir.join("example.skemo"), dir.join("custom.css"));
-    assert!(src.exists() && css.exists());
-    let out = tmp("init.png");
+    // the diagram includes the stylesheet by name: rendering needs no --css
+    let css = dir.join("skemo_style.css");
+    assert!(css.exists());
+    let text = std::fs::read_to_string(&src).unwrap();
+    assert!(text.contains("css=\"skemo_style.css\""), "{text}");
+    let out = tmp("init.svg");
     bin()
-        .args([
-            "render",
-            src.to_str().unwrap(),
-            "--css",
-            css.to_str().unwrap(),
-            "-o",
-            out.to_str().unwrap(),
-            "--deny-warnings",
-        ])
+        .args(["render", src.to_str().unwrap(), "-o", out.to_str().unwrap()])
+        .args(["--deny-warnings"])
         .assert()
         .success();
+    assert!(std::fs::read_to_string(&out).unwrap().contains("#E8590C"));
     bin()
-        .args(["check", src.to_str().unwrap()])
+        .args(["lint", src.to_str().unwrap()])
         .assert()
         .success();
     // second call: refused, files intact
     std::fs::write(&css, "/* mine */").unwrap();
-    bin().args(["init", dir.to_str().unwrap()]).assert().code(2);
+    bin()
+        .args(["init", dir.join("other.skemo").to_str().unwrap(), "--css"])
+        .assert()
+        .code(2);
+    assert!(!dir.join("other.skemo").exists());
     assert_eq!(std::fs::read_to_string(&css).unwrap(), "/* mine */");
+    // without --css: the diagram alone, a named stylesheet with --css NAME
+    bin()
+        .args(["init", dir.join("plain.skemo").to_str().unwrap()])
+        .assert()
+        .success();
+    let plain = std::fs::read_to_string(dir.join("plain.skemo")).unwrap();
+    assert!(!plain.contains("css="), "{plain}");
+    bin()
+        .args([
+            "init",
+            dir.join("named.skemo").to_str().unwrap(),
+            "--css",
+            "demo.css",
+        ])
+        .assert()
+        .success();
+    assert!(dir.join("demo.css").exists());
+    bin()
+        .args([
+            "init",
+            dir.join("x.skemo").to_str().unwrap(),
+            "--css",
+            "../out.css",
+        ])
+        .assert()
+        .code(2);
+}
+
+/// `diagram(css=…)` is read next to the source, before `--css`; a missing file stops the render.
+#[test]
+fn a_diagram_includes_its_stylesheets() {
+    let dir = tmp("css-include");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let (with, plain) = (dir.join("d.skemo"), dir.join("p.skemo"));
+    std::fs::write(&with, "diagram(css=\"a.css\")\n  card#x.t X\n    | line\n").unwrap();
+    std::fs::write(&plain, "card#x.t X\n  | line\n").unwrap();
+    std::fs::write(dir.join("a.css"), ".t { --c: #E8590C; }").unwrap();
+    std::fs::write(dir.join("b.css"), ".t { --c: #2B8A3E; }").unwrap();
+    let render = |src: &Path, extra: &[&str]| -> String {
+        let out = bin()
+            .args([
+                "render",
+                src.to_str().unwrap(),
+                "--format",
+                "svg",
+                "-o",
+                "-",
+            ])
+            .args(["--no-source"])
+            .args(extra)
+            .assert()
+            .success()
+            .get_output()
+            .stdout
+            .clone();
+        // the ids of the filters derive from the source text: `sk` and 8 hex digits
+        let svg = String::from_utf8(out).unwrap();
+        let mut kept = String::new();
+        let mut rest = svg.as_str();
+        while let Some(i) = rest.find("\"sk").into_iter().chain(rest.find("#sk")).min() {
+            kept.push_str(&rest[..i + 3]);
+            let tail = &rest[i + 3..];
+            let hex = tail.len() > 8 && tail[..8].chars().all(|c| c.is_ascii_hexdigit());
+            rest = if hex { &tail[8..] } else { tail };
+        }
+        kept.push_str(rest);
+        kept
+    };
+    let (a, b) = (dir.join("a.css"), dir.join("b.css"));
+    let (a, b) = (a.to_str().unwrap(), b.to_str().unwrap());
+    // the included file is the same as --css a.css
+    assert_eq!(render(&with, &[]), render(&plain, &["--css", a]));
+    assert_ne!(render(&with, &[]), render(&plain, &[]));
+    // --css comes after it
+    assert_eq!(
+        render(&with, &["--css", b]),
+        render(&plain, &["--css", a, "--css", b])
+    );
+    std::fs::write(&with, "diagram(css=\"missing.css\")\n  card#x X\n").unwrap();
+    bin()
+        .args([
+            "render",
+            with.to_str().unwrap(),
+            "-o",
+            "-",
+            "--format",
+            "svg",
+        ])
+        .assert()
+        .code(2);
 }
 
 #[test]
@@ -358,15 +478,15 @@ fn watch_serves_the_page_and_its_version() {
     let dir = tmp("watch-dir");
     let _ = std::fs::remove_dir_all(&dir);
     bin()
-        .args(["init", dir.to_str().unwrap()])
+        .args(["init", dir.join("example.skemo").to_str().unwrap(), "--css"])
         .assert()
         .success();
     let port = 18_700 + u16::try_from(std::process::id() % 200).unwrap();
     let exe = assert_cmd::cargo::cargo_bin("skemo");
     let mut child = Std::new(exe)
         .args([
-            "watch",
             dir.join("example.skemo").to_str().unwrap(),
+            "--watch",
             "--port",
             &port.to_string(),
         ])
@@ -487,7 +607,7 @@ fn bare_file_renders_a_png_next_to_the_source() {
 fn bare_command_names_still_work_and_stdin_needs_an_output() {
     bin().arg("--version").assert().success();
     bin()
-        .args(["check", fx("reseau.pug").to_str().unwrap()])
+        .args(["lint", fx("reseau.pug").to_str().unwrap()])
         .assert()
         .success();
     bin()
@@ -498,9 +618,9 @@ fn bare_command_names_still_work_and_stdin_needs_an_output() {
 }
 
 #[test]
-fn fmt_reads_stdin_and_reports_errors() {
+fn lint_fix_reads_stdin_and_reports_errors() {
     let out = bin()
-        .args(["fmt", "-"])
+        .args(["lint", "--fix", "-"])
         .write_stdin("card#a(step=2) A\n")
         .assert()
         .success()
@@ -510,25 +630,33 @@ fn fmt_reads_stdin_and_reports_errors() {
     assert_eq!(String::from_utf8(out).unwrap(), "card#a A @2\n");
     let bad = tmp("fmt-bad.skemo");
     std::fs::write(&bad, "card#a(\n").unwrap();
-    bin().args(["fmt", bad.to_str().unwrap()]).assert().code(1);
-    bin().args(["fmt", "/nonexistent/x.skemo"]).assert().code(2);
+    bin()
+        .args(["lint", "--fix", bad.to_str().unwrap()])
+        .assert()
+        .code(1);
+    assert_eq!(std::fs::read_to_string(&bad).unwrap(), "card#a(\n");
+    // the former commands are gone
+    for old in ["check", "fmt", "watch"] {
+        bin().args([old, "x.skemo"]).assert().code(2);
+    }
 }
 
 #[test]
-fn theme_needs_print_and_check_reports_errors() {
-    bin().arg("theme").assert().code(2);
-    let out = bin()
-        .args(["theme", "--print"])
+fn former_commands_are_gone_and_lint_reports_errors() {
+    for old in ["theme", "fit", "licences"] {
+        bin().arg(old).assert().code(2);
+    }
+    // --licences alone, never with a command; skemo alone prints the help
+    bin().arg("--licences").assert().success();
+    bin()
+        .args(["--licences", "lint", "x.skemo"])
         .assert()
-        .success()
-        .get_output()
-        .stdout
-        .clone();
-    assert!(String::from_utf8(out).unwrap().contains(".stage"));
+        .code(2);
+    bin().assert().code(2);
     let bad = tmp("check-bad.skemo");
     std::fs::write(&bad, "card#a\n  to(zz)\n").unwrap();
     let err = bin()
-        .args(["check", bad.to_str().unwrap()])
+        .args(["lint", bad.to_str().unwrap()])
         .assert()
         .code(1)
         .get_output()
@@ -537,7 +665,7 @@ fn theme_needs_print_and_check_reports_errors() {
     assert!(String::from_utf8_lossy(&err).contains("zz"));
     // check keeps going over several files: an unreadable one is a failure (1), not a usage error
     bin()
-        .args(["check", "/nonexistent/x.skemo"])
+        .args(["lint", "/nonexistent/x.skemo"])
         .assert()
         .code(1);
 }
@@ -547,15 +675,15 @@ fn stderr_of(mut c: Command, args: &[&str]) -> String {
     String::from_utf8_lossy(&out).into_owned()
 }
 
-/// The language follows the system (LANG…), `SKEMO_LANG` beats it, `--lang` beats everything.
+/// The language follows the system (LANG…), `SKEMO_LANG` beats it; there is no `--lang`.
 #[test]
 fn messages_follow_the_system_language() {
     let bad = tmp("lang-bad.skemo");
     std::fs::write(&bad, "card#a\n  to(zz)\n").unwrap();
     let f = bad.to_str().unwrap();
-    let en = stderr_of(bin_env(&[]), &["check", f]);
+    let en = stderr_of(bin_env(&[]), &["lint", f]);
     assert!(en.contains("error[unknown-target]: unknown target"), "{en}");
-    let fr = stderr_of(bin_env(&[("LANG", "fr_FR.UTF-8")]), &["check", f]);
+    let fr = stderr_of(bin_env(&[("LANG", "fr_FR.UTF-8")]), &["lint", f]);
     assert!(
         fr.contains("erreur[unknown-target] : cible « zz » inconnue"),
         "{fr}"
@@ -564,33 +692,25 @@ fn messages_follow_the_system_language() {
     assert!(
         stderr_of(
             bin_env(&[("LANG", "fr_FR"), ("LC_ALL", "en_US.UTF-8")]),
-            &["check", f]
+            &["lint", f]
         )
         .contains("unknown target")
     );
     assert!(
-        stderr_of(
-            bin_env(&[("LC_ALL", "C"), ("LANG", "fr_FR")]),
-            &["check", f]
-        )
-        .contains("cible")
+        stderr_of(bin_env(&[("LC_ALL", "C"), ("LANG", "fr_FR")]), &["lint", f]).contains("cible")
     );
-    // SKEMO_LANG and --lang
+    // SKEMO_LANG; --lang is no option
     assert!(
         stderr_of(
             bin_env(&[("LANG", "fr_FR"), ("SKEMO_LANG", "en")]),
-            &["check", f]
+            &["lint", f]
         )
         .contains("unknown target")
     );
-    assert!(
-        stderr_of(bin_env(&[("LANG", "fr_FR")]), &["--lang", "en", "check", f])
-            .contains("unknown target")
-    );
-    assert!(stderr_of(bin_env(&[]), &["check", f, "--lang=fr"]).contains("cible"));
+    assert!(stderr_of(bin_env(&[]), &["lint", f, "--lang=fr"]).contains("--lang"));
     // an unsupported language falls back to English
     assert!(
-        stderr_of(bin_env(&[("LANG", "de_DE.UTF-8")]), &["check", f]).contains("unknown target")
+        stderr_of(bin_env(&[("LANG", "de_DE.UTF-8")]), &["lint", f]).contains("unknown target")
     );
 }
 
@@ -598,13 +718,13 @@ fn messages_follow_the_system_language() {
 fn errors_and_help_are_translated_too() {
     let fr = stderr_of(
         bin_env(&[("LANG", "fr_FR.UTF-8")]),
-        &["check", "/nonexistent/x.skemo"],
+        &["lint", "/nonexistent/x.skemo"],
     );
     assert!(
         fr.starts_with("erreur : lecture de « /nonexistent/x.skemo »"),
         "{fr}"
     );
-    let en = stderr_of(bin_env(&[]), &["check", "/nonexistent/x.skemo"]);
+    let en = stderr_of(bin_env(&[]), &["lint", "/nonexistent/x.skemo"]);
     assert!(
         en.starts_with("error: reading « /nonexistent/x.skemo »"),
         "{en}"
@@ -680,7 +800,7 @@ fn icons_lists_and_filters_the_builtin_set() {
 fn check_reports_unknown_icons_and_unsafe_links() {
     let f = tmp("liens.skemo");
     std::fs::write(&f, "card#a(icon=\"databse\") A\n").unwrap();
-    let out = bin().arg("check").arg(&f).output().unwrap();
+    let out = bin().arg("lint").arg(&f).output().unwrap();
     let err = String::from_utf8_lossy(&out.stderr);
     assert!(out.status.success());
     assert!(
@@ -689,12 +809,12 @@ fn check_reports_unknown_icons_and_unsafe_links() {
     );
     assert!(err.contains("database"), "suggestion: {err}");
     bin()
-        .args(["check", "--deny-warnings"])
+        .args(["lint", "--deny-warnings"])
         .arg(&f)
         .assert()
         .failure();
     std::fs::write(&f, "card#a(href=\"javascript:alert(1)\") A\n").unwrap();
-    let out = bin().arg("check").arg(&f).output().unwrap();
+    let out = bin().arg("lint").arg(&f).output().unwrap();
     assert!(!out.status.success());
     assert!(String::from_utf8_lossy(&out.stderr).contains("unsafe-href"));
 }
@@ -702,11 +822,11 @@ fn check_reports_unknown_icons_and_unsafe_links() {
 const WIDE: &str = "diagram(fit=\"16:9\")\ncard#lb Load balancer\n  to(p1)\nzone#ns Namespace\n  card#p1 pod-1\n  card#p2 pod-2\n  card#p3 pod-3\n  card#p4 pod-4\n  card#p5 pod-5\n  card#p6 pod-6\n  card#p7 pod-7\n";
 
 #[test]
-fn fit_lists_suggestions_and_writes_the_best() {
+fn lint_fit_lists_suggestions_and_writes_the_best() {
     let src = tmp("wide.skemo");
     std::fs::write(&src, WIDE).unwrap();
     let out = bin()
-        .args(["fit", src.to_str().unwrap()])
+        .args(["lint", src.to_str().unwrap(), "--fit"])
         .assert()
         .success();
     let text = String::from_utf8(out.get_output().stdout.clone()).unwrap();
@@ -715,7 +835,7 @@ fn fit_lists_suggestions_and_writes_the_best() {
         "{text}"
     );
     bin()
-        .args(["fit", src.to_str().unwrap(), "--write"])
+        .args(["lint", src.to_str().unwrap(), "--fit", "--fix"])
         .assert()
         .success();
     let written = std::fs::read_to_string(&src).unwrap();
@@ -731,16 +851,19 @@ fn fit_lists_suggestions_and_writes_the_best() {
         .assert()
         .success();
     let err = String::from_utf8(out.get_output().stderr.clone()).unwrap();
-    assert!(!err.contains("--write"), "{err}");
+    assert!(!err.contains("--fit --fix"), "{err}");
 }
 
 #[test]
-fn fit_needs_a_target() {
+fn lint_fit_needs_a_target() {
     let src = tmp("plain.skemo");
     std::fs::write(&src, "card#a A\n").unwrap();
-    bin().args(["fit", src.to_str().unwrap()]).assert().code(2);
     bin()
-        .args(["fit", src.to_str().unwrap(), "--target", "wide"])
+        .args(["lint", src.to_str().unwrap(), "--fit"])
+        .assert()
+        .code(2);
+    bin()
+        .args(["lint", src.to_str().unwrap(), "--fit", "wide"])
         .assert()
         .code(2);
 }
@@ -864,11 +987,11 @@ fn check_reports_layout_warnings() {
     )
     .unwrap();
     let path = src.to_str().unwrap();
-    let out = bin().args(["check", path]).assert().success();
+    let out = bin().args(["lint", path]).assert().success();
     let err = String::from_utf8_lossy(&out.get_output().stderr).to_string();
     assert!(err.contains("fit=\"2:1\""), "{err}");
     bin()
-        .args(["check", "--deny-warnings", path])
+        .args(["lint", "--deny-warnings", path])
         .assert()
         .code(1);
 }

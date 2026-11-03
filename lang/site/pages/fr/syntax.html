@@ -57,11 +57,11 @@ to(core).dashed(side="right-top")     ✗ erreur : plusieurs groupes d’attribu
 <h2>Anciennes écritures</h2>
 <p>Les fichiers écrits avant la forme actuelle du langage s’ouvrent encore : <code>li texte</code> se lit <code>| texte</code>,
   <code>from</code>/<code>to</code> sur <code>diagram</code> se lisent <code>start</code>/<code>end</code>, <code>step=</code>/<code>fx=</code>
-  se lisent comme des marqueurs <code>@</code>. <code>skemo fmt</code> les réécrit.</p>
+  se lisent comme des marqueurs <code>@</code>. <code>skemo lint --fix</code> les réécrit.</p>
 
 <h2>Mise en forme</h2>
-<p><code>skemo fmt fichier.skemo</code> réécrit un fichier sous sa forme canonique (indentation, ordre des attributs, marqueurs) ;
-  <code>skemo fmt --check</code> dit seulement s’il est déjà en forme. Les commentaires et l’ordre des éléments sont conservés.</p>
+<p><code>skemo lint --fix fichier.skemo</code> réécrit un fichier sous sa forme canonique (indentation, ordre des attributs, marqueurs) ;
+  <code>skemo lint --fix --dry</code> dit seulement s’il est déjà en forme. Les commentaires et l’ordre des éléments sont conservés.</p>
 
 <h2>Extension de fichier</h2>
 <p><code>.skemo</code>. Le contenu reste du Pug valide : un éditeur peut utiliser sa coloration Pug.</p>

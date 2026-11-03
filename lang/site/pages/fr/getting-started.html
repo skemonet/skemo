@@ -25,14 +25,15 @@ skemo hello.skemo -o hello.svg    # l’extension choisit le format : svg, webp,
   <code>card#a</code> dessine <code>a → b</code>.</p>
 
 <h2>Partir d’un exemple</h2>
-<pre><code>skemo init mon-diagramme   # example.skemo et un custom.css commenté ; n’écrase rien
-cd mon-diagramme
-skemo example.skemo --css custom.css
-skemo watch example.skemo --css custom.css   # aperçu en direct sur http://127.0.0.1:8710</code></pre>
+<pre><code>skemo init demo.skemo --css   # demo.skemo et skemo_style.css, qu’il inclut ; n’écrase rien
+skemo demo.skemo
+skemo demo.skemo --watch        # aperçu en direct sur http://127.0.0.1:8710</code></pre>
+<p>Le diagramme nomme sa feuille de style sur sa première ligne, <code>diagram(dir="down" css="skemo_style.css")</code> :
+  le fichier est à côté de lui. Sans <code>--css</code>, <code>init</code> écrit le diagramme seul.</p>
 <p><code>watch</code> refait le rendu à chaque enregistrement et la page du navigateur se recharge d’elle-même.</p>
 
 <h2>Vérifier avant de rendre</h2>
-<pre><code>skemo check example.skemo</code></pre>
+<pre><code>skemo lint example.skemo</code></pre>
 <p>Les erreurs donnent leur ligne et leur colonne, par exemple <code>cible « databse » inconnue</code>, avec l’aide
   <code>vouliez-vous « database » ?</code>. Le code de sortie vaut 1 en cas d’erreur. Voir <a href="diagnostics.html">Erreurs et avertissements</a>.</p>
 

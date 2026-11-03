@@ -8,7 +8,7 @@
 | Command | Effect | Prio |
 |---|---|---|
 | `skemo render <file> -o <output>.{html,svg,png}` | rendering; format deduced from the extension | M |
-| `  --css <custom.css>` (repeatable) | CSS applied after the default theme | M |
+| `  --css <more.css>` (repeatable) | CSS applied after the default theme and the stylesheets the diagram includes (`diagram(css=…)`, D-082) | M |
 | `  --scale <n>` | PNG scale (default 2) | M |
 | `  --step <n>` | rendering of the state at step n (value as written: `2.5`) | S |
 | `  --animated` (PNG) | **one PNG per state** (`name.00.png`…) + `name.states.json`; without effects, with focus | M |
@@ -22,16 +22,15 @@
 | `  --transparent` | transparent background (SVG, PNG, APNG, contact sheet); no effect in HTML and GIF (D-029) | S |
 | `  --motion` (SVG) | plays the arrows in motion (`.flow`, `.pulse`) with CSS keyframes; without it the SVG is a still image, moving arrows drawn solid (D-079). Other formats: a warning (HTML, GIF, APNG, animated WebP always play them; PNG never) | S |
 | `  --board` (PNG) | contact sheet of the steps (one state per row) | S |
-| `skemo check --contrast <file> [--css …]` | checks the contrast in the 3 themes and lists the faulty types | S |
-| `skemo check <file>…` | validates without rendering; diagnostics; non-zero exit code on error | M |
+| `skemo lint --contrast <file> [--css …]` | checks the contrast in the 3 themes and lists the faulty types | S |
+| `skemo lint <file>…` | validates without rendering; diagnostics; non-zero exit code on error | M |
 | `skemo layout <file> --json` | full layout in the oracle's `layout.json` format (on stdout) | M |
-| `skemo watch <file> [-o …]` | re-render on every save + local server with automatic reload (`--port`) | S |
-| `skemo fmt <file>… [--check]` | canonical formatting (`lang` F-PARSE-8) | S |
-| `skemo theme --print` | writes the default theme (starting point of a custom theme) | S |
-| `skemo licences` | prints the licences and copyright notices of what the binary embeds: the fonts (OFL-1.1), the Lucide icons (ISC), the Rust crates compiled in (`src/crates.txt`, written by `tools/gen-licences.py`, checked against `Cargo.lock`) | S |
-| `skemo init [folder]` | creates a sample `.skemo` + a commented `custom.css` | C |
+| `skemo render <file> --watch [-o …]` | re-render on every save + local server with automatic reload (`--port`) | S |
+| `skemo lint --fix <file>… [--dry]` | canonical formatting (`lang` F-PARSE-8) | S |
+| `skemo --licences` | prints the licences and copyright notices of what the binary embeds: the fonts (OFL-1.1), the Lucide icons (ISC), the Rust crates compiled in (`src/crates.txt`, written by `tools/gen-licences.py`, checked against `Cargo.lock`) | S |
+| `skemo init [file] [--css [name]]` | creates a sample `.skemo` (default `diagram.skemo`); `--css` also a commented stylesheet (default `skemo_style.css`) that it includes with `diagram(css=…)` (D-082) | C |
 
-Global options: `--quiet`, `--color auto|always|never`, `--lang en|fr`, `--version`, `--help`. **Language** (D-038): help, diagnostics and messages follow the system language (`SKEMO_LANG`, `LC_ALL`, `LC_MESSAGES`, `LANGUAGE`, `LANG`), English by default.
+Generic options: `--help`, `--version`, `--quiet`, and `--licences` alone (no `--lang`, no `--color`: colours on a terminal unless `NO_COLOR`; D-082, D-084). **Language** (D-038): help, diagnostics and messages follow the system language (`SKEMO_LANG`, `LC_ALL`, `LC_MESSAGES`, `LANGUAGE`, `LANG`), English by default.
 
 ## 2. Behaviour
 

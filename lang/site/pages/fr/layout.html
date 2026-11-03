@@ -61,8 +61,8 @@ description: Directions, rangées, colonnes, piles et positions épinglées : co
   cadre, pas seulement ses proportions : un placement aux bonnes proportions mais deux fois plus grand montre un texte plus petit.
   skemo ne change jamais le placement de lui-même pour cela, afin que le dessin reste stable pendant l’édition : quand un réglage
   comme <code>zone#ns(wrap="3")</code> ou <code>diagram(dir="right")</code> afficherait le texte au moins 15 % plus grand, il avertit
-  et le nomme (avec un cadre en pixels, la taille du texte avant et après). <code>skemo fit f.skemo</code> liste les candidats,
-  chacun placé pour de vrai, avec le gain en taille de texte, et <code>--write</code> écrit le meilleur dans le fichier. Quand les
+  et le nomme (avec un cadre en pixels, la taille du texte avant et après). <code>skemo lint f.skemo --fit</code> liste les candidats,
+  chacun placé pour de vrai, avec le gain en taille de texte, et <code>--fix</code> écrit le meilleur dans le fichier. Quand les
   proportions s’écartent de plus de 15 % de la cible sans qu’aucun réglage n’aide, l’avertissement le dit : c’est le placement
   lui-même qui doit changer.</p>
 

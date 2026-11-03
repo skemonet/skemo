@@ -1,39 +1,21 @@
-//! `skemo fit`: settings (`dir`, `wrap`) that show a diagram larger in a target box, arrows kept
-//! readable (`skemo_engine::fit`). Prints them, best first; `--write` puts the best one in the file.
+//! `skemo lint --fit`: settings (`dir`, `wrap`) that show a diagram larger in a target box, arrows
+//! kept readable (`skemo_engine::fit`). Prints them, best first; with `--fix` the best one goes
+//! into the file.
 
-use crate::args::FitArgs;
-use crate::common::{Fail, load_images, read_css, read_file, read_source};
+use crate::args::LintArgs;
+use crate::common::{Fail, Inputs, load};
 use crate::out::Out;
 use skemo_engine::fit;
-use skemo_engine::source::Bundle;
 use skemo_lang::tr;
 use std::io::Write as _;
 
-pub fn run(out: &Out, a: &FitArgs) -> Result<(), Fail> {
-    let src = read_source(&a.file).map_err(Fail::usage)?;
-    let mut css = read_css(&a.css).map_err(Fail::usage)?;
-    if let Some(k) = a.font_scale {
-        css.push(format!(".stage {{ --font-scale: {k}; }}"));
-    }
-    let base_theme = a
-        .base_theme
-        .as_ref()
-        .map(|p| read_file(p))
-        .transpose()
-        .map_err(Fail::usage)?;
-    let images = load_images(&a.file, &mut Bundle::new(&src), &css)?;
-    let opts = skemo_engine::Options {
-        css,
-        theme: a.theme.map(Into::into),
-        base_theme,
-        high_contrast: false,
-        transparent: false,
-        images,
-        fonts: Vec::new(),
-    };
-    let raw = a
-        .target
-        .clone()
+/// `target`: the box given to `--fit`, empty for the diagram's own `diagram(fit=…)`.
+pub fn run(out: &Out, a: &LintArgs, file: &str, target: &str) -> Result<(), Fail> {
+    let inputs = Inputs::new(file, &a.css, a.base_theme.as_ref()).font_scale(a.font_scale);
+    let loaded = load(&inputs)?;
+    let (src, opts) = (loaded.src, loaded.options);
+    let raw = Some(target.to_string())
+        .filter(|t| !t.is_empty())
         .or_else(|| {
             skemo_lang::parse(&src)
                 .model
@@ -42,22 +24,22 @@ pub fn run(out: &Out, a: &FitArgs) -> Result<(), Fail> {
         })
         .ok_or_else(|| {
             Fail::usage(tr!(
-                "no target: give --target 16:9 or write diagram(fit=\"16:9\")",
-                "pas de cible : donner --target 16:9 ou écrire diagram(fit=\"16:9\")"
+                "no target: give --fit 16:9 or write diagram(fit=\"16:9\")",
+                "pas de cible : donner --fit 16:9 ou écrire diagram(fit=\"16:9\")"
             ))
         })?;
     let target = fit::parse_target(&raw).ok_or_else(|| {
         Fail::usage(tr!(
-            "--target « {raw} »: a ratio like 16:9 or a box like 1280x720 is expected",
-            "--target « {raw} » : un rapport comme 16:9 ou une boîte comme 1280x720 est attendu"
+            "--fit « {raw} »: a ratio like 16:9 or a box like 1280x720 is expected",
+            "--fit « {raw} » : un rapport comme 16:9 ou une boîte comme 1280x720 est attendu"
         ))
     })?;
     let shape = fit::shape_of(&src, &opts).ok_or_else(|| {
         Fail(
             1,
             Some(tr!(
-                "the diagram does not build: run skemo check",
-                "le schéma ne se construit pas : lancer skemo check"
+                "the diagram does not build: run skemo lint",
+                "le schéma ne se construit pas : lancer skemo lint"
             )),
         )
     })?;
@@ -100,22 +82,22 @@ pub fn run(out: &Out, a: &FitArgs) -> Result<(), Fail> {
         ));
     }
     let _ = std::io::stdout().write_all(text.as_bytes());
-    if a.write {
-        write_best(out, a, &src, list.first())?;
+    if a.canon.fix && !a.canon.dry {
+        write_best(out, file, &src, list.first())?;
     }
     Ok(())
 }
 
 fn write_best(
     out: &Out,
-    a: &FitArgs,
+    file: &str,
     src: &str,
     best: Option<&fit::Suggestion>,
 ) -> Result<(), Fail> {
-    if a.file == "-" {
+    if file == "-" {
         return Err(Fail::usage(tr!(
-            "--write needs a file, not the standard input",
-            "--write demande un fichier, pas l'entrée standard"
+            "--fit --fix needs a file, not the standard input",
+            "--fit --fix demande un fichier, pas l'entrée standard"
         )));
     }
     let Some(best) = best else {
@@ -128,5 +110,5 @@ fn write_best(
             "la proposition n'a pas pu être écrite"
         ))
     })?;
-    std::fs::write(&a.file, new).map_err(|e| Fail::usage(format!("{}: {e}", a.file)))
+    std::fs::write(file, new).map_err(|e| Fail::usage(format!("{file}: {e}")))
 }

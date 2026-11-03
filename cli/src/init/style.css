@@ -1,5 +1,6 @@
-/* Custom theme: overrides the default theme (see `skemo theme --print`).
-   Each rule only replaces what it names. */
+/* Custom theme: overrides the default theme (the whole of it: `skemo init --css-full`).
+   Each rule only replaces what it names. A diagram includes it by name:
+   diagram(css="this-file.css"). */
 
 /* Global variables: background, font, corner radius. */
 :root {

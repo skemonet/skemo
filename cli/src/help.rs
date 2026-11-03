@@ -13,240 +13,245 @@ const FR: &[(&str, &str, &str)] = &[
         "",
         "Diagrammes texte (skemo) : rendu HTML, SVG, PNG, GIF, APNG et WebP",
     ),
+    ("", "help", "Afficher l'aide"),
+    ("", "version", "Afficher la version"),
     ("", "quiet", "N'afficher que les erreurs"),
-    ("", "color", "Couleurs dans les messages"),
     (
         "",
-        "lang",
-        "Langue des messages et de l'aide (par défaut : celle du système ; SKEMO_LANG, LC_ALL, LC_MESSAGES, LANGUAGE, LANG)",
+        "licences",
+        "Afficher les licences de ce que le binaire embarque (polices, icônes, crates)",
     ),
+    ("init", "", "Crée un schéma d'exemple (n'écrase rien)"),
+    ("init", "file", "Schéma à créer"),
     (
-        "render",
-        "",
-        "Rendu d'un schéma ; le format est déduit de l'extension de la sortie (PNG par défaut). C'est la commande par défaut : `skemo demo.skemo` écrit `demo.png`",
-    ),
-    ("check", "", "Vérifie des fichiers sans les rendre"),
-    (
-        "fmt",
-        "",
-        "Formatage canonique (indentation, ordre des attributs, marqueurs @)",
+        "init",
+        "css",
+        "Aussi une courte feuille de style commentée, incluse par le schéma (`skemo_style.css`)",
     ),
     (
         "init",
-        "",
-        "Crée un exemple `example.skemo` et un `custom.css` commenté (n'écrase rien)",
+        "css_full",
+        "Idem, avec tout le thème par défaut à modifier",
     ),
-    ("init", "dir", "Dossier de destination (créé si besoin)"),
     (
+        "lint",
+        "",
+        "Vérifie des fichiers (diagnostics), peut les réécrire en forme canonique",
+    ),
+    ("lint", "files", "Fichiers à vérifier"),
+    (
+        "lint",
+        "fix",
+        "Réécrit les fichiers en forme canonique ; avec --fit, applique aussi le meilleur réglage",
+    ),
+    (
+        "lint",
+        "dry",
+        "Avec --fix : ne rien écrire, code 1 si un fichier changerait",
+    ),
+    ("lint", "deny_warnings", "Code 1 au moindre avertissement"),
+    (
+        "lint",
+        "contrast",
+        "Vérifie aussi le contraste des textes (thèmes light, dark, print)",
+    ),
+    (
+        "lint",
+        "fit",
+        "Réglages (dir, wrap) qui agrandissent le texte dans un cadre : 16:9, 1280x720 (défaut : diagram(fit=…))",
+    ),
+    (
+        "lint",
+        "font_scale",
+        "Facteur de taille du texte pour --fit, comme pour render",
+    ),
+    (
+        "lint",
+        "css",
+        "Feuille de style en plus, après celles du schéma (répétable)",
+    ),
+    ("lint", "base_theme", "Thème remplaçant celui par défaut"),
+    (
+        "render",
+        "",
+        "Rendu d'un schéma, format déduit de l'extension de sortie ; la commande par défaut",
+    ),
+    ("render", "file", "Fichier source (`-` : entrée standard)"),
+    (
+        "render",
+        "output",
+        "Fichier de sortie, son extension choisit le format (défaut : nom de la source, .png)",
+    ),
+    (
+        "render",
+        "format",
+        "Format, quand l'extension ne le dit pas",
+    ),
+    ("render", "scale", "Échelle en pixels du PNG, GIF et APNG"),
+    ("render", "transparent", "Sans fond (SVG, PNG, APNG)"),
+    (
+        "render",
+        "no_source",
+        "Ne pas embarquer la source dans la sortie (voir skemo extract)",
+    ),
+    ("render", "no_fonts", "HTML : ne pas embarquer les polices"),
+    (
+        "render",
+        "embed_fonts",
+        "SVG : embarquer les polices (environ 0,8 Mo par graisse)",
+    ),
+    (
+        "render",
+        "font",
+        "Fichier de police pour une famille nommée par le CSS (répétable)",
+    ),
+    (
+        "render",
         "watch",
-        "",
-        "Aperçu en direct : re-rendu à chaque sauvegarde, rechargement automatique du navigateur",
+        "Aperçu en direct dans le navigateur ; n'écrit un fichier qu'avec -o",
+    ),
+    ("render", "port", "Port de l'aperçu en direct"),
+    ("render", "deny_warnings", "Code 1 au moindre avertissement"),
+    (
+        "render",
+        "css",
+        "Feuille de style en plus, après celles du schéma (répétable)",
+    ),
+    ("render", "base_theme", "Thème remplaçant celui par défaut"),
+    (
+        "render",
+        "theme",
+        "Variante du thème, prioritaire sur diagram(theme=…)",
     ),
     (
-        "layout",
-        "",
-        "Placement complet au format layout.json (sur la sortie standard)",
+        "render",
+        "contrast",
+        "high : fonce les textes sous le contraste WCAG, placement inchangé",
+    ),
+    (
+        "render",
+        "font_scale",
+        "Facteur de taille du texte (1.4 pour une diapositive)",
+    ),
+    (
+        "render",
+        "step",
+        "L'état à cette étape (telle qu'écrite : 2.5)",
+    ),
+    (
+        "render",
+        "animated",
+        "PNG : un fichier par état, et nom.states.json",
+    ),
+    ("render", "board", "PNG : toutes les étapes sur une planche"),
+    (
+        "render",
+        "motion",
+        "SVG : animer les flèches en mouvement (.flow, .pulse) ; fixe sinon",
+    ),
+    ("render", "hold", "GIF, APNG : secondes par état"),
+    (
+        "render",
+        "transition",
+        "GIF, APNG : secondes par transition",
+    ),
+    ("render", "fps", "GIF, APNG : images par seconde"),
+    ("render", "no_loop", "GIF, APNG : jouer une fois"),
+    (
+        "render",
+        "final_hold",
+        "GIF, APNG : secondes sur la dernière image",
     ),
     (
         "extract",
         "",
-        "Récupère la source et les feuilles de style embarquées dans une image rendue (PNG, SVG, WebP, GIF, APNG, HTML) pour les modifier",
+        "Récupère la source et les feuilles de style embarquées dans une image rendue",
     ),
     ("extract", "image", "Image ou page rendue"),
     (
         "extract",
         "output",
-        "Dossier de destination (par défaut : celui de l'image)",
+        "Dossier de destination (défaut : celui de l'image)",
     ),
     ("extract", "force", "Écraser les fichiers existants"),
     (
         "extract",
         "stdout",
-        "Écrire seulement la source, sur la sortie standard",
+        "Seulement la source, sur la sortie standard",
     ),
     (
-        "fit",
+        "layout",
         "",
-        "Propose des réglages (dir, wrap) qui affichent le schéma plus grand dans une boîte cible (rapport ou taille)",
+        "Placement complet en JSON, sur la sortie standard",
     ),
-    ("fit", "file", "Fichier source"),
+    ("layout", "file", "Fichier source"),
+    ("layout", "json", "Sortie JSON (le seul format)"),
     (
-        "fit",
-        "target",
-        "Boîte cible : un rapport largeur:hauteur (16:9, 4:3, 1.5) ou une taille en px (1280x720) ; par défaut : diagram(fit=…)",
-    ),
-    (
-        "fit",
-        "write",
-        "Écrire la meilleure proposition dans le fichier",
-    ),
-    (
-        "fit",
+        "layout",
         "css",
-        "CSS perso, appliqué après le thème (répétable)",
-    ),
-    ("fit", "theme", "Thème du rendu"),
-    (
-        "fit",
-        "base_theme",
-        "Thème de base remplaçant le thème par défaut",
+        "Feuille de style en plus, après celles du schéma (répétable)",
     ),
     (
-        "fit",
-        "font_scale",
-        "Multiplier toutes les tailles de texte du thème, comme pour render",
+        "layout",
+        "theme",
+        "Variante du thème, prioritaire sur diagram(theme=…)",
     ),
+    ("layout", "base_theme", "Thème remplaçant celui par défaut"),
     (
         "icons",
         "",
-        "Liste les icônes intégrées (Lucide), filtrées par une recherche sur les noms et les mots-clés",
+        "Les icônes intégrées, filtrées par une recherche (pour les éditeurs et la complétion ; absente de l'aide)",
     ),
     (
         "icons",
         "query",
-        "Texte à chercher dans les noms et les mots-clés (toutes les icônes sans lui)",
+        "Texte à chercher dans les noms et les mots-clés",
     ),
-    ("icons", "json", "Écrit un tableau JSON de `{name, tags}`"),
-    ("theme", "", "Thème par défaut"),
+    ("icons", "json", "Un tableau JSON de `{name, tags}`"),
     (
-        "licences",
+        "completions",
         "",
-        "Licences et mentions de copyright de ce que le binaire embarque : polices, icônes, crates Rust",
+        "Script de complétion du shell : `eval \"$(skemo completions bash)\"` dans ~/.bashrc (absente de l'aide)",
     ),
     (
-        "theme",
-        "print",
-        "Écrit le thème par défaut (point de départ d'un thème perso)",
+        "completions",
+        "shell",
+        "bash, zsh, fish, elvish ou powershell",
     ),
-    ("render", "file", "Fichier source (`-` = entrée standard)"),
-    (
-        "render",
-        "output",
-        "Fichier de sortie (.html, .svg, .png, .gif, .apng, .webp ; `-` = sortie standard, avec --format). Par défaut : à côté du source, même nom, en PNG (ou selon --format)",
-    ),
-    ("render", "format", "Format, si l'extension ne suffit pas"),
-    (
-        "render",
-        "css",
-        "CSS perso, appliqué après le thème (répétable)",
-    ),
-    (
-        "render",
-        "theme",
-        "Thème du rendu (remplace diagram(theme=…))",
-    ),
-    ("render", "scale", "Échelle du PNG (et du GIF ou de l'APNG)"),
-    ("render", "no_fonts", "HTML : ne pas embarquer les polices"),
-    (
-        "render",
-        "font_scale",
-        "Multiplier toutes les tailles de texte du thème (1.4 pour une slide projetée) ; règle `--font-scale`",
-    ),
-    (
-        "render",
-        "embed_fonts",
-        "SVG : embarquer les polices utilisées (environ 0,8 Mo par graisse), pour les lecteurs sans Inter",
-    ),
-    (
-        "render",
-        "font",
-        "Un fichier de police (TrueType ou OpenType) à utiliser en plus des polices embarquées, partout où le CSS nomme sa famille (répétable : un fichier par graisse ou par style)",
-    ),
-    (
-        "render",
-        "no_source",
-        "Ne pas embarquer la source et les feuilles de style dans la sortie (elles le sont par défaut, pour rouvrir l'image : skemo extract)",
-    ),
-    (
-        "render",
-        "deny_warnings",
-        "Échouer si un avertissement est émis",
-    ),
-    (
-        "render",
-        "base_theme",
-        "Thème de base remplaçant le thème par défaut",
-    ),
-    (
-        "render",
-        "transparent",
-        "Fond transparent (SVG, PNG, APNG et planche) : pas de rectangle de fond ; sans effet en HTML et en GIF",
-    ),
-    (
-        "render",
-        "motion",
-        "SVG : animer les flèches en mouvement (`.flow`, `.pulse`) par des images clés CSS ; sans elle, le SVG est une image fixe, ses flèches en mouvement tracées en trait plein",
-    ),
-    (
-        "render",
-        "contrast",
-        "Contraste des textes : `high` assombrit (ou éclaircit) chaque texte sous le seuil WCAG (4,5:1 ; 3:1 sur un aplat d'accent), sans toucher au placement",
-    ),
-    (
-        "render",
-        "step",
-        "Rendu de l'état à cette étape (valeur telle qu'écrite : 2.5)",
-    ),
-    (
-        "render",
-        "animated",
-        "PNG : un fichier par état (nom.00.png…) et nom.states.json",
-    ),
-    (
-        "render",
-        "board",
-        "PNG : planche des étapes (un état par rangée)",
-    ),
-    (
-        "render",
-        "hold",
-        "GIF et APNG : maintien de chaque état, en secondes",
-    ),
-    (
-        "render",
-        "transition",
-        "GIF et APNG : durée des transitions, en secondes",
-    ),
-    ("render", "fps", "GIF et APNG : images par seconde"),
-    ("render", "no_loop", "GIF et APNG : ne pas boucler"),
-    (
-        "render",
-        "final_hold",
-        "GIF et APNG : maintien de la dernière image, en secondes",
-    ),
-    ("check", "files", "Fichiers à vérifier"),
-    (
-        "check",
-        "deny_warnings",
-        "Échouer si un avertissement est émis",
-    ),
-    (
-        "check",
-        "contrast",
-        "Vérifie aussi le contraste des textes dans les 3 thèmes (light, dark, print)",
-    ),
-    ("check", "css", "CSS perso (pour --contrast)"),
-    ("check", "base_theme", "Thème de base (pour --contrast)"),
-    (
-        "fmt",
-        "check",
-        "Ne rien écrire : code 1 si un fichier n'est pas formaté",
-    ),
-    (
-        "watch",
-        "output",
-        "Écrit aussi le rendu dans ce fichier à chaque changement",
-    ),
-    ("watch", "port", "Port du serveur local"),
-    ("layout", "json", "Sortie JSON (seul format disponible)"),
 ];
 
 /// Applies the help texts of `lang` to `cmd` and its subcommands (English is the base).
 pub fn localize(cmd: Command, lang: Lang) -> Command {
-    if lang != Lang::Fr {
-        return cmd;
+    compact(if lang == Lang::Fr { walk(cmd, "") } else { cmd })
+}
+
+/// Section headings in French (`args::GENERIC`, `OUTPUT`…).
+const HEADINGS: &[(&str, &str)] = &[
+    (crate::args::GENERIC, "Options générales"),
+    (crate::args::OUTPUT, "Sortie"),
+    (crate::args::STYLE, "Style"),
+    (crate::args::ANIMATION, "Animation"),
+];
+
+/// One line per option: the short help only (`--help` would otherwise print the long form, one
+/// paragraph per option), for every command alike.
+fn compact(cmd: Command) -> Command {
+    let mut cmd = cmd.long_about(None).next_line_help(false);
+    let ids: Vec<String> = cmd
+        .get_arguments()
+        .map(|a| a.get_id().to_string())
+        .collect();
+    for id in ids {
+        cmd = cmd.mut_arg(id, |a| a.long_help(None));
     }
-    walk(cmd, "")
+    let subs: Vec<String> = cmd
+        .get_subcommands()
+        .map(|c| c.get_name().to_string())
+        .collect();
+    for name in subs {
+        cmd = cmd.mut_subcommand(name, compact);
+    }
+    cmd
 }
 
 fn walk(mut cmd: Command, path: &str) -> Command {
@@ -270,8 +275,18 @@ fn walk(mut cmd: Command, path: &str) -> Command {
                 .map(|e| e.2)
         });
         if let Some(t) = text {
-            cmd = cmd.mut_arg(id, |a| a.help(t));
+            cmd = cmd.mut_arg(&id, |a| a.help(t));
         }
+        cmd = cmd.mut_arg(&id, |a| {
+            let fr = a
+                .get_help_heading()
+                .and_then(|h| HEADINGS.iter().find(|(en, _)| *en == h))
+                .map(|(_, fr)| *fr);
+            match fr {
+                Some(h) => a.help_heading(h),
+                None => a,
+            }
+        });
     }
     let subs: Vec<String> = cmd
         .get_subcommands()
@@ -320,7 +335,7 @@ mod tests {
         }
         for a in cmd.get_arguments() {
             let id = a.get_id().to_string();
-            if matches!(id.as_str(), "help" | "version") || a.get_help().is_none() {
+            if a.get_help().is_none() {
                 continue;
             }
             // global options belong to the program level
@@ -345,7 +360,9 @@ mod tests {
             .render_long_help()
             .to_string();
         assert!(
-            fr.contains("Rendu d'un schéma") && fr.contains("N'afficher que les erreurs"),
+            fr.contains("Rendu d'un schéma")
+                && fr.contains("N'afficher que les erreurs")
+                && fr.contains("Options générales"),
             "{fr}"
         );
         let en = localize(crate::args::Cli::command(), Lang::En)
@@ -363,7 +380,7 @@ mod tests {
             .to_string();
         assert!(
             render.contains("Fichier de sortie")
-                && render.contains("GIF et APNG : images par seconde"),
+                && render.contains("GIF, APNG : images par seconde"),
             "{render}"
         );
     }

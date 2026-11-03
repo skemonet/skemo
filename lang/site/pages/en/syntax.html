@@ -56,11 +56,11 @@ to(core).dashed(side="right-top")     ✗ error: several attribute groups</code>
 <h2>Older spellings</h2>
 <p>Files written before the language took its current form still open: <code>li text</code> is read as <code>| text</code>,
   <code>from</code>/<code>to</code> on <code>diagram</code> as <code>start</code>/<code>end</code>, <code>step=</code>/<code>fx=</code>
-  as <code>@</code> markers. <code>skemo fmt</code> rewrites them.</p>
+  as <code>@</code> markers. <code>skemo lint --fix</code> rewrites them.</p>
 
 <h2>Formatting</h2>
-<p><code>skemo fmt file.skemo</code> rewrites a file in canonical form (indentation, attribute order, markers);
-  <code>skemo fmt --check</code> only reports whether it is formatted. Comments and the order of elements are kept.</p>
+<p><code>skemo lint --fix file.skemo</code> rewrites a file in canonical form (indentation, attribute order, markers);
+  <code>skemo lint --fix --dry</code> only reports whether it is formatted. Comments and the order of elements are kept.</p>
 
 <h2>File extension</h2>
 <p><code>.skemo</code>. The content stays valid Pug, so an editor can use its Pug highlighting.</p>

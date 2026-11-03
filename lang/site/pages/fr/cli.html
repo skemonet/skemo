@@ -10,21 +10,20 @@ description: Toutes les commandes et options de skemo : rendu en PNG, SVG, WebP,
 <h2>Commandes</h2>
 <table>
   <tr><th>Commande</th><th>Rôle</th></tr>
+  <tr><td><code>skemo init [fichier] [--css [nom]]</code></td><td>un diagramme d’exemple (<code>diagram.skemo</code>) ; avec <code>--css</code>, une feuille de style commentée qu’il inclut (<code>skemo_style.css</code>) ; n’écrase rien</td></tr>
   <tr><td><code>skemo f.skemo</code></td><td>comme <code>skemo render f.skemo</code> : écrit <code>f.png</code> à côté de la source</td></tr>
   <tr><td><code>skemo render f.skemo -o sortie.ext</code></td><td>l’extension choisit le format : <code>png</code> <code>svg</code>
     <code>webp</code> <code>html</code> <code>gif</code> <code>apng</code></td></tr>
-  <tr><td><code>skemo check f.skemo…</code></td><td>diagnostics seulement (code de sortie 1 en cas d’erreur) ; <code>--contrast</code>
+  <tr><td><code>skemo lint f.skemo…</code></td><td>diagnostics seulement (code de sortie 1 en cas d’erreur) ; <code>--contrast</code>
     ajoute le contrôle de lisibilité</td></tr>
-  <tr><td><code>skemo fmt f.skemo… [--check]</code></td><td>mise en forme canonique</td></tr>
-  <tr><td><code>skemo watch f.skemo</code></td><td>aperçu en direct sur <code>http://127.0.0.1:8710</code>, rechargé à chaque enregistrement</td></tr>
+  <tr><td><code>skemo lint --fix f.skemo… [--dry]</code></td><td>mise en forme canonique</td></tr>
+  <tr><td><code>skemo f.skemo --watch</code></td><td>aperçu en direct sur <code>http://127.0.0.1:8710</code>, rechargé à chaque enregistrement</td></tr>
   <tr><td><code>skemo layout f.skemo --json</code></td><td>modèle, positions et tracés en JSON</td></tr>
-  <tr><td><code>skemo fit f.skemo [--target 16:9] [--write]</code></td><td>réglages (<code>dir</code>, <code>wrap</code>) qui
-    amènent le diagramme à des proportions cibles ; <code>--write</code> applique le meilleur (<em>préversion</em>)</td></tr>
+  <tr><td><code>skemo lint f.skemo --fit [16:9] [--fix]</code></td><td>réglages (<code>dir</code>, <code>wrap</code>) qui
+    amènent le diagramme à des proportions cibles ; <code>--fix</code> applique le meilleur (<em>préversion</em>)</td></tr>
   <tr><td><code>skemo extract image.png [-o dossier]</code></td><td>rend la source et les feuilles de style intégrées dans une image
     produite par skemo, pour les modifier (<code>--stdout</code> : la source seule)</td></tr>
-  <tr><td><code>skemo icons [requête]</code></td><td>les icônes intégrées, filtrées par nom ou mot-clé</td></tr>
-  <tr><td><code>skemo theme --print</code></td><td>le thème par défaut, point de départ du vôtre</td></tr>
-  <tr><td><code>skemo init [dossier]</code></td><td>un diagramme d’exemple et un fichier CSS commenté ; n’écrase rien</td></tr>
+  <tr><td><code>skemo icons [requête]</code></td><td>les icônes intégrées, filtrées par nom ou mot-clé ; <code>--json</code> pour les éditeurs et la complétion (absente de <code>--help</code>)</td></tr>
 </table>
 
 <h2>Options de rendu</h2>
@@ -68,9 +67,15 @@ skemo render diagramme.png -o nouveau.svg # toute commande accepte aussi l’ima
   <tr><td><code>3</code></td><td>erreur interne</td></tr>
 </table>
 
+<h2>Complétion du shell</h2>
+<p><code>skemo completions bash</code> (ou <code>zsh</code>, <code>fish</code>, <code>elvish</code>, <code>powershell</code>) écrit un
+  script de complétion ; la commande n’apparaît pas dans <code>--help</code>. Chargez-le au démarrage du shell :</p>
+<pre><code>eval "$(skemo completions bash)"      # ~/.bashrc
+source &lt;(skemo completions zsh)       # ~/.zshrc</code></pre>
+
 <h2>Langue</h2>
 <p>L’aide, les diagnostics et les messages suivent la langue du système (<code>LANG</code>, <code>LC_ALL</code>… comme d’habitude ;
-  anglais et français aujourd’hui). <code>--lang en|fr</code> ou <code>SKEMO_LANG=fr</code> la remplace. Les libellés dessinés par le
+  anglais et français aujourd’hui). <code>SKEMO_LANG=fr</code> la remplace. Les libellés dessinés par le
   moteur (mois, siècles) la suivent aussi, sauf si le diagramme les fixe avec <code>diagram(lang="fr")</code>.</p>
 
 <h2>Déterminisme</h2>

@@ -27,7 +27,7 @@ If it is missing, tell the user and offer the installer (Linux, macOS):
 1. **Pick the kind**: a graph of boxes and arrows (default), or `layout="timeline"`, `"frieze"`
    (chronological frieze), `"mindmap"`.
 2. **Write `name.skemo`** (and `name.css` only if you need custom types or colours).
-3. **Check**: `skemo check name.skemo`. Exit code 1 = errors, printed with line, column and a hint
+3. **Check**: `skemo lint name.skemo`. Exit code 1 = errors, printed with line, column and a hint
    (`unknown-target`, `duplicate-id`…). Fix the text and check again.
 4. **Render**: `skemo name.skemo` writes `name.png` next to the source. Pick another format with `-o`:
    `-o name.svg`, `-o name.webp`, `-o name.html` (interactive, steps), `-o name.gif`. Add `--css name.css`
@@ -117,7 +117,7 @@ caption below). Default theme types: `.t0` to `.t3`, `.cloud`, `.dmz`, `.lan`.
 - **Writing order is kept**: cards of one row appear in the order written, inside zones too.
 - **Slides** (pre-release): add `diagram(fit="16:9")` (`8:9` for half a slide, or the box in px:
   `fit="1280x720"`). If the render warns that a setting would show the text larger, run
-  `skemo fit f.skemo --write` instead of rewriting the diagram: it applies the `dir` or `wrap` setting
+  `skemo lint f.skemo --fit --fix` instead of rewriting the diagram: it applies the `dir` or `wrap` setting
   that gives the largest text once fitted (not merely the closest proportions), never one that makes the
   arrows harder to follow. `zone#ns(wrap="3")` puts at most 3 children per row; a zone of four cards or
   more with no arrow (an inventory) is already laid as a grid. For a projected
@@ -234,5 +234,5 @@ again; `skemo render image.png -o out.svg` also works directly. `--no-source` le
 ## 9. What to hand back
 
 Give the user the `.skemo` file (and `.css`), the rendered file path, and the command to re-render.
-If they will keep editing, suggest `skemo watch name.skemo` (live preview in the browser) or the
+If they will keep editing, suggest `skemo name.skemo --watch` (live preview in the browser) or the
 skemo editor.

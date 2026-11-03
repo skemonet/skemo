@@ -509,8 +509,8 @@ fn wrap_warning(h: &crate::tidy::Hidden) -> String {
     let (zone, wrap) = (&h.zone, h.wrap);
     let (cards, from) = (h.cards.join(", "), h.from.join(", "));
     tr!(
-        "zone « {zone} »: with wrap=\"{wrap}\", {cards} sit behind other cards of the zone, so the arrows from {from} go around them; remove wrap or change dir (`skemo fit` compares the options)",
-        "zone « {zone} » : avec wrap=\"{wrap}\", {cards} sont derrière d'autres cartes de la zone et les flèches venant de {from} doivent les contourner ; retirer wrap ou changer dir (`skemo fit` compare les options)"
+        "zone « {zone} »: with wrap=\"{wrap}\", {cards} sit behind other cards of the zone, so the arrows from {from} go around them; remove wrap or change dir (`skemo lint --fit` compares the options)",
+        "zone « {zone} » : avec wrap=\"{wrap}\", {cards} sont derrière d'autres cartes de la zone et les flèches venant de {from} doivent les contourner ; retirer wrap ou changer dir (`skemo lint --fit` compare les options)"
     )
 }
 

@@ -1,10 +1,10 @@
 <!--
 title: Erreurs et avertissements de skemo
 nav: Erreurs et avertissements
-description: Ce que signale skemo check : ligne, colonne, un repère sous le fautif et une aide, avec la liste des codes d’erreur et d’avertissement.
+description: Ce que signale skemo lint : ligne, colonne, un repère sous le fautif et une aide, avec la liste des codes d’erreur et d’avertissement.
 -->
 <h1>Erreurs et avertissements</h1>
-<p class="lead"><code>skemo check</code> et chaque rendu signalent les problèmes avec le fichier, la ligne, la colonne, un repère sous
+<p class="lead"><code>skemo lint</code> et chaque rendu signalent les problèmes avec le fichier, la ligne, la colonne, un repère sous
   le fautif et, souvent, une aide.</p>
 <pre><code>erreur[unknown-target] : cible « b » inconnue
   ┌─ diagramme.skemo:2:6
@@ -48,7 +48,7 @@ description: Ce que signale skemo check : ligne, colonne, un repère sous le fau
   <tr><td><code>at-ignored</code></td><td><code>at=</code> dans un mode où les positions sont calculées</td></tr>
   <tr><td><code>draw-on-node</code></td><td>l’effet <code>draw</code> sur autre chose qu’une flèche (<code>fade</code> est utilisé)</td></tr>
   <tr><td><code>unknown-icon</code>, <code>icon-ignored</code></td><td>un nom d’icône qui n’existe pas, ou une icône sur une flèche ou une ligne</td></tr>
-  <tr><td><code>legacy-step</code></td><td>ancienne notation <code>step=</code>/<code>fx=</code> : <code>skemo fmt</code> la convertit</td></tr>
+  <tr><td><code>legacy-step</code></td><td>ancienne notation <code>step=</code>/<code>fx=</code> : <code>skemo lint --fix</code> la convertit</td></tr>
   <tr><td><code>unknown-attribute</code></td><td><code>diagram(engine=…)</code>, <code>router=…</code> ou <code>elk=…</code> : options du
     prototype, plus lues</td></tr>
   <tr><td><code>bad-table</code> <em>(préversion)</em></td><td>une rangée de tableau illisible telle qu’écrite : <code>^^</code> dans la

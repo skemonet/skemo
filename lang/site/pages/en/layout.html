@@ -59,8 +59,8 @@ description: Directions, rows, columns, stacks and pinned positions: how skemo l
   box, not only its proportions: a layout with the right ratio but twice as big shows smaller text. skemo never changes the layout
   by itself for it, so the drawing stays stable while you edit: when a setting such as <code>zone#ns(wrap="3")</code> or
   <code>diagram(dir="right")</code> would show the text at least 15 % larger, it warns and names it (with a box in pixels, the
-  text size before and after). <code>skemo fit f.skemo</code> lists the candidates, each one laid out for real, with the gain in
-  text size, and <code>--write</code> puts the best one in the file. When the proportions are more than 15 % off the target and
+  text size before and after). <code>skemo lint f.skemo --fit</code> lists the candidates, each one laid out for real, with the gain in
+  text size, and <code>--fix</code> puts the best one in the file. When the proportions are more than 15 % off the target and
   no setting helps, the warning says so: the layout itself has to change.</p>
 
 <h2>Pinned positions</h2>

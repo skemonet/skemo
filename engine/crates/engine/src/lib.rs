@@ -43,7 +43,7 @@ pub mod webp;
 pub use diagram::{Diagram, Error, Frame, Options, build, from_source};
 
 /// What the engine embeds that is not its own, with the licence and copyright notice that must
-/// travel with it: (what, licence, full text). For `skemo licences`.
+/// travel with it: (what, licence, full text). For `skemo --licences`.
 pub fn notices() -> Vec<(&'static str, &'static str, &'static str)> {
     vec![
         (

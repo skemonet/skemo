@@ -153,7 +153,7 @@
 curl -fsSL https://skemo.net/skill/skemo/SKILL.md -o ~/.claude/skills/skemo/SKILL.md
 curl -fsSL https://skemo.net/skill/skemo/references/format.md -o ~/.claude/skills/skemo/references/format.md</code></pre></li>
       <li>Demandez un diagramme : <em>« dessine notre déploiement en diagramme skemo »</em>. L’agent écrit le fichier
-        <code>.skemo</code>, lance <code>skemo check</code>, puis le rend.</li>
+        <code>.skemo</code>, lance <code>skemo lint</code>, puis le rend.</li>
     </ol>
   </div>
 </section>
@@ -169,10 +169,9 @@ curl -fsSL https://skemo.net/skill/skemo/references/format.md -o ~/.claude/skill
           SHA-256. Windows : prenez le <code>.exe</code> sur la <a href="https://github.com/skemonet/skemo/releases">page des
           versions</a>.</p></div>
       <div><p class="label">Premier diagramme</p>
-        <pre class="code"><code>skemo init mon-diagramme
-cd mon-diagramme
-skemo example.skemo --css custom.css    # → example.png
-skemo watch example.skemo               # aperçu en direct</code></pre>
+        <pre class="code"><code>skemo init demo.skemo --css   # + skemo_style.css
+skemo demo.skemo              # → demo.png
+skemo demo.skemo --watch        # aperçu en direct</code></pre>
         <p class="muted" style="margin-top:10px;font-size:.92rem">Ensuite : <a href="/fr/docs/getting-started/">premiers pas</a>.</p></div>
     </div>
   </div>
@@ -189,7 +188,7 @@ skemo watch example.skemo               # aperçu en direct</code></pre>
         pas. Mermaid couvre plus de types (diagrammes de séquence, de classes, graphiques) ; skemo ne les dessine pas aujourd’hui.</p></details>
     <details><summary>L’agent a-t-il besoin de voir l’image ?</summary>
       <p>Il la regarde, comme une personne : dans notre test sur une plateforme Terraform, l’agent a lu chaque image qu’il a rendue.
-        Ce qui change, c’est ce qu’il y corrige. <code>skemo check</code> repère les erreurs de structure sous forme de texte et le
+        Ce qui change, c’est ce qu’il y corrige. <code>skemo lint</code> repère les erreurs de structure sous forme de texte et le
         placement est automatique : l’agent lit l’image pour en juger, pas pour déplacer des boîtes à la main.</p></details>
     <details><summary>Est-ce gratuit ?</summary>
       <p>Oui. skemo est libre, sous licence MIT OU Apache-2.0, et en préversion ({{version}}) : le format peut encore changer avant

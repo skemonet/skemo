@@ -1,32 +1,67 @@
-//! `skemo init`: writes an example and a commented custom theme, never overwriting a file.
+//! `skemo init`: writes a sample diagram and, on request, a stylesheet it includes
+//! (`diagram(css=…)`): a short commented one (`--css`) or the whole default theme (`--css-full`).
+//! Never overwrites a file.
 
-use crate::common::Fail;
+use crate::args::InitArgs;
+use crate::common::{Fail, check_css_name};
 use skemo_lang::tr;
 use std::path::Path;
 
-const FILES: [(&str, &str); 2] = [
-    ("example.skemo", include_str!("../init/example.skemo")),
-    ("custom.css", include_str!("../init/custom.css")),
-];
+const EXAMPLE: &str = include_str!("../init/example.skemo");
+const STYLE: &str = include_str!("../init/style.css");
 
-pub fn run(dir: &Path) -> Result<(), Fail> {
-    if let Some((n, _)) = FILES.iter().find(|(n, _)| dir.join(n).exists()) {
+/// Head of the full theme written by `--css-full`.
+const FULL_HEAD: &str = "/* The whole default theme, included by the diagram (diagram(css=…)): edit what you want.\n   It applies over the built-in theme, so a rule removed here falls back to it. */\n\n";
+
+/// The diagram, and the stylesheet named relative to the diagram's folder.
+pub fn run(a: &InitArgs) -> Result<(), Fail> {
+    let file = a.file.as_path();
+    let (css, style) = match (&a.css, &a.css_full) {
+        (Some(c), _) => (Some(c.as_str()), STYLE.to_string()),
+        (None, Some(c)) => (
+            Some(c.as_str()),
+            format!("{FULL_HEAD}{}", skemo_lang::style::DEFAULT_THEME),
+        ),
+        (None, None) => (None, String::new()),
+    };
+    if let Some(name) = css {
+        check_css_name(name).map_err(Fail::usage)?;
+    }
+    let dir = file.parent().unwrap_or(Path::new(""));
+    let name = |p: &Path| p.file_name().map(|n| n.to_string_lossy().into_owned());
+    let shown = name(file).unwrap_or_default();
+    let src = EXAMPLE
+        .replace("{file}", &shown)
+        .replace(
+            "{png}",
+            &name(&file.with_extension("png")).unwrap_or_default(),
+        )
+        .replace(
+            "{css}",
+            &css.map(|c| format!(" css=\"{c}\"")).unwrap_or_default(),
+        );
+    let mut files = vec![(file.to_path_buf(), src)];
+    if let Some(c) = css {
+        files.push((dir.join(c), style));
+    }
+    if let Some((p, _)) = files.iter().find(|(p, _)| p.exists()) {
         return Err(Fail::usage(tr!(
             "« {} » already exists: nothing was written",
             "« {} » existe déjà : rien n'a été écrit",
-            dir.join(n).display()
+            p.display()
         )));
     }
-    std::fs::create_dir_all(dir).map_err(|e| {
-        Fail::usage(tr!(
-            "creating « {} »: {e}",
-            "création de « {} » : {e}",
-            dir.display()
-        ))
-    })?;
-    for (n, content) in FILES {
-        let p = dir.join(n);
-        std::fs::write(&p, content).map_err(|e| {
+    for (p, content) in &files {
+        if let Some(d) = p.parent().filter(|d| !d.as_os_str().is_empty()) {
+            std::fs::create_dir_all(d).map_err(|e| {
+                Fail::usage(tr!(
+                    "creating « {} »: {e}",
+                    "création de « {} » : {e}",
+                    d.display()
+                ))
+            })?;
+        }
+        std::fs::write(p, content).map_err(|e| {
             Fail::usage(tr!(
                 "writing « {} »: {e}",
                 "écriture de « {} » : {e}",
@@ -37,10 +72,7 @@ pub fn run(dir: &Path) -> Result<(), Fail> {
     }
     eprintln!(
         "{}",
-        tr!(
-            "try: skemo example.skemo --css custom.css",
-            "essayer : skemo example.skemo --css custom.css"
-        )
+        tr!("try: skemo {}", "essayer : skemo {}", file.display())
     );
     Ok(())
 }

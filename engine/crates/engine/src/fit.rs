@@ -2,7 +2,7 @@
 //! automatic change of the layout (stability first, D-031). What counts is the size at which the
 //! text is shown once the diagram is fitted in the box (D-043), not the closeness of the
 //! proportions: a candidate with the right ratio but twice as large shows smaller text. The suggestions are written settings
-//! (`dir`, `wrap` on a zone) that the author, or `skemo fit --write`, puts in the source. A
+//! (`dir`, `wrap` on a zone) that the author, or `skemo lint --fit --fix`, puts in the source. A
 //! candidate whose arrows get worse (a card hidden behind others by `wrap`, many more bends) is
 //! never suggested, however large its text.
 //!
@@ -290,8 +290,8 @@ pub fn check(src: &str, opts: &Options, size: (f64, f64)) -> Option<String> {
         _ => String::new(),
     };
     Some(tr!(
-        "fit=\"{raw}\": with {} the text would be shown {gain:.2}× larger{px}; or `skemo fit --write`",
-        "fit=\"{raw}\" : avec {} le texte serait affiché {gain:.2}× plus grand{px} ; ou `skemo fit --write`",
+        "fit=\"{raw}\": with {} the text would be shown {gain:.2}× larger{px}; or `skemo lint --fit --fix`",
+        "fit=\"{raw}\" : avec {} le texte serait affiché {gain:.2}× plus grand{px} ; ou `skemo lint --fit --fix`",
         what.join(" + ")
     ))
 }

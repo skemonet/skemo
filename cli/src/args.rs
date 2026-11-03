@@ -1,38 +1,39 @@
 //! Command-line arguments (clap). Help texts are written in English here; the French ones are
 //! in `help.rs` and applied at run time (the language follows the system, see `i18n`).
 
-use clap::{Args, Parser, Subcommand, ValueEnum};
+use clap::{ArgAction, Args, Parser, Subcommand, ValueEnum};
 use skemo_lang::style::Theme;
 use skemo_lang::tr;
 use std::path::PathBuf;
+
+/// Heading of the options every command takes (`help::localize` translates it).
+pub const GENERIC: &str = "Generic options";
 
 #[derive(Parser)]
 #[command(
     name = "skemo",
     version,
     about = "Text diagrams (skemo): HTML, SVG, PNG, GIF, APNG and WebP rendering",
-    disable_help_subcommand = true
+    override_usage = "skemo <FILE> [OPTIONS]   (= skemo render)\n       skemo <COMMAND> [OPTIONS]\n       skemo --licences",
+    disable_help_subcommand = true,
+    disable_help_flag = true,
+    disable_version_flag = true
 )]
 pub struct Cli {
+    /// Print the help
+    #[arg(short, long, action = ArgAction::Help, global = true, help_heading = GENERIC)]
+    pub help: Option<bool>,
+    /// Print the version
+    #[arg(short = 'V', long, action = ArgAction::Version, help_heading = GENERIC)]
+    pub version: Option<bool>,
     /// Only show errors
-    #[arg(long, short, global = true)]
+    #[arg(long, short, global = true, help_heading = GENERIC)]
     pub quiet: bool,
-    /// Colours in the messages
-    #[arg(long, value_enum, default_value_t = Color::Auto, global = true)]
-    pub color: Color,
-    /// Language of the messages and of the help (default: the system language, `SKEMO_LANG`,
-    /// `LC_ALL`, `LC_MESSAGES`, `LANGUAGE`, `LANG`)
-    #[arg(long, value_name = "en|fr", global = true)]
-    pub lang: Option<String>,
+    /// Print the licences of what the binary embeds (fonts, icons, crates)
+    #[arg(long, help_heading = GENERIC)]
+    pub licences: bool,
     #[command(subcommand)]
-    pub cmd: Cmd,
-}
-
-#[derive(Clone, Copy, ValueEnum)]
-pub enum Color {
-    Auto,
-    Always,
-    Never,
+    pub cmd: Option<Cmd>,
 }
 
 #[derive(Clone, Copy, ValueEnum, PartialEq, Eq, Debug)]
@@ -60,9 +61,7 @@ pub enum Format {
     Svg,
     Png,
     Gif,
-    /// Animated PNG
     Apng,
-    /// WebP: still, or animated if the diagram has steps
     Webp,
 }
 
@@ -72,105 +71,130 @@ pub enum ContrastArg {
     High,
 }
 
+/// The commands, in the order of a diagram's life: create, check, render, reopen, inspect.
 #[derive(Subcommand)]
 pub enum Cmd {
-    /// Render a diagram; the format follows the output extension (PNG by default).
-    /// This is the default command: `skemo demo.skemo` writes `demo.png`
+    /// Create a sample diagram (overwrites nothing)
+    Init(InitArgs),
+    /// Check files (diagnostics), optionally rewrite them in canonical form
+    Lint(LintArgs),
+    /// Render a diagram, format from the output's extension; the default command
     Render(RenderArgs),
-    /// Check files without rendering them
-    Check(CheckArgs),
-    /// Canonical formatting (indentation, attribute order, @ markers)
-    Fmt(FmtArgs),
-    /// Create a sample `example.skemo` and a commented `custom.css` (overwrites nothing)
-    Init {
-        /// Destination folder (created if needed)
-        #[arg(default_value = ".")]
-        dir: PathBuf,
-    },
-    /// Live preview: re-render on every save, the browser reloads by itself
-    Watch(WatchArgs),
-    /// Full layout as layout.json (on the standard output)
-    Layout(LayoutArgs),
-    /// Suggest settings (dir, wrap) that show the diagram larger in a target box (ratio or size)
-    Fit(FitArgs),
-    /// Get back the source and stylesheets embedded in a rendered image (PNG, SVG, WebP, GIF,
-    /// APNG, HTML) to edit them
+    /// Get back the source and stylesheets embedded in a rendered image
     Extract(ExtractArgs),
-    /// List the built-in icons (Lucide), optionally filtered by a query on names and tags
+    /// Full layout as JSON, on the standard output
+    Layout(LayoutArgs),
+    /// The built-in icons, filtered by a query (for editors and completion; not in the help)
+    #[command(hide = true)]
     Icons {
-        /// Text to look for in the names and the tags (all icons without it)
+        /// Text to look for in the names and tags
         query: Option<String>,
-        /// Print a JSON array of `{name, tags}`
+        /// A JSON array of `{name, tags}`
         #[arg(long)]
         json: bool,
     },
-    /// Licences and copyright notices of what the binary embeds: fonts, icons, Rust crates
-    Licences,
-    /// Default theme
-    Theme {
-        /// Write the default theme (a starting point for a custom theme)
-        #[arg(long)]
-        print: bool,
+    /// Shell completion script: `eval "$(skemo completions bash)"` in ~/.bashrc (not in the help)
+    #[command(hide = true)]
+    Completions {
+        /// bash, zsh, fish, elvish or powershell
+        shell: clap_complete::Shell,
     },
 }
 
 #[derive(Args)]
+pub struct InitArgs {
+    /// Diagram to create
+    #[arg(default_value = "diagram.skemo")]
+    pub file: PathBuf,
+    /// Also a short commented stylesheet the diagram includes (`skemo_style.css`)
+    #[arg(long, value_name = "FILE", num_args = 0..=1, default_missing_value = "skemo_style.css")]
+    pub css: Option<String>,
+    /// Same, with the whole default theme to edit
+    #[arg(long, value_name = "FILE", num_args = 0..=1, default_missing_value = "skemo_style.css", conflicts_with = "css")]
+    pub css_full: Option<String>,
+}
+
+/// Headings of the render options (`help::localize` translates them).
+pub const OUTPUT: &str = "Output";
+pub const STYLE: &str = "Style";
+pub const ANIMATION: &str = "Animation";
+
+#[derive(Args)]
 pub struct RenderArgs {
-    /// Source file (`-` = standard input)
+    /// Source file (`-`: standard input)
     pub file: String,
-    /// Output file (.html, .svg, .png, .gif, .apng, .webp; `-` = standard output, with
-    /// --format). Default: next to the source, same name, as PNG (or per --format)
-    #[arg(short, long, default_value = "")]
+    /// Output file, its extension picks the format (default: the source's name, .png)
+    #[arg(short, long, value_name = "FILE", default_value = "", hide_default_value = true, help_heading = OUTPUT)]
     pub output: String,
-    /// Format, when the extension is not enough
-    #[arg(long, value_enum)]
+    /// Format, when the extension does not say
+    #[arg(long, value_enum, help_heading = OUTPUT)]
     pub format: Option<Format>,
-    /// Custom CSS, applied after the theme (repeatable)
-    #[arg(long)]
-    pub css: Vec<PathBuf>,
-    /// Theme of the rendering (overrides diagram(theme=…))
-    #[arg(long, value_enum)]
-    pub theme: Option<ThemeArg>,
-    /// Scale of the PNG (and of the GIF or APNG)
-    #[arg(long)]
+    /// Pixel scale of PNG, GIF and APNG
+    #[arg(long, help_heading = OUTPUT)]
     pub scale: Option<f32>,
+    /// No background (SVG, PNG, APNG)
+    #[arg(long, help_heading = OUTPUT)]
+    pub transparent: bool,
+    /// Do not embed the source in the output (see skemo extract)
+    #[arg(long, help_heading = OUTPUT)]
+    pub no_source: bool,
+    #[command(flatten)]
+    pub fonts: FontArgs,
+    #[command(flatten)]
+    pub live: LiveArgs,
+    /// Exit 1 on a warning
+    #[arg(long, help_heading = OUTPUT)]
+    pub deny_warnings: bool,
+    /// Extra stylesheet, after the diagram's own (repeatable)
+    #[arg(long, value_name = "FILE", help_heading = STYLE)]
+    pub css: Vec<PathBuf>,
+    /// Theme replacing the default one
+    #[arg(long, value_name = "FILE", help_heading = STYLE)]
+    pub base_theme: Option<PathBuf>,
+    /// Theme variant, over diagram(theme=…)
+    #[arg(long, value_enum, help_heading = STYLE)]
+    pub theme: Option<ThemeArg>,
+    /// high: darken the texts below the WCAG contrast, layout unchanged
+    #[arg(long, value_enum, default_value_t = ContrastArg::Standard, help_heading = STYLE)]
+    pub contrast: ContrastArg,
+    /// Text size factor (1.4 for a slide)
+    #[arg(long, value_name = "FACTOR", help_heading = STYLE)]
+    pub font_scale: Option<f32>,
     #[command(flatten)]
     pub png: PngArgs,
     #[command(flatten)]
-    pub anim: AnimArgs,
-    #[command(flatten)]
-    pub fonts: FontArgs,
-    /// Multiply every text size of the theme (1.4 for a projected slide); sets `--font-scale`
-    #[arg(long, value_name = "FACTOR")]
-    pub font_scale: Option<f32>,
-    /// Fail if a warning is emitted
-    #[arg(long)]
-    pub deny_warnings: bool,
-    /// Do not embed the source and stylesheets in the output (they are by default, so that
-    /// the image can be reopened: skemo extract)
-    #[arg(long)]
-    pub no_source: bool,
-    /// Base theme replacing the default theme
-    #[arg(long)]
-    pub base_theme: Option<PathBuf>,
-    /// Transparent background (SVG, PNG, APNG and board): no background rectangle; no effect
-    /// for HTML and GIF
-    #[arg(long)]
-    pub transparent: bool,
-    #[command(flatten)]
     pub svg: SvgArgs,
-    /// Text contrast: `high` darkens (or lightens) every text below the WCAG threshold
-    /// (4.5:1; 3:1 on an accent fill), without touching the layout
-    #[arg(long, value_enum, default_value_t = ContrastArg::Standard)]
-    pub contrast: ContrastArg,
+    #[command(flatten)]
+    pub anim: AnimArgs,
+}
+
+/// Live preview (`--watch`).
+#[derive(Args)]
+pub struct LiveArgs {
+    /// Live preview in the browser; writes a file only with -o
+    #[arg(long, help_heading = OUTPUT)]
+    pub watch: bool,
+    /// Port of the live preview
+    #[arg(long, default_value_t = 8710, requires = "watch", help_heading = OUTPUT)]
+    pub port: u16,
+}
+
+/// Canonical form (`--fix`, `--dry`).
+#[derive(Args)]
+pub struct FixArgs {
+    /// Rewrite the files in canonical form; with --fit, apply the best setting too
+    #[arg(long)]
+    pub fix: bool,
+    /// With --fix: write nothing, exit 1 if a file would change
+    #[arg(long, requires = "fix")]
+    pub dry: bool,
 }
 
 /// SVG options.
 #[derive(Args)]
 pub struct SvgArgs {
-    /// SVG: play the arrows in motion (`.flow`, `.pulse`) with CSS keyframes; without it the SVG
-    /// is a still image, its moving arrows drawn as solid lines
-    #[arg(long)]
+    /// SVG: play the moving arrows (.flow, .pulse); still otherwise
+    #[arg(long, help_heading = ANIMATION)]
     pub motion: bool,
 }
 
@@ -178,107 +202,92 @@ pub struct SvgArgs {
 #[derive(Args)]
 pub struct FontArgs {
     /// HTML: do not embed the fonts
-    #[arg(long)]
+    #[arg(long, help_heading = OUTPUT)]
     pub no_fonts: bool,
-    /// SVG: embed the fonts used (about 0.8 MB per weight), for viewers without Inter
-    #[arg(long)]
+    /// SVG: embed the fonts (about 0.8 MB per weight)
+    #[arg(long, help_heading = OUTPUT)]
     pub embed_fonts: bool,
-    /// A font file (TrueType or OpenType) to use besides the embedded ones, wherever the CSS
-    /// names its family (repeatable: one file per weight or style)
-    #[arg(long, value_name = "FILE")]
+    /// Font file for a family the CSS names (repeatable)
+    #[arg(long, value_name = "FILE", help_heading = STYLE)]
     pub font: Vec<PathBuf>,
 }
 
 /// PNG options (one given state, one file per state, board).
 #[derive(Args)]
 pub struct PngArgs {
-    /// Render the state at this step (value as written: 2.5)
-    #[arg(long)]
+    /// The state at this step (as written: 2.5)
+    #[arg(long, help_heading = ANIMATION)]
     pub step: Option<String>,
-    /// PNG: one file per state (name.00.png…) and name.states.json
-    #[arg(long)]
+    /// PNG: one file per state, and name.states.json
+    #[arg(long, help_heading = ANIMATION)]
     pub animated: bool,
-    /// PNG: board of the steps (one state per row)
-    #[arg(long)]
+    /// PNG: every step on one sheet
+    #[arg(long, help_heading = ANIMATION)]
     pub board: bool,
 }
 
 /// Options of the animated outputs (GIF and APNG).
 #[derive(Args)]
 pub struct AnimArgs {
-    /// GIF and APNG: hold time of each state, in seconds
-    #[arg(long, default_value_t = 1.6)]
+    /// GIF, APNG: seconds per state
+    #[arg(long, default_value_t = 1.6, help_heading = ANIMATION)]
     pub hold: f64,
-    /// GIF and APNG: duration of the transitions, in seconds
-    #[arg(long, default_value_t = 0.45)]
+    /// GIF, APNG: seconds per transition
+    #[arg(long, default_value_t = 0.45, help_heading = ANIMATION)]
     pub transition: f64,
-    /// GIF and APNG: frames per second
-    #[arg(long, default_value_t = 20)]
+    /// GIF, APNG: frames per second
+    #[arg(long, default_value_t = 20, help_heading = ANIMATION)]
     pub fps: u32,
-    /// GIF and APNG: do not loop
-    #[arg(long)]
+    /// GIF, APNG: play once
+    #[arg(long, help_heading = ANIMATION)]
     pub no_loop: bool,
-    /// GIF and APNG: hold time of the last frame, in seconds
-    #[arg(long, default_value_t = 3.0)]
+    /// GIF, APNG: seconds on the last frame
+    #[arg(long, default_value_t = 3.0, help_heading = ANIMATION)]
     pub final_hold: f64,
 }
 
 #[derive(Args)]
-pub struct CheckArgs {
+pub struct LintArgs {
     /// Files to check
     #[arg(required = true)]
     pub files: Vec<String>,
-    /// Fail if a warning is emitted
+    #[command(flatten)]
+    pub canon: FixArgs,
+    /// Exit 1 on a warning
     #[arg(long)]
     pub deny_warnings: bool,
-    /// Also check the text contrast in the 3 themes (light, dark, print)
+    /// Also check the text contrast in the light, dark and print themes
     #[arg(long)]
     pub contrast: bool,
-    /// Custom CSS (for --contrast)
-    #[arg(long)]
+    /// Settings (dir, wrap) showing the text larger in a box: 16:9, 1280x720 (default: diagram(fit=…))
+    #[arg(long, value_name = "BOX", num_args = 0..=1, default_missing_value = "")]
+    pub fit: Option<String>,
+    /// Text size factor for --fit, as for render
+    #[arg(long, value_name = "FACTOR", requires = "fit")]
+    pub font_scale: Option<f32>,
+    /// Extra stylesheet, after the diagram's own (repeatable)
+    #[arg(long, value_name = "FILE")]
     pub css: Vec<PathBuf>,
-    /// Base theme (for --contrast)
-    #[arg(long)]
+    /// Theme replacing the default one
+    #[arg(long, value_name = "FILE")]
     pub base_theme: Option<PathBuf>,
-}
-
-#[derive(Args)]
-pub struct FmtArgs {
-    #[arg(required = true)]
-    pub files: Vec<String>,
-    /// Write nothing: exit code 1 if a file is not formatted
-    #[arg(long)]
-    pub check: bool,
-}
-
-#[derive(Args)]
-pub struct WatchArgs {
-    pub file: String,
-    /// Also write the rendering to this file on every change
-    #[arg(short, long)]
-    pub output: Option<String>,
-    #[arg(long)]
-    pub css: Vec<PathBuf>,
-    #[arg(long, value_enum)]
-    pub theme: Option<ThemeArg>,
-    #[arg(long)]
-    pub base_theme: Option<PathBuf>,
-    /// Port of the local server
-    #[arg(long, default_value_t = 8710)]
-    pub port: u16,
 }
 
 #[derive(Args)]
 pub struct LayoutArgs {
+    /// Source file
     pub file: String,
-    /// JSON output (the only format available)
+    /// JSON output (the only format)
     #[arg(long)]
     pub json: bool,
-    #[arg(long)]
+    /// Extra stylesheet, after the diagram's own (repeatable)
+    #[arg(long, value_name = "FILE")]
     pub css: Vec<PathBuf>,
+    /// Theme variant, over diagram(theme=…)
     #[arg(long, value_enum)]
     pub theme: Option<ThemeArg>,
-    #[arg(long)]
+    /// Theme replacing the default one
+    #[arg(long, value_name = "FILE")]
     pub base_theme: Option<PathBuf>,
 }
 
@@ -286,40 +295,15 @@ pub struct LayoutArgs {
 pub struct ExtractArgs {
     /// Rendered image or page
     pub image: String,
-    /// Destination folder (default: the image's folder)
+    /// Destination folder (default: the image's)
     #[arg(short, long)]
     pub output: Option<PathBuf>,
     /// Overwrite existing files
     #[arg(long)]
     pub force: bool,
-    /// Print the source only, on the standard output
+    /// Only the source, on the standard output
     #[arg(long)]
     pub stdout: bool,
-}
-
-#[derive(Args)]
-pub struct FitArgs {
-    /// Source file
-    pub file: String,
-    /// Target box: a ratio width:height (16:9, 4:3, 1.5) or a size in px (1280x720); default:
-    /// diagram(fit=…)
-    #[arg(long)]
-    pub target: Option<String>,
-    /// Write the best suggestion into the file
-    #[arg(long)]
-    pub write: bool,
-    /// Custom CSS, applied after the theme (repeatable)
-    #[arg(long)]
-    pub css: Vec<PathBuf>,
-    /// Theme of the rendering
-    #[arg(long, value_enum)]
-    pub theme: Option<ThemeArg>,
-    /// Base theme replacing the default theme
-    #[arg(long)]
-    pub base_theme: Option<PathBuf>,
-    /// Multiply every text size of the theme, as for render
-    #[arg(long, value_name = "FACTOR")]
-    pub font_scale: Option<f32>,
 }
 
 impl Format {
@@ -339,34 +323,37 @@ impl Format {
 /// Subcommands, options specific to `Cli` and their aliases: anything else in first position is a
 /// source file, hence the `render` command.
 const KNOWN: &[&str] = &[
+    "init",
+    "lint",
     "render",
+    "extract",
+    "layout",
+    "icons",
+    "completions",
+    // former commands (D-083, D-084): left to clap, which says they do not exist, rather than
+    // read as a file
     "check",
     "fmt",
-    "init",
     "watch",
-    "layout",
     "fit",
-    "extract",
     "theme",
-    "icons",
     "licences",
     "help",
     "-h",
     "--help",
     "-V",
     "--version",
+    "--licences",
 ];
 
 /// `skemo demo.skemo [options]` = `skemo render demo.skemo [options]`.
-/// The global options (`--quiet`, `--color`, `--lang`) may come before the file.
+/// The generic option `--quiet` may come before the file.
 pub fn with_default_command(args: Vec<String>) -> Vec<String> {
     let mut out = args;
     let mut i = 1;
     while i < out.len() {
         match out[i].as_str() {
             "-q" | "--quiet" => i += 1,
-            "--color" | "--lang" => i += 2,
-            a if a.starts_with("--color=") || a.starts_with("--lang=") => i += 1,
             a if KNOWN.contains(&a) => return out,
             _ => {
                 out.insert(i, "render".into());
@@ -415,24 +402,20 @@ mod tests {
             argv(&["skemo", "render", "d.skemo"])
         );
         assert_eq!(
-            with(&["skemo", "check", "d.skemo"]),
-            argv(&["skemo", "check", "d.skemo"])
+            with(&["skemo", "lint", "d.skemo"]),
+            argv(&["skemo", "lint", "d.skemo"])
         );
         assert_eq!(with(&["skemo", "--version"]), argv(&["skemo", "--version"]));
         assert_eq!(with(&["skemo", "-h"]), argv(&["skemo", "-h"]));
         assert_eq!(with(&["skemo", "-"]), argv(&["skemo", "render", "-"]));
-        // global options may precede the file
+        // the generic --quiet may precede the file
         assert_eq!(
-            with(&[
-                "skemo", "--quiet", "--color", "never", "d.skemo", "-o", "x.png"
-            ]),
-            argv(&[
-                "skemo", "--quiet", "--color", "never", "render", "d.skemo", "-o", "x.png"
-            ])
+            with(&["skemo", "--quiet", "d.skemo", "-o", "x.png"]),
+            argv(&["skemo", "--quiet", "render", "d.skemo", "-o", "x.png"])
         );
         assert_eq!(
-            with(&["skemo", "--color=always", "d.skemo"]),
-            argv(&["skemo", "--color=always", "render", "d.skemo"])
+            with(&["skemo", "--licences"]),
+            argv(&["skemo", "--licences"])
         );
         assert_eq!(with(&["skemo"]), argv(&["skemo"]));
         assert_eq!(with(&["skemo", "-q"]), argv(&["skemo", "-q"]));
@@ -444,7 +427,7 @@ mod tests {
             cli.extend(argv(&["-o", output]));
         }
         let Cli {
-            cmd: Cmd::Render(mut a),
+            cmd: Some(Cmd::Render(mut a)),
             ..
         } = <Cli as clap::Parser>::parse_from(cli)
         else {

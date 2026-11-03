@@ -21,11 +21,11 @@ description: Gardez vos diagrammes en texte à côté du code : relus en pull re
 </ul>
 
 <h2>Vérifier et rendre en CI</h2>
-<pre><code>skemo check docs/*.skemo --deny-warnings          # code de sortie 1 au moindre problème
+<pre><code>skemo lint docs/*.skemo --deny-warnings          # code de sortie 1 au moindre problème
 skemo render docs/architecture.skemo -o docs/architecture.svg --deny-warnings</code></pre>
 <p>Une étape GitHub Actions, par exemple :</p>
 <pre><code>- run: curl -fsSL https://raw.githubusercontent.com/skemonet/skemo/main/cli/install.sh | sh
-- run: ~/.local/bin/skemo check docs/*.skemo --deny-warnings</code></pre>
+- run: ~/.local/bin/skemo lint docs/*.skemo --deny-warnings</code></pre>
 
 <h2>Sorties</h2>
 <table>
@@ -43,13 +43,13 @@ skemo render docs/architecture.skemo -o docs/architecture.svg --deny-warnings</c
   place de la source. Rendez avec <code>--no-source</code> quand la source ne doit pas voyager avec l’image.</p>
 
 <h2>Aperçu en direct pendant l’écriture</h2>
-<pre><code>skemo watch docs/architecture.skemo --css docs/architecture.css   # http://127.0.0.1:8710</code></pre>
-<p>La page se recharge à chaque enregistrement. <code>skemo fmt</code> garde les fichiers sous une forme canonique : les diffs
+<pre><code>skemo docs/architecture.skemo --watch --css docs/architecture.css   # http://127.0.0.1:8710</code></pre>
+<p>La page se recharge à chaque enregistrement. <code>skemo lint --fix</code> garde les fichiers sous une forme canonique : les diffs
   restent petits.</p>
 
 <h2>Voir aussi</h2>
 <ul>
   <li><a href="cli.html">Ligne de commande</a> : toutes les commandes et options.</li>
   <li><a href="ai-agents.html">Agents IA</a> : laisser un agent de code écrire et mettre à jour les fichiers.</li>
-  <li><a href="diagnostics.html">Erreurs et avertissements</a> : ce que signale <code>skemo check</code>.</li>
+  <li><a href="diagnostics.html">Erreurs et avertissements</a> : ce que signale <code>skemo lint</code>.</li>
 </ul>

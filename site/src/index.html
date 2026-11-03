@@ -149,7 +149,7 @@
 curl -fsSL https://skemo.net/skill/skemo/SKILL.md -o ~/.claude/skills/skemo/SKILL.md
 curl -fsSL https://skemo.net/skill/skemo/references/format.md -o ~/.claude/skills/skemo/references/format.md</code></pre></li>
       <li>Ask for a diagram: <em>“draw our deployment as a skemo diagram”</em>. The agent writes the <code>.skemo</code> file,
-        runs <code>skemo check</code>, then renders it.</li>
+        runs <code>skemo lint</code>, then renders it.</li>
     </ol>
   </div>
 </section>
@@ -164,10 +164,9 @@ curl -fsSL https://skemo.net/skill/skemo/references/format.md -o ~/.claude/skill
         <p class="muted" style="margin-top:10px;font-size:.92rem">Installs into <code>~/.local/bin</code> after checking the SHA-256.
           Windows: take the <code>.exe</code> from the <a href="https://github.com/skemonet/skemo/releases">releases page</a>.</p></div>
       <div><p class="label">First diagram</p>
-        <pre class="code"><code>skemo init my-diagram
-cd my-diagram
-skemo example.skemo --css custom.css    # → example.png
-skemo watch example.skemo               # live preview</code></pre>
+        <pre class="code"><code>skemo init demo.skemo --css   # + skemo_style.css
+skemo demo.skemo              # → demo.png
+skemo demo.skemo --watch        # live preview</code></pre>
         <p class="muted" style="margin-top:10px;font-size:.92rem">Next: <a href="/docs/getting-started/">getting started</a>.</p></div>
     </div>
   </div>
@@ -184,7 +183,7 @@ skemo watch example.skemo               # live preview</code></pre>
         diagrams, charts); skemo does not draw those today.</p></details>
     <details><summary>Does the agent need to see the image?</summary>
       <p>It looks, as a person would: in our test on a Terraform platform the agent read every image it rendered. What changes is what
-        it fixes there. <code>skemo check</code> catches structural mistakes as text and the layout is automatic, so the agent
+        it fixes there. <code>skemo lint</code> catches structural mistakes as text and the layout is automatic, so the agent
         reads the picture to judge it, not to move boxes by hand.</p></details>
     <details><summary>Is it free?</summary>
       <p>Yes. skemo is open source, licensed MIT OR Apache-2.0, and in pre-release ({{version}}): the format may still change

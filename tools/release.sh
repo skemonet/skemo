@@ -41,7 +41,7 @@ One binary per platform: download it, make it executable, run it.
 Linux and macOS in one line: \`curl -fsSL https://raw.githubusercontent.com/$repo/main/cli/install.sh | sh\`
 
 Check it against its line below (\`sha256sum -c\`, or \`shasum -a 256 -c\` on macOS).
-The licences of what it embeds (fonts, icons, Rust crates): \`skemo licences\`.
+The licences of what it embeds (fonts, icons, Rust crates): \`skemo --licences\`.
 
 \`\`\`
 $(cat ../SHA256SUMS)

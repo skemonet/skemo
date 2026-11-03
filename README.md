@@ -38,10 +38,9 @@ cargo build --release -p skemo-cli       # the binary: target/release/skemo
 ## Getting started
 
 ```bash
-skemo init my-diagram                    # example.skemo and a commented custom.css
-cd my-diagram
-skemo example.skemo --css custom.css     # writes example.png
-skemo watch example.skemo --css custom.css   # live preview in the browser
+skemo init demo.skemo --css             # demo.skemo, and skemo_style.css that it includes
+skemo demo.skemo                         # writes demo.png
+skemo demo.skemo --watch                   # live preview in the browser
 ```
 
 The format is described in [`lang/FORMAT.md`](lang/FORMAT.md) and in the user documentation,
@@ -76,5 +75,5 @@ or conditions.
 
 Third-party parts: the embedded fonts (Inter, JetBrains Mono) are under the SIL Open Font License 1.1, the
 built-in icons come from [Lucide](https://lucide.dev) (ISC), and the layout uses
-[elk-rs](https://github.com/openedges/elk-rs) (EPL-2.0). `skemo licences` prints the licences of everything the
+[elk-rs](https://github.com/openedges/elk-rs) (EPL-2.0). `skemo --licences` prints the licences of everything the
 binary embeds.

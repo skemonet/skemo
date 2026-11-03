@@ -37,7 +37,7 @@ def measure(skemo: str, examples: pathlib.Path) -> dict:
     rows = []
     for src in sorted(examples.glob("*.skemo")):
         css = src.with_suffix(".css")
-        cmd = [skemo, "--lang", "en", "render", str(src), "-q", "--format", "svg", "-o", "-"]
+        cmd = ["env", "SKEMO_LANG=en", skemo, "render", str(src), "-q", "--format", "svg", "-o", "-"]
         if css.exists():
             cmd += ["--css", str(css)]
         svg = lean(subprocess.run(cmd, check=True, capture_output=True, text=True).stdout)

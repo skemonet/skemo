@@ -8,8 +8,9 @@ description: Un type de diagramme est une classe CSS avec une couleur d’accent
   étiquette ; toutes les teintes en découlent.</p>
 
 <skemo name="types"></skemo>
-<p>Rendez avec la feuille de style : <code>skemo types.skemo --css types.css</code>. <code>--css</code> peut se répéter ; les fichiers
-  s’appliquent après le thème par défaut, avec la cascade habituelle.</p>
+<p>Le diagramme inclut sa feuille de style par son nom, à côté de lui : <code>diagram(css="types.css")</code> (plusieurs noms
+  séparés par des espaces). Ou donnez-la au rendu : <code>skemo types.skemo --css types.css</code>, qui peut se répéter et
+  s’applique après celles du diagramme. Les fichiers s’appliquent après le thème par défaut, avec la cascade habituelle.</p>
 
 <h2>Un type en une ligne</h2>
 <pre><code>.server { --c: #5B6CFF; --label: "SERVEUR"; }</code></pre>
@@ -36,8 +37,8 @@ description: Un type de diagramme est une classe CSS avec une couleur d’accent
   <tr><td><code>--font-scale</code></td><td><code>.stage</code></td><td>multiplie toutes les tailles de texte du thème, <code>1.4</code>
     pour une diapositive projetée (<em>préversion</em>) ; aussi <code>skemo render --font-scale 1.4</code></td></tr>
 </table>
-<p><code>skemo theme --print</code> affiche tout le thème par défaut : un bon point de départ pour votre propre thème, que
-  <code>--base-theme</code> utilise alors à la place de celui par défaut.</p>
+<p><code>skemo init demo.skemo --css-full</code> écrit tout le thème par défaut à côté du diagramme, qui l’inclut : un bon
+  point de départ pour votre propre thème. Donné à <code>--base-theme</code>, un tel fichier remplace plutôt le thème par défaut.</p>
 
 <h2>Flèches</h2>
 <p>La couleur d’une flèche est sa <code>color</code> ; les pointes la suivent. Les traits sont des chemins SVG :</p>

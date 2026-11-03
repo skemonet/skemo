@@ -11,54 +11,66 @@ mod help;
 mod i18n;
 mod out;
 
-use args::{Cli, Cmd, Color};
+use args::{Cli, Cmd};
 use clap::{CommandFactory, FromArgMatches};
 use common::Fail;
 use out::Out;
+use skemo_lang::tr;
 use std::io::IsTerminal;
 use std::process::ExitCode;
 
-/// Colours: asked for, or a terminal without `NO_COLOR` in automatic mode.
-fn use_color(choice: Color) -> bool {
-    match choice {
-        Color::Always => true,
-        Color::Never => false,
-        Color::Auto => std::io::stderr().is_terminal() && std::env::var_os("NO_COLOR").is_none(),
-    }
+/// Colours in the messages: on a terminal, unless `NO_COLOR` is set.
+fn use_color() -> bool {
+    std::io::stderr().is_terminal() && std::env::var_os("NO_COLOR").is_none()
 }
 
 fn run(cli: Cli) -> Result<(), Fail> {
     let out = Out {
-        color: use_color(cli.color),
+        color: use_color(),
         quiet: cli.quiet,
     };
-    match cli.cmd {
+    let Some(cmd) = cli.cmd else {
+        if cli.licences {
+            return commands::licences::run();
+        }
+        // `skemo` alone: the help, as a usage error
+        let _ = help::localize(Cli::command(), skemo_lang::i18n::language()).print_help();
+        return Err(Fail(2, None));
+    };
+    if cli.licences {
+        return Err(Fail::usage(tr!(
+            "--licences is used alone, without a command",
+            "--licences s'emploie seul, sans commande"
+        )));
+    }
+    match cmd {
+        Cmd::Render(a) if a.live.watch => commands::watch::run(&out, &a),
         Cmd::Render(mut a) => {
             a.resolve_output()?;
             commands::render::run(&out, &a)
         }
-        Cmd::Check(a) => commands::check::run(&out, &a),
-        Cmd::Fmt(a) => commands::fmt::run(&out, &a),
+        Cmd::Lint(a) => commands::lint::run(&out, &a),
         Cmd::Layout(a) => commands::layout::run(&out, &a),
-        Cmd::Fit(a) => commands::fit::run(&out, &a),
         Cmd::Extract(a) => commands::extract::run(&out, &a),
-        Cmd::Watch(a) => commands::watch::run(&out, &a),
-        Cmd::Init { dir } => commands::init::run(&dir),
+        Cmd::Init(a) => commands::init::run(&a),
+        Cmd::Completions { shell } => {
+            let mut cmd = help::localize(Cli::command(), skemo_lang::i18n::language());
+            clap_complete::generate(shell, &mut cmd, "skemo", &mut std::io::stdout());
+            Ok(())
+        }
         Cmd::Icons { query, json } => commands::icons::run(query.as_deref(), json),
-        Cmd::Theme { print } => commands::theme::run(print),
-        Cmd::Licences => commands::licences::run(),
     }
 }
 
 fn main() -> ExitCode {
     let raw: Vec<String> = std::env::args().collect();
     // the language comes first: even the help and the usage errors follow it
-    let lang = i18n::init(&raw);
+    let lang = i18n::init();
     let matches =
         help::localize(Cli::command(), lang).get_matches_from(args::with_default_command(raw));
     let cli = Cli::from_arg_matches(&matches).unwrap_or_else(|e| e.exit());
     let out = Out {
-        color: use_color(cli.color),
+        color: use_color(),
         quiet: false,
     };
     match run(cli) {

@@ -6,7 +6,7 @@ diagram(dir="right")
     to(check)
 
   zone#ci.ci CI job
-    card#check.step skemo check
+    card#check.step skemo lint
       | --deny-warnings
       to(render)
     card#render.step skemo render

@@ -44,15 +44,14 @@ Static Linux binary (musl): `sudo apt install musl-tools && rustup target add x8
 curl -fsSL https://raw.githubusercontent.com/skemonet/skemo/main/cli/install.sh | sh
 ```
 
-Installs the latest release into `~/.local/bin` after checking its SHA-256 (`SKEMO_VERSION`, `SKEMO_BIN`). Linux (x86_64, ARM) and macOS (ARM); on Windows, take `skemo-windows-x86_64.exe` from the releases page. A release is one binary per platform, its SHA-256 in the release's description; `skemo licences` prints the licences of what it embeds (fonts, icons, Rust crates).
+Installs the latest release into `~/.local/bin` after checking its SHA-256 (`SKEMO_VERSION`, `SKEMO_BIN`). Linux (x86_64, ARM) and macOS (ARM); on Windows, take `skemo-windows-x86_64.exe` from the releases page. A release is one binary per platform, its SHA-256 in the release's description; `skemo --licences` prints the licences of what it embeds (fonts, icons, Rust crates).
 
 ## Getting started
 
 ```bash
-skemo init my-diagram            # creates example.skemo and a commented custom.css, overwriting nothing
-cd my-diagram
-skemo example.skemo --css custom.css          # writes example.png (render is the default command)
-skemo watch example.skemo --css custom.css      # live preview in the browser, reloaded on every save
+skemo init demo.skemo --css      # creates demo.skemo and skemo_style.css, which it includes; overwrites nothing
+skemo demo.skemo                 # writes demo.png (render is the default command)
+skemo demo.skemo --watch           # live preview in the browser, reloaded on every save
 ```
 
 ### The format in 30 seconds
@@ -70,8 +69,8 @@ A `.skemo` file is **Pug** restricted to seven tags, with content lines written 
 | `diagram(dir="down")` | global options (direction, theme, `timeline`, `frieze` or `mindmap` layout) |
 
 Useful attributes: `at="x,y"` (pinned position), `side="bottom-top"` (attachment sides), `via="x,y"` (waypoint),
-`tag="Owner"` (badge), `join="trunk"` (several targets sharing one trunk). The `.type` classes are CSS classes: see the `custom.css` created by `skemo init`, and
-`skemo theme --print` for the default theme. The **full specification** is
+`tag="Owner"` (badge), `join="trunk"` (several targets sharing one trunk). The `.type` classes are CSS classes: see the stylesheet created by `skemo init --css`, and
+`skemo init --css-full` for the whole default theme. The **full specification** is
 [`FORMAT.md`](../lang/FORMAT.md) in the `lang` folder; the user
 documentation is the site built from `lang/site/` (skemo.net/docs/).
 
@@ -87,22 +86,24 @@ binary.
 
 | Command | Role |
 |---|---|
+| `skemo init [file] [--css [name]]` | creates a sample diagram (`diagram.skemo`); with `--css`, a commented stylesheet it includes (`skemo_style.css`) |
 | `skemo f.skemo` (= `skemo render f.skemo`) | **default command**: writes `f.png` next to the source. `-o out.{png,svg,html,gif,apng,webp}` picks another file and format (the extension decides; `.webp` is lossless: animated if the diagram has steps or arrows in motion, still otherwise); `--format svg` changes the default extension |
-| `skemo check f.skemo…` | diagnostics (exit code 1 on errors); `--contrast` checks text legibility |
-| `skemo fmt f.skemo… [--check]` | canonical formatting (indentation, attribute order) |
-| `skemo watch f.skemo` | live preview on `127.0.0.1:8710` |
+| `skemo lint f.skemo…` | diagnostics (exit code 1 on errors); `--contrast` checks text legibility |
+| `skemo lint --fix f.skemo… [--dry]` | canonical formatting (indentation, attribute order) |
+| `skemo f.skemo --watch` | live preview on `127.0.0.1:8710` |
 | `skemo layout f.skemo --json` | full layout (positions and routes) as JSON |
-| `skemo theme --print` | writes the default theme, a starting point for a custom one |
-| `skemo init [folder]` | creates a sample diagram and a commented CSS file |
 
-`render` options: `--css custom.css` (repeatable), `--theme light|dark|print|auto`, `--scale 2`,
+`render` options: `--css more.css` (repeatable, applied after the stylesheets the diagram includes with `diagram(css=…)`), `--theme light|dark|print|auto`, `--scale 2`,
 `--transparent` (SVG, PNG, APNG without background), `--motion` (SVG: play the `.flow` and `.pulse` arrows), `--contrast high` (darkens texts below the WCAG threshold),
 `--step 2.5` (one animation state), `--animated` (one PNG per step), `--board` (contact sheet of the steps),
 `--base-theme theme.css`, `--deny-warnings`. Details: `skemo render --help`.
 
 Exit codes: **0** OK · **1** errors in the file · **2** wrong usage · **3** internal error.
 
-**Language**: help, diagnostics and messages follow your system language (`LANG`, `LC_ALL`… as usual; English and French so far). `--lang en|fr` or `SKEMO_LANG=fr` overrides it. Month and century labels drawn in timelines and friezes follow it too, unless the diagram pins them with `diagram(lang="en")`.
+**Shell completion**: `eval "$(skemo completions bash)"` in `~/.bashrc`, `source <(skemo completions zsh)`
+in `~/.zshrc` (also `fish`, `elvish`, `powershell`; not listed in `--help`).
+
+**Language**: help, diagnostics and messages follow your system language (`LANG`, `LC_ALL`… as usual; English and French so far). `SKEMO_LANG=fr` overrides it. Month and century labels drawn in timelines and friezes follow it too, unless the diagram pins them with `diagram(lang="en")`.
 
 ![Dark theme](docs/example-dark.png)
 

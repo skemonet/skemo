@@ -98,7 +98,7 @@ def find_source(name: str, lang: str = "en") -> tuple[pathlib.Path, pathlib.Path
 
 def command(skemo: str, name: str, lang: str) -> list[str]:
     src, css = find_source(name, lang)
-    cmd = [skemo, "--lang", lang, "render", str(src), "-q", "--deny-warnings"]
+    cmd = ["env", f"SKEMO_LANG={lang}", skemo, "render", str(src), "-q", "--deny-warnings"]
     return cmd + (["--css", str(css)] if css else [])
 
 
@@ -256,7 +256,7 @@ def llms(pages: list[dict], version: str) -> str:
         "> skemo is a text language for diagrams (a Pug dialect styled with CSS) and a single offline binary that lays "
         "them out, routes the arrows and renders PNG, SVG, WebP, GIF, APNG or animated HTML. "
         f"Open source (MIT OR Apache-2.0), version {version}.", "",
-        "An AI agent writes a few lines of `.skemo` text instead of drawing SVG; `skemo check` reports mistakes as text "
+        "An AI agent writes a few lines of `.skemo` text instead of drawing SVG; `skemo lint` reports mistakes as text "
         "with line numbers; `skemo render` draws the picture.", "",
         "## Agent skill", "",
         f"- [SKILL.md]({ORIGIN}/skill/skemo/SKILL.md): the workflow, the syntax and the rules, for coding agents",
