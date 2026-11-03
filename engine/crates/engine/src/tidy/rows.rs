@@ -215,7 +215,8 @@ pub fn order_rows(model: &Model, boxes: &mut Boxes) {
     }
 }
 
-/// Hands the slots of a row out in writing order, keeping the first slot and the gaps.
+/// Hands the slots of a row out in writing order, keeping the first slot and the gaps, then
+/// leaves room under each card for its subtree (`subtree_room`).
 fn reorder(model: &Model, ax: Axes, row: &[&str], boxes: &mut Boxes) {
     let pos = |b: &Box2| (ax.span(b).0, ax.span_len(b));
     let mut slots: Vec<(&str, f64, f64)> = row
@@ -242,6 +243,77 @@ fn reorder(model: &Model, ax: Axes, row: &[&str], boxes: &mut Boxes) {
         ax.shift_across(model, id, at - p, boxes);
         at += s + gaps.get(i).copied().unwrap_or(0.0);
     }
+    subtree_room(model, ax, &written, boxes);
+}
+
+/// A card handed a new slot leaves its subtree where ELK put it, under another card: the
+/// centring passes then find no room to bring it under its parent (an org chart's teams stayed
+/// under the manager written last). Each card's subtree is taken as centred under it, level by
+/// level; a card whose subtree would overlap one on its left at some level moves right, with the
+/// cards after it, until it clears it. The subtrees themselves are left to `center_children`.
+fn subtree_room(model: &Model, ax: Axes, written: &[&str], boxes: &mut Boxes) {
+    const GAP: f64 = 28.0;
+    // right edge of the subtrees so far, per level below the row
+    let mut right: Vec<f64> = Vec::new();
+    let mut shift = 0.0;
+    for id in written {
+        let levels = subtree_levels(model, ax, id, written, boxes);
+        let mid = ax.mid(&boxes[*id]) + shift;
+        let need = levels
+            .iter()
+            .zip(&right)
+            .map(|(w, r)| r + GAP - (mid - w / 2.0))
+            .fold(0.0, f64::max);
+        shift += need;
+        ax.shift_across(model, id, shift, boxes);
+        let mid = mid + need;
+        for (i, w) in levels.iter().enumerate() {
+            let r = mid + w / 2.0;
+            match right.get_mut(i) {
+                Some(x) => *x = x.max(r),
+                None => right.push(r),
+            }
+        }
+    }
+}
+
+/// Widths across the flow of the levels below card `id`: the cards beyond it in its container
+/// that it is the only parent of, then theirs, none of them on the row `row`. A zone has none.
+fn subtree_levels(model: &Model, ax: Axes, id: &str, row: &[&str], boxes: &Boxes) -> Vec<f64> {
+    let edges = constrained(model);
+    let parent = |k: &str| model.node(k).map(|n| n.parent.clone());
+    let mut seen: Vec<&str> = row.to_vec();
+    let mut level = vec![id];
+    let mut widths = Vec::new();
+    while is_card(model, id) {
+        let mut next: Vec<&str> = Vec::new();
+        for p in &level {
+            for e in edges.iter().filter(|e| e.from == *p) {
+                let k = e.to.as_str();
+                let (Some(pb), Some(kb)) = (boxes.get(*p), boxes.get(k)) else {
+                    continue;
+                };
+                let free = is_card(model, k) && !seen.contains(&k);
+                if free && parent(k) == parent(id) && only_parent(&edges, p, k) && ax.beyond(pb, kb)
+                {
+                    seen.push(k);
+                    next.push(k);
+                }
+            }
+        }
+        if next.is_empty() {
+            break;
+        }
+        let (lo, hi) = next
+            .iter()
+            .map(|k| ax.span(&boxes[*k]))
+            .fold((f64::INFINITY, f64::NEG_INFINITY), |a, s| {
+                (a.0.min(s.0), a.1.max(s.1))
+            });
+        widths.push(hi - lo);
+        level = next;
+    }
+    widths
 }
 
 /// Sibling zones of one row start on the same line (same top with `dir` down, same left edge with
