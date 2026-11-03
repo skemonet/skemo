@@ -3,7 +3,7 @@
 //! Never overwrites a file.
 
 use crate::args::InitArgs;
-use crate::common::{Fail, check_css_name};
+use crate::common::{Fail, check_css_name, io};
 use skemo_lang::tr;
 use std::path::Path;
 
@@ -53,26 +53,35 @@ pub fn run(a: &InitArgs) -> Result<(), Fail> {
     }
     for (p, content) in &files {
         if let Some(d) = p.parent().filter(|d| !d.as_os_str().is_empty()) {
-            std::fs::create_dir_all(d).map_err(|e| {
+            std::fs::create_dir_all(d)
+                .map_err(|e| io(&e))
+                .map_err(|e| {
+                    Fail::usage(tr!(
+                        "creating « {} »: {e}",
+                        "création de « {} » : {e}",
+                        d.display()
+                    ))
+                })?;
+        }
+        std::fs::write(p, content)
+            .map_err(|e| io(&e))
+            .map_err(|e| {
                 Fail::usage(tr!(
-                    "creating « {} »: {e}",
-                    "création de « {} » : {e}",
-                    d.display()
+                    "writing « {} »: {e}",
+                    "écriture de « {} » : {e}",
+                    p.display()
                 ))
             })?;
-        }
-        std::fs::write(p, content).map_err(|e| {
-            Fail::usage(tr!(
-                "writing « {} »: {e}",
-                "écriture de « {} » : {e}",
-                p.display()
-            ))
-        })?;
-        eprintln!("{}", tr!("created: {}", "créé : {}", p.display()));
     }
+    let names: Vec<String> = files.iter().map(|(p, _)| p.display().to_string()).collect();
+    let f = file.display();
     eprintln!(
         "{}",
-        tr!("try: skemo {}", "essayer : skemo {}", file.display())
+        tr!(
+            "Created {}.\nDraw it:      skemo {f}\nLive preview: skemo {f} --watch",
+            "Créé : {}.\nLe dessiner :      skemo {f}\nAperçu en direct : skemo {f} --watch",
+            names.join(", ")
+        )
     );
     Ok(())
 }

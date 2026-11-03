@@ -32,27 +32,46 @@ impl Fail {
 pub fn read_source(file: &str) -> Result<String, String> {
     if file == "-" {
         let mut s = String::new();
-        std::io::stdin().read_to_string(&mut s).map_err(|e| {
-            tr!(
-                "reading standard input: {e}",
-                "lecture de l'entrée standard : {e}"
-            )
-        })?;
+        std::io::stdin()
+            .read_to_string(&mut s)
+            .map_err(|e| io(&e))
+            .map_err(|e| {
+                tr!(
+                    "reading standard input: {e}",
+                    "lecture de l'entrée standard : {e}"
+                )
+            })?;
         Ok(s)
     } else {
         std::fs::read_to_string(file)
+            .map_err(|e| io(&e))
             .map_err(|e| tr!("reading « {file} »: {e}", "lecture de « {file} » : {e}"))
     }
 }
 
 pub fn read_file(p: &Path) -> Result<String, String> {
-    std::fs::read_to_string(p).map_err(|e| {
+    std::fs::read_to_string(p).map_err(|e| io(&e)).map_err(|e| {
         tr!(
             "reading « {} »: {e}",
             "lecture de « {} » : {e}",
             p.display()
         )
     })
+}
+
+/// A file system error in the language of the messages, for the cases a user meets (the system's
+/// own text is in English).
+pub fn io(e: &std::io::Error) -> String {
+    use std::io::ErrorKind as K;
+    match e.kind() {
+        K::NotFound => tr!("no such file", "fichier introuvable"),
+        K::PermissionDenied => tr!("permission denied", "accès refusé"),
+        K::AlreadyExists => tr!("already exists", "existe déjà"),
+        K::IsADirectory => tr!("it is a folder", "c'est un dossier"),
+        K::StorageFull => tr!("no space left on the disk", "plus de place sur le disque"),
+        K::InvalidData => tr!("not valid UTF-8 text", "pas un texte UTF-8 valide"),
+        _ => e.to_string(),
+    }
 }
 
 /// Checks a stylesheet name written in a source (`diagram(css=…)`): a relative path that stays
@@ -105,15 +124,17 @@ pub fn write_out(path: &str, data: &[u8]) -> Result<(), Fail> {
         .parent()
         .filter(|d| !d.as_os_str().is_empty())
     {
-        std::fs::create_dir_all(dir).map_err(|e| {
-            Fail::internal(tr!(
-                "creating « {} »: {e}",
-                "création de « {} » : {e}",
-                dir.display()
-            ))
-        })?;
+        std::fs::create_dir_all(dir)
+            .map_err(|e| io(&e))
+            .map_err(|e| {
+                Fail::internal(tr!(
+                    "creating « {} »: {e}",
+                    "création de « {} » : {e}",
+                    dir.display()
+                ))
+            })?;
     }
-    std::fs::write(path, data).map_err(|e| {
+    std::fs::write(path, data).map_err(|e| io(&e)).map_err(|e| {
         Fail::internal(tr!(
             "writing « {path} »: {e}",
             "écriture de « {path} » : {e}"
@@ -188,15 +209,19 @@ pub struct Loaded {
 fn read_bytes(file: &str) -> Result<Vec<u8>, String> {
     if file == "-" {
         let mut b = Vec::new();
-        std::io::stdin().read_to_end(&mut b).map_err(|e| {
-            tr!(
-                "reading standard input: {e}",
-                "lecture de l'entrée standard : {e}"
-            )
-        })?;
+        std::io::stdin()
+            .read_to_end(&mut b)
+            .map_err(|e| io(&e))
+            .map_err(|e| {
+                tr!(
+                    "reading standard input: {e}",
+                    "lecture de l'entrée standard : {e}"
+                )
+            })?;
         Ok(b)
     } else {
         std::fs::read(file)
+            .map_err(|e| io(&e))
             .map_err(|e| tr!("reading « {file} »: {e}", "lecture de « {file} » : {e}"))
     }
 }
@@ -276,7 +301,7 @@ pub fn load(i: &Inputs) -> Result<Loaded, Fail> {
         .fonts
         .iter()
         .map(|p| {
-            let data = std::fs::read(p).map_err(|e| {
+            let data = std::fs::read(p).map_err(|e| io(&e)).map_err(|e| {
                 Fail::usage(tr!("font « {} »: {e}", "police « {} » : {e}", p.display()))
             })?;
             if skemo_engine::fonts::describe(&data).is_none() {
@@ -344,7 +369,7 @@ pub fn load_images(
             i.bytes().unwrap_or_default()
         } else {
             let path = base.map_or_else(|| PathBuf::from(&name), |d| d.join(&name));
-            std::fs::read(&path).map_err(|e| {
+            std::fs::read(&path).map_err(|e| io(&e)).map_err(|e| {
                 Fail::usage(tr!(
                     "image « {name} » ({}): {e}",
                     "image « {name} » ({}) : {e}",

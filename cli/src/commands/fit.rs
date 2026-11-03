@@ -3,7 +3,7 @@
 //! into the file.
 
 use crate::args::LintArgs;
-use crate::common::{Fail, Inputs, load};
+use crate::common::{Fail, Inputs, io, load};
 use crate::out::Out;
 use skemo_engine::fit;
 use skemo_lang::tr;
@@ -110,5 +110,7 @@ fn write_best(
             "la proposition n'a pas pu être écrite"
         ))
     })?;
-    std::fs::write(file, new).map_err(|e| Fail::usage(format!("{file}: {e}")))
+    std::fs::write(file, new)
+        .map_err(|e| io(&e))
+        .map_err(|e| Fail::usage(format!("{file}: {e}")))
 }

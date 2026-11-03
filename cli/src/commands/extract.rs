@@ -2,14 +2,14 @@
 //! as files to edit. The image itself can also be given to any other command.
 
 use crate::args::ExtractArgs;
-use crate::common::{Fail, write_out};
+use crate::common::{Fail, io, write_out};
 use crate::out::Out;
 use skemo_engine::source::{NamedText, extract, safe_name};
 use skemo_lang::tr;
 use std::path::{Path, PathBuf};
 
 pub fn run(out: &Out, a: &ExtractArgs) -> Result<(), Fail> {
-    let raw = std::fs::read(&a.image).map_err(|e| {
+    let raw = std::fs::read(&a.image).map_err(|e| io(&e)).map_err(|e| {
         Fail::usage(tr!(
             "reading « {} »: {e}",
             "lecture de « {} » : {e}",

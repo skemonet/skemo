@@ -636,8 +636,15 @@ fn lint_fix_reads_stdin_and_reports_errors() {
         .code(1);
     assert_eq!(std::fs::read_to_string(&bad).unwrap(), "card#a(\n");
     // the former commands are gone
-    for old in ["check", "fmt", "watch"] {
-        bin().args([old, "x.skemo"]).assert().code(2);
+    // the former commands are gone, and say what replaces them
+    for (old, now) in [
+        ("check", "skemo lint"),
+        ("fmt", "lint --fix"),
+        ("watch", "--watch"),
+    ] {
+        let out = bin().args([old, "x.skemo"]).assert().code(2);
+        let err = String::from_utf8(out.get_output().stderr.clone()).unwrap();
+        assert!(err.contains(now), "{err}");
     }
 }
 
@@ -749,7 +756,7 @@ fn errors_and_help_are_translated_too() {
         .get_output()
         .stdout
         .clone();
-    assert!(String::from_utf8_lossy(&top).contains("Diagrammes texte"));
+    assert!(String::from_utf8_lossy(&top).contains("Des schémas écrits en texte"));
 }
 
 #[test]

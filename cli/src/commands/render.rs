@@ -57,7 +57,20 @@ pub fn run(out: &Out, a: &RenderArgs) -> Result<(), Fail> {
         Format::Png => png(a, &d, src),
         Format::Gif | Format::Apng => animation(a, &d, fmt, src),
         Format::Webp => webp(a, &d, src),
+    }?;
+    if a.output != "-" {
+        let written = if a.png.animated {
+            let base = a.output.strip_suffix(".png").unwrap_or(&a.output);
+            tr!(
+                "{base}.00.png… and {base}.states.json",
+                "{base}.00.png… et {base}.states.json"
+            )
+        } else {
+            a.output.clone()
+        };
+        out.note(&format!("{} → {written}", a.file));
     }
+    Ok(())
 }
 
 /// Format deduced from the extension of the output file.

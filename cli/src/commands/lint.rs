@@ -8,6 +8,7 @@ use skemo_lang::tr;
 
 pub fn run(out: &Out, a: &LintArgs) -> Result<(), Fail> {
     let mut failed = false;
+    let mut errors = false;
     for f in &a.files {
         let src = match read_source(f) {
             Ok(s) => s,
@@ -25,6 +26,7 @@ pub fn run(out: &Out, a: &LintArgs) -> Result<(), Fail> {
             out.diag(&src, f, d);
         }
         let unknown = unknown_icons(out, &src, f, &doc);
+        errors |= doc.has_errors();
         failed |= (a.deny_warnings && unknown)
             || doc.has_errors()
             || (a.deny_warnings && doc.warnings().next().is_some());
@@ -37,6 +39,20 @@ pub fn run(out: &Out, a: &LintArgs) -> Result<(), Fail> {
         if let Some(target) = a.fit.as_deref().filter(|_| !doc.has_errors()) {
             super::fit::run(out, a, f, target)?;
         }
+    }
+    if !errors {
+        let n = a.files.len();
+        out.note(&if n == 1 {
+            tr!(
+                "1 diagram checked: no error",
+                "1 schéma vérifié : aucune erreur"
+            )
+        } else {
+            tr!(
+                "{n} diagrams checked: no error",
+                "{n} schémas vérifiés : aucune erreur"
+            )
+        });
     }
     if failed { Err(Fail::source()) } else { Ok(()) }
 }

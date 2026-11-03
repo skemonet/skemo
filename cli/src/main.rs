@@ -66,6 +66,14 @@ fn main() -> ExitCode {
     let raw: Vec<String> = std::env::args().collect();
     // the language comes first: even the help and the usage errors follow it
     let lang = i18n::init();
+    if let Some(msg) = args::former_command(&raw) {
+        Out {
+            color: use_color(),
+            quiet: false,
+        }
+        .error(&msg);
+        return ExitCode::from(2);
+    }
     let matches =
         help::localize(Cli::command(), lang).get_matches_from(args::with_default_command(raw));
     let cli = Cli::from_arg_matches(&matches).unwrap_or_else(|e| e.exit());
