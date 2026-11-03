@@ -15,6 +15,7 @@ and the project uses [Semantic Versioning](https://semver.org/) (pre-1.0: minor 
 - A clearer help and clearer messages: headings, values and defaults in the user's language, examples,
   `demo.skemo → demo.png` after a render, a summary after `lint`, file errors in the user's language, the
   replacement of a removed command.
+- A subtitle line of the diagram's title keeps its classes (`|.warn text` under `title`), as a card's lines do.
 - For contributors: a `local` profile, incremental (`cargo build --profile local`).
 
 ## [0.1.0-rc.8] — 2026-11-03

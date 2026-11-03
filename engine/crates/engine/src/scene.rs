@@ -1103,10 +1103,20 @@ impl Scene {
                     .iter()
                     .map(|_| tree.add(Some(el), "li", None, &["pill"]))
                     .collect(),
-                subs: t
-                    .sub
-                    .iter()
-                    .map(|_| tree.add(Some(el), "div", None, &["sub"]))
+                subs: (0..t.sub.len())
+                    .map(|i| {
+                        // a line's classes reach its style, as a zone's subtitle lines' do
+                        let cls: Vec<&str> = std::iter::once("sub")
+                            .chain(
+                                t.sub_classes
+                                    .get(i)
+                                    .into_iter()
+                                    .flatten()
+                                    .map(String::as_str),
+                            )
+                            .collect();
+                        tree.add(Some(el), "div", None, &cls)
+                    })
                     .collect(),
             }
         });

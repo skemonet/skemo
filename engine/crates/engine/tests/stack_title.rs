@@ -111,3 +111,21 @@ fn a_zone_tag_is_drawn_after_its_title() {
     // a stack draws nothing of its own
     assert!(!page.contains("data-id=\"stack1\""));
 }
+
+#[test]
+fn a_subtitle_line_keeps_its_classes() {
+    let src = "diagram\n  title shop\n    | AWS\n    |.gone 110 resources\n  card#a A\n";
+    let opts = Options {
+        css: vec![".diagram-title > .sub.gone { color: #C92A2A; }".to_string()],
+        ..Options::default()
+    };
+    let d = from_source(src, &opts).unwrap().0;
+    let out = svg::render(&d);
+    assert!(
+        out.contains("fill=\"#C92A2A\" xml:space=\"preserve\">110 resources"),
+        "{out}"
+    );
+    assert!(!out.contains("fill=\"#C92A2A\" xml:space=\"preserve\">AWS"));
+    let page = html::render(&d, &Default::default());
+    assert!(page.contains("class=\"sub gone\""), "{page}");
+}

@@ -759,6 +759,7 @@ fn title(cx: &mut Ctx, t: &Tag) {
     let (text, _, _, _) = text_of(cx, t);
     let mut lines = Vec::new();
     let mut sub = Vec::new();
+    let mut sub_classes = Vec::new();
     for c in &t.children {
         if c.name == "li" {
             lines.push(text_of(cx, c).0);
@@ -768,6 +769,7 @@ fn title(cx: &mut Ctx, t: &Tag) {
                 lines.push(li.text);
             } else {
                 sub.push(li.text);
+                sub_classes.push(li.classes);
             }
         } else {
             cx.diags.push(Diagnostic::warning(
@@ -781,7 +783,15 @@ fn title(cx: &mut Ctx, t: &Tag) {
             ));
         }
     }
-    cx.model.title = Some(Title { text, lines, sub });
+    if sub_classes.iter().all(Vec::is_empty) {
+        sub_classes.clear();
+    }
+    cx.model.title = Some(Title {
+        text,
+        lines,
+        sub,
+        sub_classes,
+    });
 }
 
 fn icon_attr(t: &Tag) -> Option<String> {

@@ -162,6 +162,10 @@ pub struct Title {
     /// Subtitle lines under the title, emphasis included. Absent from the JSON when none.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub sub: Vec<String>,
+    /// The classes of each subtitle line (`|.warn text`), when one has some. Absent from the JSON
+    /// when none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sub_classes: Vec<Vec<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

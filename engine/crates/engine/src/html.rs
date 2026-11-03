@@ -454,9 +454,21 @@ fn title_html(d: &Diagram, body: &mut String) {
     let subs: String = t
         .sub
         .iter()
-        .map(|l| {
+        .enumerate()
+        .map(|(i, l)| {
+            let cls = std::iter::once("sub")
+                .chain(
+                    t.sub_classes
+                        .get(i)
+                        .into_iter()
+                        .flatten()
+                        .map(String::as_str),
+                )
+                .collect::<Vec<_>>()
+                .join(" ");
             format!(
-                "<div class=\"sub\">{}</div>",
+                "<div class=\"{}\">{}</div>",
+                esc(&cls),
                 esc(&skemo_lang::inline::plain(l))
             )
         })
