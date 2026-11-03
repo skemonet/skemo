@@ -14,8 +14,8 @@ cargo install wasm-bindgen-cli --version 0.2.129 --locked   # same version as en
 ```
 
 ```bash
-cargo build --release -p skemo-cli       # target/release/skemo
-cargo test --workspace --release         # every crate's tests
+cargo build --profile local -p skemo-cli   # target/local/skemo, rebuilt in seconds after a change
+cargo test --workspace --profile local     # every crate's tests
 tools/ci.sh                              # the full pipeline, as the CI runs it (quality + security in parallel)
 tools/ci.sh quality                      # format, clippy, tests, docs, coverage, WebAssembly, smoke test
 tools/ci.sh security                     # cargo-deny, unsafe, secrets, workflows
@@ -40,7 +40,7 @@ project crate, `engine` uses both, `cli` only calls `engine` and `lang`. A featu
   edited by hand.
 - **Rendering changes are deliberate.** `engine/crates/engine/tests/golden.rs` fingerprints every output (SVG in
   three themes, HTML, PNG) of every example. A refactoring must not change it; after an intended change, run
-  `UPDATE_GOLDEN=1 cargo test --release -p skemo-engine --test golden` and say in the pull request which outputs
+  `UPDATE_GOLDEN=1 cargo test --profile local -p skemo-engine --test golden` and say in the pull request which outputs
   moved and why.
 - **Diagnostics are snapshots.** `lang` checks its messages with `insta`; review a changed snapshot with
   `cargo insta review` (or by reading the `.snap.new` diff) before accepting it.

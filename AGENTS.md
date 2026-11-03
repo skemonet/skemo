@@ -6,10 +6,10 @@ the same things at more length. (To *use* skemo from an agent, see the skill in 
 ## Commands
 
 ```bash
-cargo build --release -p skemo-cli                 # target/release/skemo
-cargo test --workspace --release                   # all tests
-cargo test --release -p skemo-engine --test golden # rendering fingerprints
-tools/ci.sh                                        # the CI pipeline; must pass before a pull request
+cargo build --profile local -p skemo-cli                 # target/local/skemo (incremental: seconds)
+cargo test --workspace --profile local                   # all tests
+cargo test --profile local -p skemo-engine --test golden # rendering fingerprints
+tools/ci.sh                                              # the CI pipeline; must pass before a pull request
 ```
 
 ## Ground rules

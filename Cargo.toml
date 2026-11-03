@@ -75,3 +75,11 @@ lto = true
 codegen-units = 1
 strip = true
 panic = "abort"
+
+# Working on the code: the release optimisations with incremental compilation, so that changing one
+# function rebuilds in seconds (the binary 3.6 s instead of 21, every test binary 11 s instead of 89,
+# measured on 4 cores). Not for CI, which starts cold.
+[profile.local]
+inherits = "ci-fast"
+incremental = true
+codegen-units = 256
