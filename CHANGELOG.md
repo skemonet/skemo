@@ -5,6 +5,28 @@ and the project uses [Semantic Versioning](https://semver.org/) (pre-1.0: minor 
 
 ## [Unreleased]
 
+## [0.1.0-rc.8] — 2026-11-03
+
+The tag v0.1.0-rc.7 was not published: its changes are released here.
+
+- **Commands, in the order of a diagram's life** (D-083, D-084): `init`, `lint`, `render`, `extract`,
+  `layout`. **Changed**: `lint` replaces `check` and `fmt` (`lint --fix` rewrites in canonical form,
+  `--fix --dry` only reports) and `fit` (`lint --fit [16:9]`, applied by `--fix`); `render --watch`
+  replaces `watch`; `skemo --licences` replaces `skemo licences`; `init --css-full` replaces
+  `theme --print`. The former names are refused.
+- **A diagram names its stylesheets** (D-082): `diagram(css="style.css")`, files next to it, read before
+  `--css` and embedded in the outputs. `skemo init [file] [--css [name] | --css-full [name]]` writes
+  `diagram.skemo`, and a short commented stylesheet or the whole default theme that it includes.
+- **No `--lang` and no `--color`**: the language follows `SKEMO_LANG`, else the system; colours show on a
+  terminal unless `NO_COLOR` is set.
+- **A compact help**: one line per option, `render`'s options under Output, Style and Animation, generic
+  options apart. Shell completion: `eval "$(skemo completions bash)"` (also zsh, fish, elvish,
+  powershell).
+- Warning `part-class`: a class named like a part the engine draws (`.head`, `.title`, `.line`…) would
+  style that part everywhere.
+- Org charts: the teams of a manager written between two others stay under it.
+- CI: the checks build once in a `ci-fast` profile and run the tests once under coverage.
+
 ## [0.1.0-rc.7] — 2026-11-03
 
 - **Arrows in motion** (D-079): `.pulse`, a new arrow style, runs one glowing dot along the line from the source
