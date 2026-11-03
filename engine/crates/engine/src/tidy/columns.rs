@@ -73,9 +73,12 @@ fn align(model: &Model, col: &[&str], boxes: &mut Boxes) {
     }
 }
 
-/// `diagram(zones="stretch")` (D-045): sibling zones stacked along the direction (one above the
-/// other with `dir` down or up) take the extent of the widest, across (the same width; the same
-/// height with right or left), like layers drawn by hand. Only the frames change, never a card.
+/// Sibling zones stacked along the direction (one above the other with `dir` down or up) take the
+/// extent of the widest, across (the same width; the same height with right or left), like layers
+/// drawn by hand: by default the drawn zones stacked one under the other (`dir` down or up, D-085),
+/// every zone in any direction with `diagram(zones="stretch")` (D-045), none with `zones="fit"`
+/// (frames fitted to their content). Side by side along `dir` right, equal heights would leave a
+/// short stage as an empty box. Only the frames change, never a card.
 /// A group with two zones side by side (on one row) is left alone: stretching would overlap them.
 /// Pinned zones (`at=` + `size=`) keep their size and do not count. The zones of a `stack` are
 /// stretched so without asking (D-056): a stack is a pile of layers. A pile that would cover a
@@ -83,6 +86,7 @@ fn align(model: &Model, col: &[&str], boxes: &mut Boxes) {
 pub fn stretch_zones(model: &Model, frames: &mut Boxes, cards: &Boxes) {
     let everywhere = model.option("zones") == Some("stretch");
     let across = Axes::of(model).across;
+    let drawn = everywhere || (!across && model.option("zones") != Some("fit"));
     // seen transposed for right/left: "columns" of zones stacked along x
     let t = |b: Box2| {
         if across {
@@ -98,10 +102,10 @@ pub fn stretch_zones(model: &Model, frames: &mut Boxes, cards: &Boxes) {
     };
     for parent in containers(model) {
         let stack = parent.and_then(|p| model.node(p)).is_some_and(|p| p.stack);
-        if !everywhere && !stack {
+        if !drawn && !stack {
             continue;
         }
-        // asked for (`zones="stretch"`), every zone; by default in a stack, the drawn ones
+        // asked for (`zones="stretch"`), every zone; otherwise the drawn ones
         let zones: Vec<&str> = model
             .children(parent)
             .filter(|n| n.kind == Kind::Zone && !(n.at.is_some() && n.size.is_some()))

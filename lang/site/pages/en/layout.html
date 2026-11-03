@@ -39,8 +39,9 @@ description: Directions, rows, columns, stacks and pinned positions: how skemo l
 
 <h2>Layers of the same width <em>(preview)</em></h2>
 <skemo name="stretch"></skemo>
-<p><code>diagram(zones="stretch")</code> gives zones stacked along the direction the width of the widest one, like layers drawn by
-  hand. Only the frames grow: no card moves, no number is written in the file.</p>
+<p>Zones stacked one under the other take the width of the widest one, like layers drawn by hand. Only the frames grow: no
+  card moves, no number is written in the file. <code>diagram(zones="fit")</code> keeps each frame fitted to its content;
+  <code>diagram(zones="stretch")</code> evens them in every direction (with <code>dir="right"</code>, the same height).</p>
 
 <h2>Groups in order: <code>stack</code> <em>(preview)</em></h2>
 <skemo name="kubernetes" wide></skemo>

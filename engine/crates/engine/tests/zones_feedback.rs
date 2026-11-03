@@ -272,11 +272,32 @@ fn zones_stretch_to_the_widest_of_their_column() {
     let d = build(src);
     let (p, s) = (&d.boxes["pods"], &d.boxes["svcs"]);
     assert_eq!((p.x, p.w), (s.x, s.w));
-    let plain = build(&src.replace(" zones=\"stretch\"", ""));
+    // stacked one under the other: as wide by default too (D-085), fitted with zones="fit"
+    let default = build(&src.replace(" zones=\"stretch\"", ""));
+    assert_eq!(default.boxes["svcs"].w, default.boxes["pods"].w);
+    let plain = build(&src.replace("zones=\"stretch\"", "zones=\"fit\""));
     assert!(plain.boxes["svcs"].w < plain.boxes["pods"].w);
     for c in ["f1", "f2", "b1", "sf"] {
         assert_eq!(d.boxes[c], plain.boxes[c], "{c} does not move");
     }
+}
+
+/// Side by side along `dir="right"`, stages keep their own height unless `zones="stretch"` (D-085).
+#[test]
+fn zones_along_right_keep_their_height_by_default() {
+    let src = "diagram(dir=\"right\")
+  zone#ci CI
+    card#a A
+      to(b)
+  zone#out Out
+    card#b B
+    card#c C
+    card#d D
+";
+    let d = build(src);
+    assert!(d.boxes["ci"].h < d.boxes["out"].h);
+    let s = build(&src.replace("dir=\"right\"", "dir=\"right\" zones=\"stretch\""));
+    assert_eq!(s.boxes["ci"].h, s.boxes["out"].h);
 }
 
 #[test]

@@ -194,14 +194,21 @@ fn title_centre_offset(d: &skemo_engine::Diagram, id: &str) -> f64 {
     run.x + run.width / 2.0 - d.boxes[id].w / 2.0
 }
 
+/// A card without lines: centred in the classic look; left like its neighbours in the band look,
+/// the default (D-085).
 #[test]
-fn a_card_without_lines_has_its_title_centred() {
+fn a_card_without_lines_has_its_title_centred_in_the_classic_look() {
     for look in ["band", "classic"] {
         let d = build(&format!(
             "diagram(look=\"{look}\")\ncard#a A rather long name\ncard#b Short\ncard#c With lines\n  li a line\n"
         ));
         // centred in the padded box (the band has 13 px of padding on the left, 10 on the right)
-        assert!(title_centre_offset(&d, "b").abs() < 3.0, "{look}: centred");
+        let off = title_centre_offset(&d, "b");
+        if look == "classic" {
+            assert!(off.abs() < 3.0, "{look}: centred");
+        } else {
+            assert!(off < -10.0, "{look}: left, like a card with lines");
+        }
         assert!(
             title_centre_offset(&d, "c") < -10.0,
             "{look}: a card with lines keeps it left"

@@ -180,7 +180,8 @@ Layout is automatic. Pin only what the user wants fixed:
   column (with `dir="right"`) cannot be reached straight from the left, and the render warns.
   `wrap="1"` (a single file: a server and its stack) never warns: arrows enter by the free sides. The cards
   of a grid column share the widest one's width, left-aligned.
-- `diagram(zones="stretch")` (pre-release): zones stacked along `dir` get the same width (layers).
+- Zones stacked one under the other get the same width by default (layers); `diagram(zones="fit")` keeps
+  fitted frames, `zones="stretch"` evens them along `dir` right or left too.
 - Cards of one row keep the writing order; an arrow written after its target still follows `dir`.
 - `at=` has no effect in timeline, frieze and mindmap modes (warning).
 

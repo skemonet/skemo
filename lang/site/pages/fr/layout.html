@@ -40,8 +40,10 @@ description: Directions, rangées, colonnes, piles et positions épinglées : co
 
 <h2>Couches de même largeur <em>(préversion)</em></h2>
 <skemo name="stretch"></skemo>
-<p><code>diagram(zones="stretch")</code> donne aux zones empilées dans la direction la largeur de la plus large, comme des couches
-  dessinées à la main. Seuls les cadres grandissent : aucune carte ne bouge, aucun nombre n’est écrit dans le fichier.</p>
+<p>Les zones empilées l’une sous l’autre prennent la largeur de la plus large, comme des couches dessinées à la main. Seuls
+  les cadres grandissent : aucune carte ne bouge, aucun nombre n’est écrit dans le fichier. <code>diagram(zones="fit")</code>
+  garde chaque cadre ajusté à son contenu ; <code>diagram(zones="stretch")</code> les égalise dans toutes les directions
+  (avec <code>dir="right"</code>, la même hauteur).</p>
 
 <h2>Groupes ordonnés : <code>stack</code> <em>(préversion)</em></h2>
 <skemo name="kubernetes"></skemo>

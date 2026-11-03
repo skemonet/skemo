@@ -100,8 +100,8 @@ card.no-tag .title::before { content: none; }   /* classe posée par le core si 
 .stage.look-band { --look: band; }
 .stage.look-header { --look: header; }
 .stage.look-classic { --look: classic; }
-/* a card without lines: its title is centred (the tag stays at the right of a band) */
-card.look-band.no-body > .head > .type { flex: 1; text-align: center; justify-content: center; }
+/* a card without lines: in the classic look its title is centred (the band look keeps it left,
+   like its neighbours with lines: user's choice, 2026-11-03) */
 .stage.look-classic card.no-body > .title { text-align: center; }
 card.look-band { padding: 0; min-width: 96px; overflow: hidden; border-radius: 10px;
        border: 1.5px solid var(--accent-fill, var(--c, #9AA3B2)); background: color-mix(in srgb, var(--c, #9AA3B2) 9%, var(--surface)); }
@@ -442,4 +442,3 @@ card.text li { color: var(--muted); font-size: calc(12px * var(--font-scale, 1))
 /* HTML: the category takes a row of its own in the band (the engine lays it out the same) */
 card.look-band > .head { flex-wrap: wrap; row-gap: 0; }
 card.look-band > .head .kind { flex: 0 0 100%; }
-card.look-band.no-body > .head .kind { text-align: center; }
