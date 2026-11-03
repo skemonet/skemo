@@ -1,0 +1,64 @@
+<!--
+title: Erreurs et avertissements de skemo
+nav: Erreurs et avertissements
+description: Ce que signale skemo check : ligne, colonne, un repère sous le fautif et une aide, avec la liste des codes d’erreur et d’avertissement.
+-->
+<h1>Erreurs et avertissements</h1>
+<p class="lead"><code>skemo check</code> et chaque rendu signalent les problèmes avec le fichier, la ligne, la colonne, un repère sous
+  le fautif et, souvent, une aide.</p>
+<pre><code>erreur[unknown-target] : cible « b » inconnue
+  ┌─ diagramme.skemo:2:6
+  │
+2 │   to(b) va
+  │      ^
+  = aide : vouliez-vous « a » ?</code></pre>
+<p>Les erreurs arrêtent le rendu (code de sortie 1). Les avertissements jamais, sauf avec <code>--deny-warnings</code>. Les codes
+  sont stables : vous pouvez vous y fier dans des scripts. Les messages suivent la langue du système.</p>
+
+<h2>Erreurs</h2>
+<table>
+  <tr><th>Code</th><th>Cause</th></tr>
+  <tr><td><code>unknown-target</code></td><td><code>to(x)</code> nomme un id qui n’existe pas</td></tr>
+  <tr><td><code>no-target</code></td><td><code>to()</code> sans cible</td></tr>
+  <tr><td><code>duplicate-id</code></td><td>deux cartes ou zones partagent un id</td></tr>
+  <tr><td><code>to-outside-card</code></td><td>une flèche qui n’est pas dans une carte</td></tr>
+  <tr><td><code>nested-in-card</code></td><td>une carte ou une zone indentée dans une carte (seules les lignes <code>|</code> et
+    <code>to</code> y sont permises)</td></tr>
+  <tr><td><code>multiple-attr-groups</code></td><td>deux paires de parenthèses sur une même balise</td></tr>
+  <tr><td><code>mixed-indent</code></td><td>tabulations et espaces dans le même fichier</td></tr>
+  <tr><td><code>bad-number</code></td><td><code>at</code>, <code>size</code> ou <code>via</code> mal formé</td></tr>
+  <tr><td><code>bad-marker</code>, <code>multiple-appear</code></td><td>marqueur d’animation mal formé (<code>@0</code>, <code>@4-2</code>,
+    effet inconnu), ou deux marqueurs d’apparition sur un élément</td></tr>
+  <tr><td><code>legacy-and-marker</code></td><td>ancienne notation <code>step=</code> et un marqueur <code>@</code> sur le même élément</td></tr>
+  <tr><td><code>unsafe-href</code></td><td>un lien au schéma interdit, ou vide</td></tr>
+  <tr><td><code>missing-date</code>, <code>bad-date</code>, <code>end-before-start</code></td><td>dates des chronologies et des frises
+    (année 0 comprise)</td></tr>
+  <tr><td><code>zone-in-frise</code>, <code>zone-in-mindmap</code></td><td>des zones dans un mode qui ne les accepte pas</td></tr>
+  <tr><td><code>bad-root</code></td><td><code>root</code> de carte mentale qui n’est pas un id de carte</td></tr>
+</table>
+
+<h2>Avertissements</h2>
+<table>
+  <tr><th>Code</th><th>Cause</th></tr>
+  <tr><td><code>unknown-tag</code></td><td>une balise autre que les quatre (ignorée avec son contenu)</td></tr>
+  <tr><td><code>line-misplaced</code>, <code>orphan-text</code>, <code>ignored-child</code></td><td>du contenu à un endroit où il n’a
+    pas de sens (ignoré)</td></tr>
+  <tr><td><code>bad-side</code>, <code>bad-join</code></td><td>valeur inconnue de <code>side</code>, <code>join</code> vide, ou un nom de
+    <code>join</code> qu’aucune autre flèche vers la même carte ne porte (ignoré)</td></tr>
+  <tr><td><code>at-ignored</code></td><td><code>at=</code> dans un mode où les positions sont calculées</td></tr>
+  <tr><td><code>draw-on-node</code></td><td>l’effet <code>draw</code> sur autre chose qu’une flèche (<code>fade</code> est utilisé)</td></tr>
+  <tr><td><code>unknown-icon</code>, <code>icon-ignored</code></td><td>un nom d’icône qui n’existe pas, ou une icône sur une flèche ou une ligne</td></tr>
+  <tr><td><code>legacy-step</code></td><td>ancienne notation <code>step=</code>/<code>fx=</code> : <code>skemo fmt</code> la convertit</td></tr>
+  <tr><td><code>unknown-attribute</code></td><td><code>diagram(engine=…)</code>, <code>router=…</code> ou <code>elk=…</code> : options du
+    prototype, plus lues</td></tr>
+  <tr><td><code>bad-table</code> <em>(préversion)</em></td><td>une rangée de tableau illisible telle qu’écrite : <code>^^</code> dans la
+    première rangée, une rangée qui commence par <code>||</code>, un séparateur mal placé ou d’un autre nombre de colonnes, un tableau
+    d’une cellule entre des lignes de texte (écrivez <code>\|</code> pour une barre finale)</td></tr>
+  <tr><td><code>bad-at</code> <em>(préversion)</em></td><td><code>at=</code> qui n’est ni des coordonnées ni un point cardinal, ou un
+    point cardinal sur un élément qui n’est pas au premier niveau</td></tr>
+  <tr><td><code>docked-arrow</code> <em>(préversion)</em></td><td>une flèche entre un élément ancré (<code>at="s"</code>…) et le reste du
+    dessin : non dessinée</td></tr>
+</table>
+<p>Le moteur ajoute quelques avertissements à lui : deux cartes épinglées qui se chevauchent (les deux sont nommées), un marqueur
+  d’animation plus tôt que son parent ne le permet, une carte de carte mentale que la racine n’atteint pas, un contraste sous le
+  seuil avec <code>--contrast</code>.</p>

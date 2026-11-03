@@ -1,0 +1,79 @@
+<!--
+title: Styler les diagrammes en CSS avec skemo
+nav: Styler en CSS
+description: Un type de diagramme est une classe CSS avec une couleur d’accent et une étiquette. Apparences des cartes, couleurs des flèches et toutes les teintes en découlent.
+-->
+<h1>Styler en CSS</h1>
+<p class="lead">Les classes sont des types, les types se stylent en CSS. Un type n’a besoin que d’une couleur d’accent et d’une
+  étiquette ; toutes les teintes en découlent.</p>
+
+<skemo name="types"></skemo>
+<p>Rendez avec la feuille de style : <code>skemo types.skemo --css types.css</code>. <code>--css</code> peut se répéter ; les fichiers
+  s’appliquent après le thème par défaut, avec la cascade habituelle.</p>
+
+<h2>Un type en une ligne</h2>
+<pre><code>.server { --c: #5B6CFF; --label: "SERVEUR"; }</code></pre>
+<p><code>--c</code> est l’accent : la bande, la bordure et le fond teinté de la carte en viennent tous, par <code>color-mix()</code>
+  avec les couleurs de surface du thème. <code>--label</code> est le texte du badge ou de la pastille (omettez-le pour ne pas avoir de
+  badge ; <code>tag="…"</code> sur une carte le remplace). Comme rien d’autre n’est figé, le même type fonctionne dans les thèmes
+  clair, sombre et impression.</p>
+<div class="warn"><p>Ne définissez ni <code>background</code> ni couleurs de texte sur les types. Utilisez les variables
+  (<code>var(--surface)</code>, <code>var(--ink)</code>…) s’il le faut, sinon les thèmes sombre et impression casseront.</p></div>
+
+<h2>Variables</h2>
+<table>
+  <tr><th>Variable</th><th>Où</th><th>Rôle</th></tr>
+  <tr><td><code>--c</code></td><td>type de carte ou de zone</td><td>couleur d’accent ; une zone la transmet à ses cartes sans type</td></tr>
+  <tr><td><code>--label</code></td><td>type de carte</td><td>texte du badge ou de la pastille</td></tr>
+  <tr><td><code>--look</code></td><td>type de carte</td><td><code>band</code>, <code>header</code>, <code>classic</code> ou <code>eyebrow</code> (ci-dessous)</td></tr>
+  <tr><td><code>--on-c</code></td><td>type</td><td>couleur du texte posé sur l’accent (blanc par défaut)</td></tr>
+  <tr><td><code>--z-bg</code>, <code>--z-border</code>, <code>--z-ink</code></td><td>type de zone</td><td>teintes de zone explicites, au lieu des teintes dérivées</td></tr>
+  <tr><td><code>--icon</code></td><td>type</td><td>icône par défaut du type (<a href="icons-and-links.html">préversion</a>)</td></tr>
+  <tr><td><code>--zone-pad</code>, <code>--zone-head</code></td><td><code>:root</code></td><td>marges des zones, utilisées par le placement</td></tr>
+  <tr><td><code>--bg</code>, <code>--surface</code>, <code>--ink</code>, <code>--ink-2</code>, <code>--muted</code>, <code>--line</code>,
+    <code>--card-border</code></td><td><code>:root</code></td><td>couleurs de base, redéfinies par chaque thème</td></tr>
+  <tr><td><code>--font</code>, <code>--mono</code>, <code>--radius</code></td><td><code>:root</code></td><td>typographie et rayon des coins</td></tr>
+  <tr><td><code>--font-scale</code></td><td><code>.stage</code></td><td>multiplie toutes les tailles de texte du thème, <code>1.4</code>
+    pour une diapositive projetée (<em>préversion</em>) ; aussi <code>skemo render --font-scale 1.4</code></td></tr>
+</table>
+<p><code>skemo theme --print</code> affiche tout le thème par défaut : un bon point de départ pour votre propre thème, que
+  <code>--base-theme</code> utilise alors à la place de celui par défaut.</p>
+
+<h2>Flèches</h2>
+<p>La couleur d’une flèche est sa <code>color</code> ; les pointes la suivent. Les traits sont des chemins SVG :</p>
+<pre><code>.edge.ok { color: #2B8A3E; }
+.edge.ko .line { stroke-dasharray: 5 4; }
+.edge.from-uplink { color: #7B5CC4; }    /* toutes les flèches qui quittent une carte .uplink */</code></pre>
+
+<h2>Apparences des cartes</h2>
+<p>Quatre apparences, pour tout le diagramme avec <code>diagram(look="…")</code> ou par type avec <code>--look</code> :</p>
+<div class="looks">
+  <div class="figures steps">
+    <div><skemo name="look-band" figure></skemo><p class="muted"><code>band</code> (par défaut) : le nom dans une bande colorée, la pastille à droite</p></div>
+    <div><skemo name="look-header" figure></skemo><p class="muted"><code>header</code> : le type dans la bande, le nom centré dessous</p></div>
+    <div><skemo name="look-classic" figure></skemo><p class="muted"><code>classic</code> : un filet d’accent en haut, un badge avant le nom</p></div>
+    <div><skemo name="look-eyebrow" figure></skemo><p class="muted"><code>eyebrow</code> (préversion) : une carte blanche, le type en petite étiquette colorée au-dessus du nom</p></div>
+  </div>
+  <p>Dans toutes les apparences, une carte sans type est dessinée claire : blanche, avec une bordure fine. La couleur est laissée aux
+    types qui ont un sens.</p>
+</div>
+<skemo-source name="look-header"></skemo-source>
+
+<h2>Viser un seul élément</h2>
+<p>Dans les sorties SVG et HTML, les ids sont écrits en <code>data-id</code>, pour que plusieurs diagrammes partagent une page. Visez
+  une carte avec un sélecteur d’attribut :</p>
+<pre><code>[data-id="fw"] { --c: #C94A44; }</code></pre>
+<p>Autres sélecteurs sur lesquels compter : <code>card</code>, <code>zone</code>, <code>card &gt; .title</code>, <code>card li</code>
+  (un par ligne <code>|</code>), <code>card table</code>, <code>card mark</code>, <code>.edge</code>, <code>.edge .line</code>,
+  <code>.edge .head</code>, <code>.edge .edge-label</code>. L’étiquette d’une flèche est dans sa flèche et prend sa couleur :
+  <code>.edge.ok { color: #2B8A3E; }</code> teinte à la fois le trait et la pastille de l’étiquette <em>(préversion)</em>. Ces noms
+  appartiennent au dessin : ne les prenez pas comme noms de types.</p>
+
+<h2>Polices <em>(préversion)</em></h2>
+<p>skemo embarque Inter et JetBrains Mono et ne lit aucune police du système : un diagramme se mesure et se rend pareil partout. Pour
+  utiliser une autre police, nommez sa famille dans le CSS et donnez ses fichiers au moteur, un par graisse ou style :</p>
+<pre><code>.stage { --font: 'Source Serif 4', serif; }</code></pre>
+<pre><code>skemo render plan.skemo --css plan.css --font SourceSerif4-Regular.ttf --font SourceSerif4-Bold.ttf</code></pre>
+<p>La famille, la graisse et le style sont lus dans chaque fichier (TrueType ou OpenType). La police sert à la mesure et à toutes les
+  sorties ; le HTML l’embarque, le SVG aussi avec <code>--embed-fonts</code>. Une famille qu’aucune police ne dessine retombe sur
+  Inter, avec un avertissement qui la nomme. N’utilisez que des polices dont la licence permet l’intégration.</p>

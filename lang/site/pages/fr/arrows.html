@@ -1,0 +1,91 @@
+<!--
+title: Les flèches dans skemo : styles, étiquettes, troncs et tracé
+nav: Flèches
+description: Écrivez les flèches dans la carte qu’elles quittent ; stylez-les avec des classes, étiquetez-les, faites-leur partager un tronc, et laissez skemo les tracer autour des obstacles.
+-->
+<h1>Flèches</h1>
+<p class="lead">Une flèche s’écrit dans la carte qu’elle quitte : <code>to(cible)</code>. Ses classes la stylent, son texte
+  l’étiquette.</p>
+
+<h2>Écrire une flèche</h2>
+<pre><code>card#api API
+  to(db)                      //- api → db
+  to(queue).dashed événements //- stylée, avec une étiquette
+card#db Base de données
+card#queue File</code></pre>
+<p>La cible est l’<code>#id</code> d’une carte. Une cible inconnue est une erreur, avec une suggestion quand l’id ressemble à un id
+  existant. Les flèches peuvent revenir en arrière, former des cycles ou relier une carte à plusieurs autres.</p>
+
+<h2>Styles</h2>
+<skemo name="arrows"></skemo>
+<table>
+  <tr><th>Classe</th><th>Effet</th></tr>
+  <tr><td><code>.dashed</code>, <code>.dotted</code></td><td>trait en tirets ou en pointillés</td></tr>
+  <tr><td><code>.thick</code></td><td>trait plus épais</td></tr>
+  <tr><td><code>.flow</code></td><td>des tirets qui avancent vers la pointe</td></tr>
+  <tr><td><code>.pulse</code></td><td>un point lumineux qui court de la source à la pointe</td></tr>
+  <tr><td><code>.both</code></td><td>une pointe aux deux bouts</td></tr>
+  <tr><td><code>.nohead</code></td><td>pas de pointe</td></tr>
+  <tr><td><code>.dot</code></td><td>un point au départ</td></tr>
+  <tr><td><code>.link</code></td><td>pointillé, sans pointe : rattache une note à une carte</td></tr>
+  <tr><td><code>.wan</code>, <code>.secure</code></td><td>exemples de couleur du thème par défaut (rouge et plus épais, vert)</td></tr>
+</table>
+<p>Les classes se combinent (<code>to(b).dashed.both</code>). Vos propres classes colorent les flèches en CSS :
+  <code>.edge.important { color: #E8590C; }</code>. Quand le sens ou la nature d’une flèche compte, donnez-lui aussi un style de
+  trait, pas seulement une couleur, pour qu’elle se lise en noir et blanc.</p>
+
+<h2>Flèches en mouvement <em>(préversion)</em></h2>
+<p><code>.flow</code> et <code>.pulse</code> tournent en boucle tant que le diagramme est affiché. Tous les points vont à la même
+  vitesse : ceux de toutes les flèches partent ensemble et une longue flèche prend plus de temps. Ils sont joués dans le HTML
+  (arrêtés pour un lecteur qui demande moins d’animations), en GIF, APNG et WebP animé, et dans le SVG si vous le demandez avec
+  <code>--motion</code>. Une image fixe les dessine en traits pleins. Voir <a href="animated-flows.html">Flux animés</a>.</p>
+<pre><code>.edge.orders { --pulse-color: #E8590C; --pulse-size: 7px; --pulse-speed: 200px; }
+.edge.flow   { --flow-speed: 30px; }   /* px par seconde */</code></pre>
+
+<h2>Plusieurs cibles</h2>
+<skemo name="multi"></skemo>
+<p><code>to(w1 w2 w3)</code> crée une flèche par cible, toutes avec les mêmes classes et la même étiquette (une étiquette est donc
+  répétée sur chaque flèche).</p>
+
+<h2>Tronc commun</h2>
+<skemo name="trunk"></skemo>
+<p>Avec <code>join="trunk"</code>, les flèches d’un même <code>to(…)</code> partent du même point et partagent un tronc avant de se
+  séparer, comme dans un organigramme. Chaque cible garde sa propre flèche, avec son id et son marqueur d’animation.</p>
+<p><em>(Préversion)</em> Des flèches simples d’une carte vers plusieurs cartes de la rangée suivante sont dessinées ainsi sans rien
+  demander (une <em>fourche</em>). Quand plusieurs cartes relient chacune les mêmes cartes de la rangée suivante, toutes à toutes,
+  leurs flèches partagent une barre entre les rangées (un <em>bus</em>) au lieu de se croiser. Les jonctions sont marquées d’un
+  point.</p>
+<p><em>(Préversion)</em> Tout autre nom fait se rejoindre des flèches <em>vers</em> une carte : des flèches vers la même carte qui
+  portent le même <code>join="http"</code>, écrites sous des cartes différentes, se rejoignent avant elle et finissent sur une seule
+  ligne avec une seule pointe (les appels HTTP de deux frontaux vers un même back-end, dans l’exemple Kubernetes de
+  <a href="layout.html">Placement</a>). Un nom qu’aucune autre flèche vers cette carte ne porte est signalé et ignoré. Leur étiquette
+  nomme tout le flux : elle se place sur la partie commune, juste avant la carte.</p>
+<p>Une ligne sans pointe (<code>.nohead</code>, <code>.link</code>, une pointe en forme de point) va jusqu’à la carte.</p>
+
+<h2>Flèches hors du placement <em>(préversion)</em></h2>
+<skemo name="constraint"></skemo>
+<p><code>constraint="false"</code> dessine et trace une flèche sans la laisser façonner le placement : sa cible n’est pas repoussée
+  d’une rangée. Utilisez-le pour les liens transversaux (découverte de services, supervision, rappels) qui feraient sinon du
+  diagramme une longue chaîne. Ici, CoreDNS reste à côté des pods au lieu de passer dessous.</p>
+
+<h2>Classes venues des extrémités</h2>
+<skemo name="edge-classes"></skemo>
+<p>Chaque flèche reçoit automatiquement les classes <code>from-&lt;type&gt;</code> et <code>to-&lt;type&gt;</code> des cartes
+  qu’elle relie : une seule règle CSS peut colorer toutes les flèches qui quittent ou rejoignent un type.</p>
+
+<h2>Côtés, points de passage, ids</h2>
+<table>
+  <tr><th>Attribut</th><th>Effet</th></tr>
+  <tr><td><code>side="right-top"</code></td><td>côté de départ et côté d’arrivée, parmi <code>top</code> <code>bottom</code>
+    <code>left</code> <code>right</code>. Une moitié peut rester vide : <code>side="-top"</code></td></tr>
+  <tr><td><code>via="x,y x,y"</code></td><td>points de passage du tracé, dans l’ordre</td></tr>
+  <tr><td><code>href="…"</code></td><td>la flèche est un lien (SVG et HTML)</td></tr>
+  <tr><td><code>to#id(…)</code></td><td>un id explicite ; par défaut une flèche s’appelle <code>source-&gt;cible</code>
+    (puis <code>#2</code>, <code>#3</code> pour les doublons)</td></tr>
+</table>
+<p>Voir <a href="layout.html">Placement et positions</a> pour savoir quand utiliser <code>side</code> et <code>via</code>.</p>
+
+<h2>Tracé</h2>
+<p>Chaque flèche est tracée à angles droits, autour des cartes et des zones qui ne contiennent aucune de ses extrémités. Les coudes se
+  placent au milieu du couloir libre, et les flèches qui partagent un côté sont écartées. Vous ne dessinez jamais un tracé
+  vous-même.</p>

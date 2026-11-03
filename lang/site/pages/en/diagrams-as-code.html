@@ -1,0 +1,53 @@
+<!--
+title: Diagrams as code: in Git, in docs and in CI
+nav: Diagrams as code
+description: Keep diagrams as text next to the code: reviewed in pull requests, checked and rendered in CI, published as PNG, SVG or HTML, identical on every machine.
+-->
+<h1>Diagrams as code</h1>
+<p class="lead">A <code>.skemo</code> file is a few lines of text. It lives in the repository next to what it describes, changes in
+  pull requests like the code, and renders to the same image on every machine.</p>
+
+<skemo name="docs-as-code"></skemo>
+
+<h2>Why text</h2>
+<ul>
+  <li><strong>Reviewable.</strong> Adding a service is one line in the diff, not a binary image to compare by eye.</li>
+  <li><strong>Deterministic.</strong> Fonts and theme are built into the binary: the same file gives the same pixels everywhere,
+    so rendered images can be committed and compared.</li>
+  <li><strong>Stable when edited.</strong> A change only moves the arrows attached to what changed; pin a card with
+    <code>at="x,y"</code> to keep it in place.</li>
+  <li><strong>Offline.</strong> One executable, no browser, no Node, no network: the diagram of a private system never leaves
+    your machine.</li>
+</ul>
+
+<h2>Check and render in CI</h2>
+<pre><code>skemo check docs/*.skemo --deny-warnings          # exit code 1 on any problem
+skemo render docs/architecture.skemo -o docs/architecture.svg --deny-warnings</code></pre>
+<p>A GitHub Actions step, for instance:</p>
+<pre><code>- run: curl -fsSL https://raw.githubusercontent.com/skemonet/skemo/main/cli/install.sh | sh
+- run: ~/.local/bin/skemo check docs/*.skemo --deny-warnings</code></pre>
+
+<h2>Outputs</h2>
+<table>
+  <tr><th>Format</th><th>Use</th></tr>
+  <tr><td>PNG, WebP</td><td>READMEs, wikis, chat, slides (<code>--scale 2</code> for sharp screens, <code>--transparent</code>)</td></tr>
+  <tr><td>SVG</td><td>documentation sites: sharp at any size, text selectable and indexed by search engines</td></tr>
+  <tr><td>HTML</td><td>a standalone page with light and dark themes, step-by-step reader and animated arrows</td></tr>
+  <tr><td>GIF, APNG, animated WebP</td><td>animations where no script runs</td></tr>
+</table>
+
+<h2>Images that reopen</h2>
+<p>Every image skemo renders carries its source and stylesheets in metadata that viewers ignore. Share the PNG alone; later,
+  <code>skemo extract diagram.png</code> gives the text back, and any command accepts the image in place of the source. Render with
+  <code>--no-source</code> when the source must not travel with the image.</p>
+
+<h2>Live preview while you write</h2>
+<pre><code>skemo watch docs/architecture.skemo --css docs/architecture.css   # http://127.0.0.1:8710</code></pre>
+<p>The page reloads on every save. <code>skemo fmt</code> keeps files in one canonical form, so diffs stay small.</p>
+
+<h2>See also</h2>
+<ul>
+  <li><a href="cli.html">Command line</a>: every command and option.</li>
+  <li><a href="ai-agents.html">AI agents</a>: let a coding agent write and update the files.</li>
+  <li><a href="diagnostics.html">Errors and warnings</a>: what <code>skemo check</code> reports.</li>
+</ul>

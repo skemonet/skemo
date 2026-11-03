@@ -1,0 +1,22 @@
+//- A diagram that lives with the code: checked and rendered on every push
+diagram(dir="right")
+
+  card#file.src(icon="file-code") architecture.skemo
+    | in the repository, reviewed in pull requests
+    to(check)
+
+  zone#ci.ci CI job
+    card#check.step skemo check
+      | --deny-warnings
+      to(render)
+    card#render.step skemo render
+      | same image on every machine
+      to(png svg html)
+
+  zone#out.out Published
+    card#png.img architecture.png
+      | README, wiki
+    card#svg.img architecture.svg
+      | docs site
+    card#html.img architecture.html
+      | slides, steps

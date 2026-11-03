@@ -1,11 +1,11 @@
-# The only GitHub workflow: builds skemo.net (site/) with the skemo of this commit and publishes it
+# The only GitHub workflow: builds skemo.net (site/, with the documentation of lang/site/) with the skemo of this commit and publishes it
 # on GitHub Pages. Checks, binaries and releases run on the maintainers' CI (.gitlab-ci.yml).
 name: pages
 
 on:
   push:
     branches: [main]
-    paths: [site/**, cli/skill/**, .github/workflows/pages.yml]
+    paths: [site/**, lang/site/**, cli/skill/**, .github/workflows/pages.yml]
   workflow_dispatch:
 
 permissions:

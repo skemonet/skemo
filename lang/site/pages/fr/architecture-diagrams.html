@@ -1,0 +1,52 @@
+<!--
+title: Diagrammes d’architecture logicielle en texte
+nav: Diagrammes d’architecture
+description: Dessinez des diagrammes d’architecture logicielle à partir de texte avec skemo : conteneurs, services, bases de données et leurs liens, placés et tracés automatiquement, stylés en CSS.
+-->
+<h1>Diagrammes d’architecture logicielle</h1>
+<p class="lead">Décrivez les personnes, applications, services et bases de données d’un système et les appels entre eux. skemo place
+  chaque boîte, trace chaque flèche et garde le dessin net quand le système évolue.</p>
+
+<skemo name="architecture"></skemo>
+
+<h2>Comment l’écrire</h2>
+<ul>
+  <li><strong>Une carte par brique</strong> : <code>card#api.app API</code>. L’<code>#id</code> la nomme pour les flèches, la classe
+    lui donne un type.</li>
+  <li><strong>Une zone par frontière</strong> : un système, une équipe, une unité de déploiement. Ce qui est indenté sous la zone est
+    dedans.</li>
+  <li><strong>Les flèches s’écrivent dans la carte qu’elles quittent</strong> : <code>to(db) SQL</code> sous le service commandes
+    dessine l’appel et son étiquette. <code>to(catalog orders)</code> dessine deux flèches qui partagent une fourche.</li>
+  <li><strong>Les types sont du CSS</strong> : <code>.app { --c: #3E6FC4; --label: "Conteneur"; }</code> colore tous les conteneurs
+    et écrit leur catégorie au-dessus du nom. Une ligne à changer pour restyler tout le diagramme.</li>
+</ul>
+
+<h2>Le modèle C4</h2>
+<p>L’exemple suit le niveau conteneurs du <a href="https://c4model.com/">modèle C4</a> : une personne, les conteneurs d’un système,
+  un système externe. Chaque niveau C4 est un fichier <code>.skemo</code> distinct, avec les mêmes types :</p>
+<table>
+  <tr><th>Niveau C4</th><th>Dans skemo</th></tr>
+  <tr><td>Contexte</td><td>une carte par système et par type d’utilisateur ; votre système en une seule carte</td></tr>
+  <tr><td>Conteneurs</td><td>votre système en zone, avec ses applications et ses bases</td></tr>
+  <tr><td>Composants</td><td>un conteneur en zone, avec ses composants</td></tr>
+  <tr><td>Déploiement</td><td>des zones imbriquées pour les régions, les réseaux et les machines : voir
+    <a href="cloud-and-network-diagrams.html">cloud et réseau</a></td></tr>
+</table>
+
+<h2>Rester lisible</h2>
+<ul>
+  <li>Choisissez la direction du flux principal : <code>diagram(dir="down")</code> pour le parcours d’une requête,
+    <code>dir="right"</code> pour une chaîne de données (<a href="layout.html">Placement</a>).</li>
+  <li>Donnez aux flux asynchrones leur propre classe de flèche (<code>.async</code>, en tirets) pour qu’ils se lisent sans couleur.</li>
+  <li>Ajoutez une légende qui liste les types pour vous : <code>card.legend(at="ne")</code> (<a href="rich-cards.html">Cartes
+    enrichies</a>).</li>
+  <li>Modifiez librement : ajouter un service refait le placement, et épingler une carte avec <code>at="x,y"</code> la garde où vous
+    voulez.</li>
+</ul>
+
+<h2>Voir aussi</h2>
+<ul>
+  <li><a href="cards-and-zones.html">Cartes et zones</a> et <a href="arrows.html">Flèches</a>, la référence de chaque attribut.</li>
+  <li><a href="styling.html">Styler en CSS</a> : apparences, couleurs, mode sombre.</li>
+  <li><a href="diagrams-as-code.html">Diagrammes en code</a> : garder le fichier dans le dépôt et le rendre en CI.</li>
+</ul>

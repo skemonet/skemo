@@ -1,0 +1,43 @@
+<!--
+title: Icônes et liens dans les diagrammes skemo
+nav: Icônes et liens
+description: Placez l’une des 1 866 icônes Lucide intégrées ou votre propre image sur une carte, et faites des cartes et des flèches des liens.
+-->
+<h1>Icônes et liens</h1>
+<div class="warn"><p><strong>Préversion.</strong> Les icônes et les liens sont implémentés et peuvent encore changer avant la
+  première version stable.</p></div>
+
+<skemo name="icons"></skemo>
+
+<h2>Icônes</h2>
+<p><code>icon="nom"</code> dessine une icône du jeu intégré avant le titre d’une carte ou d’une zone. Le jeu est
+  <a href="https://lucide.dev/">Lucide</a> (1 866 icônes), embarqué dans skemo : le rendu reste hors ligne et identique partout.
+  Cherchez-y depuis la ligne de commande :</p>
+<pre><code>skemo icons data        # database, database-backup, … (noms et mots-clés)</code></pre>
+<ul>
+  <li>Un type peut porter une icône par défaut en CSS : <code>.store { --icon: "database"; }</code>. <code>icon="none"</code> la
+    retire sur une carte.</li>
+  <li>Un nom inconnu ne dessine rien, ne réserve aucune place, et avertit avec une suggestion (<code>unknown-icon</code>).</li>
+  <li>Les flèches et les lignes ne prennent pas d’icône (avertissement <code>icon-ignored</code>).</li>
+  <li>L’icône prend la couleur du texte qu’elle précède ; <code>--icon-size</code>, <code>--icon-color</code> et
+    <code>--icon-gap</code> la règlent.</li>
+</ul>
+
+<h2>Vos propres images <em>(préversion)</em></h2>
+<pre><code>card#build(icon="img/docker.svg") Image Docker
+card#repo(icon="img/harbor.png") Harbor</code></pre>
+<p>Une valeur <code>icon=</code> qui finit par <code>.svg</code>, <code>.png</code>, <code>.jpg</code> ou <code>.webp</code> est un
+  fichier image, relatif au fichier source et dans son dossier (pas de <code>..</code>, pas d’URL). Elle est dessinée dans la boîte
+  de l’icône, dans ses propres couleurs, et voyage dans chaque fichier rendu avec la source : l’image se rouvre avec ses icônes
+  (<code>skemo extract</code> les réécrit). Un SVG est affiché comme une image, jamais inclus en ligne : ses scripts et ses liens ne
+  font rien. 1 Mo au plus par fichier. Les logos appartiennent à leurs propriétaires : utilisez ceux que vous avez le droit
+  d’utiliser.</p>
+
+<h2>Liens</h2>
+<p><code>href="…"</code> rend une carte, une zone ou une flèche cliquable dans les sorties SVG et HTML (les formats matriciels ne
+  sont pas cliquables). Valeurs acceptées : <code>http:</code>, <code>https:</code>, <code>mailto:</code>, un chemin relatif
+  (<code>docs/fw.md</code>) ou un fragment (<code>#core</code>). Tout autre schéma (<code>javascript:</code>, <code>data:</code>,
+  <code>file:</code>…) et une valeur vide sont l’erreur bloquante <code>unsafe-href</code>.</p>
+<p>Une carte ou une zone liée montre un petit symbole de lien après son nom, dans tous les formats, pour que le placement ne
+  dépende jamais de la sortie. <code>--link-mark: none</code> le masque. Les liens externes s’ouvrent dans un nouvel onglet dans la
+  sortie HTML.</p>

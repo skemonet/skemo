@@ -1,0 +1,28 @@
+//- Carte mentale : la racine au centre, les branches à droite et à gauche
+diagram(layout="mindmap")
+
+  card#skemo.root skemo
+    to(language engine router cli editor docs)
+
+  card#language Langage
+    | FORMAT.md
+    to(parser styles editing)
+  card#parser Analyseur
+  card#styles Styles CSS
+  card#editing Édition chirurgicale
+
+  card#engine Moteur
+    to(measure layout render)
+  card#measure Mesure
+  card#layout Placement
+  card#render Rendu
+    | HTML, SVG, PNG, WebP
+
+  card#router Routeur
+    to(nudging hyperedges)
+  card#nudging Espacement
+  card#hyperedges Hyperarêtes
+
+  card#cli Ligne de commande
+  card#editor Éditeur
+  card#docs Documentation

@@ -1,0 +1,51 @@
+<!--
+title: Chronologies et feuilles de route en texte
+nav: Chronologies et feuilles de route
+description: Dessinez feuilles de route, plannings de projet et diagrammes de Gantt en code avec skemo : périodes et jalons placés par leurs dates, couloirs, dépendances et repère du jour.
+-->
+<h1>Chronologies et feuilles de route</h1>
+<p class="lead">Pour les feuilles de route, les plannings et les calendriers de versions : la position d’une carte vient de ses
+  dates, les zones de premier niveau deviennent des couloirs, et les flèches sont des dépendances.</p>
+
+<skemo name="timeline-small"></skemo>
+
+<h2>Options</h2>
+<table>
+  <tr><th>Attribut</th><th>Sur</th><th>Sens</th></tr>
+  <tr><td><code>layout="timeline"</code></td><td>diagram</td><td>active le mode</td></tr>
+  <tr><td><code>start</code>, <code>end</code></td><td>diagram</td><td>bornes de l’axe (<code>end</code> inclus) ; par défaut les dates extrêmes, ± 7 jours</td></tr>
+  <tr><td><code>scale</code></td><td>diagram</td><td><code>day</code> · <code>week</code> · <code>month</code> (par défaut) ·
+    <code>quarter</code> · <code>year</code></td></tr>
+  <tr><td><code>width</code></td><td>diagram</td><td>largeur imposée de l’axe, en pixels</td></tr>
+  <tr><td><code>today</code></td><td>diagram</td><td>date du repère « aujourd’hui »</td></tr>
+  <tr><td><code>date</code></td><td>card</td><td><strong>jalon</strong> : le bord gauche est sur la date, avec un losange sur l’axe</td></tr>
+  <tr><td><code>start</code>, <code>end</code></td><td>card</td><td><strong>période</strong> : une barre mesure exactement la durée ;
+    la carte s’élargit si son texte l’exige</td></tr>
+</table>
+
+<h2>Dates</h2>
+<p><code>AAAA</code>, <code>AAAA-MM</code> ou <code>AAAA-MM-JJ</code>. <strong><code>end</code> est inclus</strong> :
+  <code>end="2027-03"</code> va jusqu’au 31 mars. Un <code>start</code> donné en mois désigne son premier jour. Chaque carte a besoin
+  de <code>date</code> ou de <code>start</code> ; un <code>end</code> antérieur à <code>start</code> est une erreur.</p>
+<p>Les noms des mois et des trimestres suivent la langue des messages ; fixez-les avec <code>diagram(lang="fr")</code> pour un fichier
+  qui doit se rendre à l’identique partout.</p>
+
+<h2>Couloirs et flèches</h2>
+<ul>
+  <li>Les zones de premier niveau sont des couloirs, dans l’ordre d’écriture ; les cartes hors zone forment un couloir sans cadre
+    en haut.</li>
+  <li>Les cartes qui se chevauchent dans le temps s’empilent sur des rangées successives de leur couloir.</li>
+  <li>Les flèches sont des dépendances : elles sortent à droite et entrent à gauche dans un couloir, librement d’un couloir à
+    l’autre.</li>
+  <li><code>at=</code> est sans effet ; les marqueurs d’animation fonctionnent comme d’habitude (le losange de l’axe suit son
+    jalon).</li>
+</ul>
+
+<h2>Un exemple plus grand</h2>
+<skemo name="timeline"></skemo>
+
+<h2>Voir aussi</h2>
+<ul>
+  <li><a href="chronological-friezes.html">Frises chronologiques</a> pour des durées de plusieurs siècles.</li>
+  <li><a href="step-by-step-animations.html">Animations pas à pas</a> : présenter un plan phase par phase.</li>
+</ul>

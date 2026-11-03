@@ -1,0 +1,78 @@
+<!--
+title: La ligne de commande skemo : render, check, watch, fmt
+nav: Ligne de commande
+description: Toutes les commandes et options de skemo : rendu en PNG, SVG, WebP, GIF, APNG ou HTML, vérification, mise en forme, aperçu en direct, extraction de la source d’une image.
+-->
+<h1>Ligne de commande</h1>
+<p class="lead"><code>skemo</code> est un seul exécutable. Le rendu est sa commande par défaut : <code>skemo f.skemo</code> écrit
+  <code>f.png</code>.</p>
+
+<h2>Commandes</h2>
+<table>
+  <tr><th>Commande</th><th>Rôle</th></tr>
+  <tr><td><code>skemo f.skemo</code></td><td>comme <code>skemo render f.skemo</code> : écrit <code>f.png</code> à côté de la source</td></tr>
+  <tr><td><code>skemo render f.skemo -o sortie.ext</code></td><td>l’extension choisit le format : <code>png</code> <code>svg</code>
+    <code>webp</code> <code>html</code> <code>gif</code> <code>apng</code></td></tr>
+  <tr><td><code>skemo check f.skemo…</code></td><td>diagnostics seulement (code de sortie 1 en cas d’erreur) ; <code>--contrast</code>
+    ajoute le contrôle de lisibilité</td></tr>
+  <tr><td><code>skemo fmt f.skemo… [--check]</code></td><td>mise en forme canonique</td></tr>
+  <tr><td><code>skemo watch f.skemo</code></td><td>aperçu en direct sur <code>http://127.0.0.1:8710</code>, rechargé à chaque enregistrement</td></tr>
+  <tr><td><code>skemo layout f.skemo --json</code></td><td>modèle, positions et tracés en JSON</td></tr>
+  <tr><td><code>skemo fit f.skemo [--target 16:9] [--write]</code></td><td>réglages (<code>dir</code>, <code>wrap</code>) qui
+    amènent le diagramme à des proportions cibles ; <code>--write</code> applique le meilleur (<em>préversion</em>)</td></tr>
+  <tr><td><code>skemo extract image.png [-o dossier]</code></td><td>rend la source et les feuilles de style intégrées dans une image
+    produite par skemo, pour les modifier (<code>--stdout</code> : la source seule)</td></tr>
+  <tr><td><code>skemo icons [requête]</code></td><td>les icônes intégrées, filtrées par nom ou mot-clé</td></tr>
+  <tr><td><code>skemo theme --print</code></td><td>le thème par défaut, point de départ du vôtre</td></tr>
+  <tr><td><code>skemo init [dossier]</code></td><td>un diagramme d’exemple et un fichier CSS commenté ; n’écrase rien</td></tr>
+</table>
+
+<h2>Options de rendu</h2>
+<table>
+  <tr><th>Option</th><th>Effet</th></tr>
+  <tr><td><code>-o FICHIER</code></td><td>fichier de sortie ; <code>-</code> = sortie standard (avec <code>--format</code>)</td></tr>
+  <tr><td><code>--format FMT</code></td><td><code>html</code> <code>svg</code> <code>png</code> <code>gif</code> <code>apng</code>
+    <code>webp</code>, quand l’extension ne suffit pas</td></tr>
+  <tr><td><code>--css FICHIER</code></td><td>feuille de style personnelle, après le thème (répétable)</td></tr>
+  <tr><td><code>--base-theme FICHIER</code></td><td>un thème qui remplace celui par défaut</td></tr>
+  <tr><td><code>--theme T</code></td><td><code>light</code> <code>dark</code> <code>print</code> <code>auto</code>, en passant outre le fichier</td></tr>
+  <tr><td><code>--scale N</code></td><td>résolution des sorties matricielles (<code>--scale 2</code> pour les écrans denses)</td></tr>
+  <tr><td><code>--transparent</code></td><td>pas de fond (SVG, PNG, APNG)</td></tr>
+  <tr><td><code>--contrast high</code></td><td>les textes sous le seuil WCAG sont foncés ou éclaircis, placement inchangé</td></tr>
+  <tr><td><code>--step N</code></td><td>rendre un état de l’animation</td></tr>
+  <tr><td><code>--animated</code>, <code>--board</code></td><td>un PNG par état, ou une planche de tous les états</td></tr>
+  <tr><td><code>--hold</code>, <code>--transition</code>, <code>--fps</code>, <code>--final-hold</code>, <code>--no-loop</code></td>
+    <td>minutage du GIF et de l’APNG</td></tr>
+  <tr><td><code>--motion</code></td><td>SVG : jouer les flèches <code>.pulse</code> et <code>.flow</code> (<a href="animated-flows.html">Flux animés</a>)</td></tr>
+  <tr><td><code>--no-fonts</code></td><td>HTML : ne pas intégrer les polices (fichier bien plus petit)</td></tr>
+  <tr><td><code>--embed-fonts</code></td><td>SVG : intégrer les polices utilisées, pour les visionneuses sans Inter (environ 0,8 Mo par graisse)</td></tr>
+  <tr><td><code>--font-scale K</code></td><td>multiplie toutes les tailles de texte du thème (<code>1.4</code> pour une diapositive)</td></tr>
+  <tr><td><code>--no-source</code></td><td>ne pas intégrer la source et les feuilles de style dans la sortie (ci-dessous)</td></tr>
+  <tr><td><code>--deny-warnings</code></td><td>échouer au moindre avertissement (utile en CI)</td></tr>
+</table>
+<p>L’entrée <code>-</code> lit l’entrée standard : <code>cat f.skemo | skemo render - --format svg -o - &gt; f.svg</code>.</p>
+
+<h2>Des images qui se rouvrent</h2>
+<p>Comme draw.io, chaque fichier rendu par skemo porte sa source et ses feuilles de style (PNG, APNG, SVG, WebP, GIF et HTML), dans
+  des métadonnées que les visionneuses ignorent. L’image peut se partager seule et se modifier plus tard :</p>
+<pre><code>skemo extract diagramme.png              # écrit diagramme.skemo et ses feuilles de style à côté de l’image
+skemo render diagramme.png -o nouveau.svg # toute commande accepte aussi l’image à la place de la source</code></pre>
+<p>L’éditeur ouvre directement une telle image. Le texte intégré est lisible par quiconque reçoit le fichier : rendez avec
+  <code>--no-source</code> quand la source ne doit pas voyager avec l’image.</p>
+
+<h2>Codes de sortie</h2>
+<table>
+  <tr><td><code>0</code></td><td>succès</td></tr>
+  <tr><td><code>1</code></td><td>erreurs dans le fichier</td></tr>
+  <tr><td><code>2</code></td><td>mauvaise utilisation</td></tr>
+  <tr><td><code>3</code></td><td>erreur interne</td></tr>
+</table>
+
+<h2>Langue</h2>
+<p>L’aide, les diagnostics et les messages suivent la langue du système (<code>LANG</code>, <code>LC_ALL</code>… comme d’habitude ;
+  anglais et français aujourd’hui). <code>--lang en|fr</code> ou <code>SKEMO_LANG=fr</code> la remplace. Les libellés dessinés par le
+  moteur (mois, siècles) la suivent aussi, sauf si le diagramme les fixe avec <code>diagram(lang="fr")</code>.</p>
+
+<h2>Déterminisme</h2>
+<p>Polices et thème sont intégrés : le même fichier donne la même image sur toutes les machines, ce qui permet de versionner et de
+  comparer les fichiers rendus. <code>watch</code> n’écoute que sur <code>127.0.0.1</code>.</p>

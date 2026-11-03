@@ -1,0 +1,4 @@
+.trigger { --c: #6B7280; --label: "Déclencheur"; }
+.job     { --c: #3E6FC4; --label: "Tâche"; }
+.env     { --c: #2F9E44; --label: "Environnement"; }
+.gate    { --c: #E8590C; --label: "Validation manuelle"; }

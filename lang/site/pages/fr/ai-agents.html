@@ -1,0 +1,52 @@
+<!--
+title: Des diagrammes avec les agents IA : la compétence skemo
+nav: Agents IA
+description: Donnez la compétence skemo à Claude Code ou à tout agent de code : il écrit quelques lignes de texte, skemo place et rend le diagramme sur votre processeur, avec un tiers de tokens en moins sur une tâche complète.
+-->
+<h1>Des diagrammes avec les agents IA</h1>
+<p class="lead">skemo est une bonne cible pour les agents de code : l’agent écrit une courte description de la structure, et la
+  partie coûteuse (coordonnées, tracé, rendu) tourne sur votre processeur.</p>
+
+<skemo name="agent-loop" figure></skemo>
+
+<h2>Pourquoi ça économise des tokens</h2>
+<p>Pour dessiner un diagramme directement, un modèle doit écrire chaque coordonnée, chaque tracé et chaque couleur de l’image.
+  Mesuré sur les exemples de la galerie, le SVG d’un diagramme, écrit aussi sobrement qu’une main soigneuse le ferait, est environ
+  <strong>12 fois</strong> plus long, en tokens, que la source skemo dont il est rendu (<a href="/fr/#tokens">comment c’est
+  mesuré</a>). Sur une tâche complète, où lire l’entrée et regarder les images domine, la première mesure a donné environ un tiers de
+  tokens en moins. Chaque token produit est un passage du modèle sur un GPU : moins de tokens, c’est moins de temps, de coût et
+  d’énergie. Les modifications coûtent encore moins : renommer ou ajouter une carte, c’est une seule ligne changée, là où une image
+  dessinée doit être régénérée.</p>
+
+<h2>La compétence skemo</h2>
+<p>La compétence est un fichier <code>SKILL.md</code> qui apprend à un agent la démarche (écrire, vérifier, rendre), la syntaxe et
+  les règles qui gardent les diagrammes courts et justes. Elle fonctionne avec Claude Code et avec tout agent qui charge des
+  compétences dans ce format.</p>
+<pre><code>mkdir -p ~/.claude/skills/skemo/references
+curl -fsSL https://skemo.net/skill/skemo/SKILL.md -o ~/.claude/skills/skemo/SKILL.md
+curl -fsSL https://skemo.net/skill/skemo/references/format.md -o ~/.claude/skills/skemo/references/format.md</code></pre>
+<p>Pour un seul projet, placez plutôt le dossier dans <code>.claude/skills/skemo/</code> à la racine du dépôt. L’agent a aussi
+  besoin de l’exécutable <code>skemo</code> dans son <code>PATH</code> (<a href="getting-started.html">installation</a>).</p>
+
+<h2>Ce que fait l’agent</h2>
+<ol>
+  <li>Il écrit <code>nom.skemo</code> (et un petit <code>nom.css</code> pour ses types), sans coordonnées.</li>
+  <li>Il lance <code>skemo check nom.skemo</code> et corrige les lignes signalées.</li>
+  <li>Il rend avec <code>skemo nom.skemo</code> (PNG) ou <code>-o nom.svg</code>, et regarde l’image pour en juger.</li>
+  <li>Les changements suivants sont des modifications de lignes dans le même fichier.</li>
+</ol>
+
+<h2>Conseils pour les demandes</h2>
+<ul>
+  <li>Dites à quoi sert le diagramme et sa direction : <em>« un diagramme skemo de gauche à droite de notre chaîne de
+    déploiement »</em>.</li>
+  <li>Demandez des types en CSS plutôt que des couleurs sur chaque carte.</li>
+  <li>Gardez le fichier <code>.skemo</code> dans le dépôt à côté de la documentation qu’il illustre, et refaites son rendu en CI avec
+    <code>skemo check --deny-warnings</code> ou <code>skemo render --deny-warnings</code>.</li>
+</ul>
+
+<h2>Voir aussi</h2>
+<ul>
+  <li><a href="diagrams-as-code.html">Diagrammes en code</a> : vérifier et rendre en CI les fichiers de l’agent.</li>
+  <li><a href="/skill/skemo/SKILL.md">SKILL.md</a>, la compétence elle-même (en anglais).</li>
+</ul>

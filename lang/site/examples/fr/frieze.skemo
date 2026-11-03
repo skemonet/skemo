@@ -1,0 +1,21 @@
+//- Frise chronologique : la Rome antique (années négatives = av. J.-C.)
+diagram(layout="frieze" start="-800" end="600" scale="century" width="1300" lang="fr")
+
+  card#monarchy.roy(start="-753" end="-509") Royauté
+  card#republic.rep(start="-509" end="-27") République
+  card#empire.emp(start="-27" end="476") Empire
+  card#punic.war(start="-264" end="-146") Guerres puniques
+  card#crisis.war(start="235" end="284") Crise du IIIe siècle
+
+  card#founding.evt(date="-753") Fondation de Rome
+    | selon la tradition
+  card#gauls.evt(date="-390") Sac de Rome par les Gaulois
+  card#caesar.evt(date="-44-03-15") Mort de César
+    | Ides de mars
+  card#augustus.evt(date="-27") Auguste, premier empereur
+  card#vesuvius.evt(date="79-10-24") Éruption du Vésuve
+    | Pompéi ensevelie
+  card#caracalla.evt(date="212") Édit de Caracalla
+  card#split.evt(date="395") Partage de l’Empire
+    to(fall).dashed
+  card#fall.end(date="476-09-04") Chute de l’Empire d’Occident

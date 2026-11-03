@@ -1,0 +1,40 @@
+<!--
+title: Diagrammes de processus et de chaînes en texte
+nav: Processus et chaînes
+description: Dessinez des chaînes CI/CD, des flux de données et des processus métier en code avec skemo : étapes en zones, tâches en cartes, fourches et jonctions tracées pour vous, de gauche à droite.
+-->
+<h1>Diagrammes de processus et de chaînes</h1>
+<p class="lead">Une chaîne de livraison, un flux de données ou un processus métier se lit de gauche à droite : les étapes sont des
+  zones, les tâches des cartes, et les flèches entre elles se séparent et se rejoignent d’elles-mêmes.</p>
+
+<skemo name="pipeline"></skemo>
+
+<h2>Comment l’écrire</h2>
+<ul>
+  <li><code>diagram(dir="right")</code> place les tâches de gauche à droite ; les cartes d’une étape restent dans leur zone, dans
+    l’ordre d’écriture.</li>
+  <li><code>to(test lint)</code> lance deux tâches en parallèle : leurs flèches partagent une fourche. Deux tâches qui mènent à la
+    même suivante s’y rejoignent.</li>
+  <li>Une classe d’état marque un résultat : <code>.ok</code>, <code>.warn</code>, <code>.error</code> ajoutent un anneau et une
+    marque à la carte (<a href="rich-cards.html">Cartes enrichies</a>).</li>
+  <li>Une étiquette sur une flèche nomme la condition : <code>to(prod) validé</code>, <code>to(screen).dashed non</code>.</li>
+</ul>
+
+<h2>Boucles et décisions</h2>
+<p>Une flèche peut revenir à une tâche précédente : elle contourne la rangée au lieu de la traverser. Donnez à une décision son
+  propre type et étiquetez ses flèches sortantes :</p>
+<pre><code>card#decision.choice Décision
+  to(send).ok oui
+  to(screen).ko.dashed non</code></pre>
+<p>skemo dessine des boîtes, pas des symboles d’organigramme : une décision est une carte d’une couleur à elle, pas un losange.</p>
+
+<h2>Le montrer pas à pas</h2>
+<p>Ajoutez <code>@1</code>, <code>@2</code>… en fin de ligne et le même fichier se joue en animation, en HTML, GIF ou PNG animé,
+  une étape à la fois (<a href="step-by-step-animations.html">Animations pas à pas</a>). Ou gardez le dessin fixe et faites courir
+  des points sur les flèches (<a href="animated-flows.html">Flux animés</a>).</p>
+
+<h2>Voir aussi</h2>
+<ul>
+  <li><a href="layout.html">Placement et positions</a> : directions, rangées, longues chaînes repliées.</li>
+  <li><a href="timelines.html">Chronologies</a> quand les étapes ont des dates.</li>
+</ul>

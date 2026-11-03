@@ -1,0 +1,50 @@
+<!--
+title: skemo documentation: diagrams as code
+nav: Introduction
+description: Learn skemo, the text language for diagrams: architecture, cloud, network, process, org charts, mind maps, timelines and animations, laid out and rendered for you.
+-->
+<h1>skemo documentation</h1>
+<p class="lead">skemo is a language for diagrams. You write cards, the zones that group them and the arrows between them as a few lines
+  of indented text; skemo lays them out, routes the arrows and renders the result as PNG, SVG, WebP, animated HTML or GIF.</p>
+
+<skemo name="intro"></skemo>
+
+<h2>What you can draw</h2>
+<div class="cards">
+  <a href="architecture-diagrams.html"><strong>Architecture diagrams</strong><span>systems, containers, services and data</span></a>
+  <a href="cloud-and-network-diagrams.html"><strong>Cloud and network</strong><span>VPCs, subnets, instances, Kubernetes</span></a>
+  <a href="process-diagrams.html"><strong>Processes and pipelines</strong><span>CI/CD, data flows, business processes</span></a>
+  <a href="org-charts.html"><strong>Org charts and trees</strong><span>hierarchies with shared trunks</span></a>
+  <a href="mind-maps.html"><strong>Mind maps</strong><span>a central idea, balanced branches</span></a>
+  <a href="timelines.html"><strong>Timelines and roadmaps</strong><span>periods, milestones, lanes, dependencies</span></a>
+  <a href="chronological-friezes.html"><strong>Chronological friezes</strong><span>history over centuries and millennia</span></a>
+  <a href="step-by-step-animations.html"><strong>Step-by-step animations</strong><span>diagrams that unfold during a talk</span></a>
+  <a href="animated-flows.html"><strong>Animated flows</strong><span>dots and dashes moving along arrows</span></a>
+</div>
+
+<h2>Where it fits</h2>
+<div class="cards">
+  <a href="diagrams-as-code.html"><strong>Diagrams as code</strong><span>in Git, reviewed in pull requests, rendered in CI</span></a>
+  <a href="ai-agents.html"><strong>AI agents</strong><span>a skill that teaches coding agents to write skemo</span></a>
+</div>
+
+<h2>Why text</h2>
+<ul>
+  <li><strong>The text is the source.</strong> A diagram is read, reviewed with <code>git diff</code> and fixed like code.</li>
+  <li><strong>Layout is automatic.</strong> No coordinates to maintain; pin only what you want fixed.</li>
+  <li><strong>Edits stay local.</strong> Changing one card only moves the arrows attached to it.</li>
+  <li><strong>Style is CSS.</strong> A card type is one line: an accent colour and a label. Light, dark and print themes follow.</li>
+  <li><strong>Cheap for AI agents.</strong> An agent writes a few hundred tokens of text instead of thousands of SVG coordinates.</li>
+</ul>
+
+<h2>Learn the language</h2>
+<table>
+  <tr><td><a href="getting-started.html">Getting started</a></td><td>install skemo and render a first diagram</td></tr>
+  <tr><td><a href="syntax.html">Syntax</a></td><td>the four tags and how a line is read</td></tr>
+  <tr><td><a href="cards-and-zones.html">Cards and zones</a>, <a href="arrows.html">arrows</a></td><td>the elements of a diagram</td></tr>
+  <tr><td><a href="styling.html">Styling with CSS</a></td><td>types, colours, looks</td></tr>
+  <tr><td><a href="cli.html">Command line</a></td><td>every command and option</td></tr>
+</table>
+
+<div class="note"><p>skemo is in pre-release ({{version}}). The language described here is stable; features marked
+  <em>preview</em> may still change.</p></div>

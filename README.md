@@ -45,7 +45,7 @@ skemo watch example.skemo --css custom.css   # live preview in the browser
 ```
 
 The format is described in [`lang/FORMAT.md`](lang/FORMAT.md) and in the user documentation,
-[docs.skemo.net](https://docs.skemo.net) (built from [`lang/site/`](lang/site)). The commands are listed in
+[skemo.net/docs](https://skemo.net/docs/) (built from [`lang/site/`](lang/site)). The commands are listed in
 [`cli/README.md`](cli/README.md). AI agents can use the [skemo skill](cli/skill/skemo/SKILL.md).
 
 ## Repository layout

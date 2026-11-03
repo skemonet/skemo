@@ -1,0 +1,50 @@
+<!--
+title: Cloud and network diagrams from text
+nav: Cloud and network diagrams
+description: Draw cloud infrastructure and network diagrams as code with skemo: VPCs, subnets, CIDR tags, piles of instances, icons and ports, with arrows routed around every zone.
+-->
+<h1>Cloud and network diagrams</h1>
+<p class="lead">Regions, networks and subnets are nested zones; machines are cards, a group of identical instances is a pile.
+  Address ranges, ports and protocols go in chips and labels. skemo keeps every arrow clear of the boxes it does not join.</p>
+
+<skemo name="cloud"></skemo>
+
+<h2>Building blocks</h2>
+<table>
+  <tr><th>Write</th><th>For</th></tr>
+  <tr><td><code>zone#vpc(tag="10.0.0.0/16") Production VPC</code></td><td>a network with its range as a chip; zones nest</td></tr>
+  <tr><td><code>| eu-west-1 · 3 availability zones</code> under a zone</td><td>a description line under the zone's title</td></tr>
+  <tr><td><code>cards#app(count="6") App servers</code></td><td>a pile of identical instances with a <code>×6</code> badge</td></tr>
+  <tr><td><code>icon="database"</code></td><td>one of the 1,866 built-in icons, or your own image (<a href="icons-and-links.html">Icons</a>)</td></tr>
+  <tr><td><code>to(db) 5432</code></td><td>an arrow labelled with its port</td></tr>
+  <tr><td><code>|.pill 8080 · http</code></td><td>a port as a pill inside the card</td></tr>
+  <tr><td><code>to(nat constraint="false")</code></td><td>a link drawn without changing the layout (return paths, monitoring)</td></tr>
+</table>
+<p>A line that starts with an IPv4 address or a CIDR block is shown in monospace, so address plans line up.</p>
+
+<h2>A classic network</h2>
+<p>The default theme ships network types (<code>.t0</code> to <code>.t3</code> for tiers, <code>.dmz</code>, <code>.lan</code>,
+  <code>.cloud</code> for zones), handy for a quick sketch:</p>
+<skemo name="zones"></skemo>
+
+<h2>Kubernetes</h2>
+<p>Columns (<code>.col-*</code>) line up pods, services and the machines that host them across zones; named joins merge the calls
+  of several pods into one line:</p>
+<skemo name="kubernetes" figure></skemo>
+<p>The source is on the <a href="layout.html">Layout</a> page.</p>
+
+<h2>Tips</h2>
+<ul>
+  <li>Write zones from the outside in (region, network, subnet) and put each card in the deepest zone it belongs to.</li>
+  <li>An arrow that goes back up (a return path, outbound traffic through a NAT) can push the layout around: give it
+    <code>constraint="false"</code>.</li>
+  <li>Several instances of one thing are one pile, not several cards: the drawing stays as wide as the idea.</li>
+  <li>For a page about one network, put a legend of the flow kinds in a corner: <code>card.legend(at="ne")</code>.</li>
+</ul>
+
+<h2>See also</h2>
+<ul>
+  <li><a href="cards-and-zones.html">Cards and zones</a>: piles, wide cards, columns, zone tags.</li>
+  <li><a href="animated-flows.html">Animated flows</a>: show traffic moving along the arrows.</li>
+  <li><a href="architecture-diagrams.html">Architecture diagrams</a> for the application view of the same system.</li>
+</ul>

@@ -1,0 +1,53 @@
+<!--
+title: Documentation de skemo : des diagrammes en texte
+nav: Introduction
+description: Apprenez skemo, le langage texte pour les diagrammes : architecture, cloud, réseau, processus, organigrammes, cartes mentales, chronologies et animations, placés et rendus pour vous.
+-->
+<h1>Documentation de skemo</h1>
+<p class="lead">skemo est un langage pour les diagrammes. Vous écrivez les cartes, les zones qui les regroupent et les flèches entre
+  elles en quelques lignes de texte indenté ; skemo les place, trace les flèches et rend le résultat en PNG, SVG, WebP, HTML animé
+  ou GIF.</p>
+
+<skemo name="intro"></skemo>
+
+<h2>Ce que vous pouvez dessiner</h2>
+<div class="cards">
+  <a href="architecture-diagrams.html"><strong>Diagrammes d’architecture</strong><span>systèmes, conteneurs, services et données</span></a>
+  <a href="cloud-and-network-diagrams.html"><strong>Cloud et réseau</strong><span>VPC, sous-réseaux, instances, Kubernetes</span></a>
+  <a href="process-diagrams.html"><strong>Processus et chaînes</strong><span>CI/CD, flux de données, processus métier</span></a>
+  <a href="org-charts.html"><strong>Organigrammes et arbres</strong><span>hiérarchies à tronc commun</span></a>
+  <a href="mind-maps.html"><strong>Cartes mentales</strong><span>une idée centrale, des branches équilibrées</span></a>
+  <a href="timelines.html"><strong>Chronologies et feuilles de route</strong><span>périodes, jalons, couloirs, dépendances</span></a>
+  <a href="chronological-friezes.html"><strong>Frises chronologiques</strong><span>l’histoire sur des siècles et des millénaires</span></a>
+  <a href="step-by-step-animations.html"><strong>Animations pas à pas</strong><span>des diagrammes qui se déploient pendant un exposé</span></a>
+  <a href="animated-flows.html"><strong>Flux animés</strong><span>des points et des tirets qui courent sur les flèches</span></a>
+</div>
+
+<h2>Où l’utiliser</h2>
+<div class="cards">
+  <a href="diagrams-as-code.html"><strong>Diagrammes en code</strong><span>dans Git, relus en pull request, rendus en CI</span></a>
+  <a href="ai-agents.html"><strong>Agents IA</strong><span>une compétence qui apprend skemo aux agents de code</span></a>
+</div>
+
+<h2>Pourquoi du texte</h2>
+<ul>
+  <li><strong>Le texte est la source.</strong> Un diagramme se lit, se relit avec <code>git diff</code> et se corrige comme du code.</li>
+  <li><strong>Le placement est automatique.</strong> Aucune coordonnée à entretenir ; épinglez seulement ce qui doit rester fixe.</li>
+  <li><strong>Les modifications restent locales.</strong> Changer une carte ne déplace que les flèches qui y sont attachées.</li>
+  <li><strong>Le style, c’est du CSS.</strong> Un type de carte tient en une ligne : une couleur d’accent et une étiquette. Les
+    thèmes clair, sombre et impression suivent.</li>
+  <li><strong>Économe pour les agents IA.</strong> Un agent écrit quelques centaines de tokens de texte au lieu de milliers de
+    coordonnées SVG.</li>
+</ul>
+
+<h2>Apprendre le langage</h2>
+<table>
+  <tr><td><a href="getting-started.html">Premiers pas</a></td><td>installer skemo et rendre un premier diagramme</td></tr>
+  <tr><td><a href="syntax.html">Syntaxe</a></td><td>les quatre balises et la lecture d’une ligne</td></tr>
+  <tr><td><a href="cards-and-zones.html">Cartes et zones</a>, <a href="arrows.html">flèches</a></td><td>les éléments d’un diagramme</td></tr>
+  <tr><td><a href="styling.html">Styler en CSS</a></td><td>types, couleurs, apparences</td></tr>
+  <tr><td><a href="cli.html">Ligne de commande</a></td><td>toutes les commandes et options</td></tr>
+</table>
+
+<div class="note"><p>skemo est en préversion ({{version}}). Le langage décrit ici est stable ; les fonctions marquées
+  <em>préversion</em> peuvent encore changer.</p></div>

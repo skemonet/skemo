@@ -1,0 +1,35 @@
+<!--
+title: Organigrammes et arbres en texte
+nav: Organigrammes et arbres
+description: Dessinez organigrammes, hiérarchies et arbres en code avec skemo : les collaborateurs d’un responsable partagent un tronc, chaque parent est centré sur ses enfants.
+-->
+<h1>Organigrammes et arbres</h1>
+<p class="lead">Une hiérarchie, ce sont des cartes et les flèches de chaque parent vers ses enfants. Avec <code>join="trunk"</code>,
+  les flèches d’un même parent partagent un tronc puis se séparent, comme on dessine un organigramme.</p>
+
+<skemo name="org-chart"></skemo>
+
+<h2>Comment l’écrire</h2>
+<ul>
+  <li><code>diagram(dir="down")</code> : la racine en haut, chaque niveau une rangée plus bas.</li>
+  <li><code>to(cto cfo cpo join="trunk")</code> sous la racine dessine un tronc vers ses trois collaborateurs. Chacun garde sa
+    propre flèche, qui peut avoir son style ou son marqueur d’animation.</li>
+  <li>Les enfants gardent l’ordre d’écriture. Un parent est centré au-dessus de ses enfants.</li>
+  <li>Un type par niveau (<code>.lead</code>, <code>.manager</code>, <code>.team</code>) colore les niveaux et écrit leur catégorie
+    au-dessus du nom.</li>
+</ul>
+<div class="note"><p>Nommez vos types d’après ce qu’ils signifient (<code>.manager</code>, <code>.team</code>). Quelques noms de
+  classe appartiennent au dessin lui-même et styleraient une partie de chaque carte : évitez <code>.head</code>,
+  <code>.title</code> et <code>.line</code> comme types.</p></div>
+
+<h2>D’autres arbres</h2>
+<p>La même écriture dessine toute hiérarchie : une décomposition de produit, un arbre de décision, une arborescence de fichiers.
+  Sans <code>join</code>, des flèches simples d’une carte vers plusieurs cartes de la rangée suivante forment aussi une fourche :</p>
+<skemo name="trunk"></skemo>
+<p>Pour un arbre qui part d’une idée centrale dans les deux sens, prenez une <a href="mind-maps.html">carte mentale</a>.</p>
+
+<h2>Voir aussi</h2>
+<ul>
+  <li><a href="arrows.html">Flèches</a> : troncs, fourches, bus et jonctions nommées.</li>
+  <li><a href="styling.html">Styler en CSS</a> : des apparences plus légères pour un organigramme.</li>
+</ul>

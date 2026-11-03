@@ -1,0 +1,23 @@
+//- Infrastructure cloud : un VPC, ses sous-réseaux, des groupes d’instances
+diagram(dir="down")
+
+  card#users.edge-svc(icon="globe") Internet
+    to(lb) HTTPS 443
+
+  zone#vpc.vpc(tag="10.0.0.0/16") VPC de production
+    | eu-west-1 · 3 zones de disponibilité
+    zone#public.subnet(tag="10.0.0.0/24") Sous-réseau public
+      card#lb.net(icon="network") Répartiteur de charge
+        | TLS 1.3
+        to(app) 8080
+      card#nat.net(icon="arrow-up-right") Passerelle NAT
+        | sortant uniquement
+    zone#private.subnet(tag="10.0.1.0/24") Sous-réseau privé
+      cards#app.compute(icon="server" count="6") Serveurs d’application
+        | autoscaling 3–12
+        to(db) 5432
+        to(cache) 6379
+        to(nat constraint="false").dashed mises à jour
+      card#db.data(icon="database") PostgreSQL
+        | primaire + réplique
+      card#cache.data(icon="zap") Redis

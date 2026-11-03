@@ -1,0 +1,90 @@
+<!--
+title: Placement automatique et positions épinglées dans skemo
+nav: Placement et positions
+description: Directions, rangées, colonnes, piles et positions épinglées : comment skemo place un diagramme et comment l’orienter sans coordonnées.
+-->
+<h1>Placement et positions</h1>
+<p class="lead">skemo place les cartes ; vous choisissez une direction, et vous épinglez seulement ce qui compte pour vous.</p>
+
+<h2>Direction</h2>
+<div class="pair">
+  <div><skemo name="dir-down" figure></skemo><p class="muted">dir="down" (par défaut)</p></div>
+  <div><skemo name="dir-right" figure></skemo><p class="muted">dir="right"</p></div>
+</div>
+<p><code>diagram(dir="…")</code> fixe la direction principale des flèches : <code>down</code> (par défaut), <code>right</code>,
+  <code>up</code> ou <code>left</code>. <code>right</code> convient aux chaînes et aux processus, <code>down</code> aux hiérarchies et
+  aux réseaux. Les cartes sont rangées en couches dans cette direction et alignées en colonnes dans les zones. Les cartes d’une même
+  rangée gardent l’ordre d’écriture, dans les zones aussi ; une flèche écrite après sa cible pointe quand même dans la direction
+  principale.</p>
+
+<h2>Couches nettes <em>(préversion)</em></h2>
+<p>Une carte se centre au-dessus des cartes vers lesquelles elle mène quand elle est leur seul parent, ou au-dessus de la carte de sa
+  colonne. Les flèches sortent et entrent dans la direction du diagramme, les rangées d’une zone sont aussi espacées qu’au dehors, et
+  deux flèches ne partagent jamais un trait là où elles touchent une carte.</p>
+
+<h2>Rangées dans une zone <em>(préversion)</em></h2>
+<skemo name="wrap"></skemo>
+<p><code>wrap="N"</code> sur une zone met au plus N enfants par rangée (par colonne avec <code>dir="right"</code>), en grille, dans
+  l’ordre d’écriture. Utile quand une zone de nombreuses cartes non reliées ferait sinon une très longue rangée ;
+  <em>(préversion)</em> une zone de quatre cartes ou plus sans aucune flèche (un inventaire) est disposée d’elle-même en une telle
+  grille, avec à peu près autant de colonnes que de rangées. Quand une carte se retrouve derrière une autre vue depuis la carte à
+  laquelle elle est reliée, un avertissement le signale ; pas avec <code>wrap="1"</code>, une file unique de cartes (un serveur et
+  sa pile logicielle) dont les flèches arrivent par les côtés libres. Quand une flèche venue de l’extérieur atteint une carte au-delà
+  de la première rangée, les rangées de la zone (et celles des zones voisines) s’écartent pour laisser un couloir, que d’autres
+  flèches peuvent traverser, afin que la ligne ne fasse pas le tour de la zone.</p>
+
+<h2>Piles <em>(préversion)</em></h2>
+<skemo name="stack"></skemo>
+<p>Avec <code>wrap="1"</code>, une zone est une pile : ses cartes partagent une largeur, celle de la plus large, sur un bord gauche
+  commun. Les zones sœurs côte à côte commencent sur la même ligne.</p>
+
+<h2>Couches de même largeur <em>(préversion)</em></h2>
+<skemo name="stretch"></skemo>
+<p><code>diagram(zones="stretch")</code> donne aux zones empilées dans la direction la largeur de la plus large, comme des couches
+  dessinées à la main. Seuls les cadres grandissent : aucune carte ne bouge, aucun nombre n’est écrit dans le fichier.</p>
+
+<h2>Groupes ordonnés : <code>stack</code> <em>(préversion)</em></h2>
+<skemo name="kubernetes"></skemo>
+<p>Un <code>stack</code> ne dessine rien : il place ses enfants, zones ou cartes, l’un après l’autre dans l’ordre d’écriture le long
+  de la direction (ici les pods, les services, les nœuds, puis le réseau), quelles que soient les flèches entre eux. Les flèches
+  alignent toujours ce qu’elles relient (chaque service sous ses pods) ; une flèche qui remonte la pile sort par le haut et entre
+  par le bas. Une zone <code>.bare</code> sans titre regroupe des cartes sans rien dessiner (les trois nœuds). Une carte n’appartient
+  qu’à un groupe : zones et piles forment un arbre. Les zones d’un stack partagent une largeur, comme des couches. Une carte d’une
+  zone dont toutes les flèches quittent la zone, sans aucune entrante, se place sur la première rangée de la zone. Les classes
+  <code>.col-w1</code>, <code>.col-w2</code>… alignent chaque service et ses pods au-dessus du nœud qui les héberge, d’une zone à
+  l’autre ; la zone <code>.wide</code> des nœuds les répartit sur toute la largeur et donne leur place aux colonnes : chaque nœud est
+  aussi large que le plus large groupe de sa colonne, si bien que deux pods ne chevauchent jamais deux nœuds.</p>
+
+<h2>Cadre cible <em>(préversion)</em></h2>
+<p><code>diagram(fit="16:9")</code> dit où le diagramme sera montré (une diapositive ; <code>8:9</code> pour une demi-diapositive),
+  ou sa taille en pixels : <code>fit="1280x720"</code>. Ce qui compte, c’est la taille du texte une fois le diagramme ajusté dans ce
+  cadre, pas seulement ses proportions : un placement aux bonnes proportions mais deux fois plus grand montre un texte plus petit.
+  skemo ne change jamais le placement de lui-même pour cela, afin que le dessin reste stable pendant l’édition : quand un réglage
+  comme <code>zone#ns(wrap="3")</code> ou <code>diagram(dir="right")</code> afficherait le texte au moins 15 % plus grand, il avertit
+  et le nomme (avec un cadre en pixels, la taille du texte avant et après). <code>skemo fit f.skemo</code> liste les candidats,
+  chacun placé pour de vrai, avec le gain en taille de texte, et <code>--write</code> écrit le meilleur dans le fichier. Quand les
+  proportions s’écartent de plus de 15 % de la cible sans qu’aucun réglage n’aide, l’avertissement le dit : c’est le placement
+  lui-même qui doit changer.</p>
+
+<h2>Positions épinglées</h2>
+<skemo name="pinned"></skemo>
+<p><code>at="x,y"</code> épingle le coin supérieur gauche d’une carte ou d’une zone, en pixels. Les cartes sans <code>at</code> gardent
+  leur place automatique ; toutes les flèches sont tracées dans les deux cas. L’éditeur graphique écrit <code>at=</code> pour vous
+  quand vous déplacez une carte.</p>
+
+<h2>Ajuster une flèche</h2>
+<p><code>side="départ-arrivée"</code> impose les côtés par lesquels une flèche sort et entre ; <code>via="x,y"</code> la fait passer
+  par des points. Dans l’exemple ci-dessus, <code>fw → web</code> sort par la gauche et <code>fw → db</code> passe par
+  <code>440,200</code>.</p>
+
+<h2>Stabilité</h2>
+<p>Modifier une carte ne déplace que les flèches qui y sont attachées : les positions ne bougent pas quand vous ajoutez une ligne ou
+  renommez un titre. Épingler une carte exactement là où le placement l’a mise ne change rien au dessin. C’est ce qui permet de
+  mélanger sans risque l’édition du texte et le glisser-déposer.</p>
+
+<h2>Chevauchements</h2>
+<p>Une carte épinglée sur une autre n’est jamais déplacée : le fichier montre exactement ce que vous avez écrit. skemo émet à la
+  place un avertissement qui nomme les deux cartes, et l’éditeur propose de les séparer.</p>
+
+<div class="note"><p>En modes chronologie, frise et carte mentale, les positions viennent des dates ou de l’arbre : <code>at=</code>
+  y est sans effet (avertissement).</p></div>

@@ -1,0 +1,38 @@
+<!--
+title: Animated flow diagrams: moving dots and dashes on arrows
+nav: Animated flows
+description: Make traffic visible with skemo: a glowing dot runs along each .pulse arrow and dashes stream along .flow arrows, in HTML, SVG, GIF, APNG and animated WebP.
+-->
+<h1>Animated flows <em>(preview)</em></h1>
+<p class="lead">Two arrow classes loop for as long as the diagram is shown: <code>.pulse</code> sends one glowing dot from the source
+  to the head, <code>.flow</code> streams dashes along the line. They show where requests and events go, at a glance.</p>
+
+<skemo name="motion"></skemo>
+<p>The diagram above moves in your browser; it is the SVG output with <code>--motion</code>.</p>
+
+<h2>How it is written</h2>
+<ul>
+  <li><code>to(gateway).pulse requests</code>: one dot per arrow at any time. Every dot runs at the same speed, so the dots of all
+    arrows leave together and a long arrow takes longer.</li>
+  <li><code>to(kafka).flow events</code>: dashes moving towards the head, for a continuous stream.</li>
+  <li>Settings are CSS properties on the arrow's class:</li>
+</ul>
+<pre><code>.edge.orders { --pulse-color: #E8590C; --pulse-size: 7px; --pulse-speed: 200px; }
+.edge.flow   { --flow-speed: 30px; }   /* px per second */</code></pre>
+
+<h2>Where it plays</h2>
+<table>
+  <tr><th>Output</th><th>Motion</th></tr>
+  <tr><td>HTML (<code>-o f.html</code>)</td><td>plays; stopped for readers who ask their system for less motion</td></tr>
+  <tr><td>SVG with <code>--motion</code></td><td>plays, also inside an <code>&lt;img&gt;</code> tag (CSS animation, no script)</td></tr>
+  <tr><td>GIF, APNG, animated WebP</td><td>one loop, frame by frame; APNG keeps the glow's colours best</td></tr>
+  <tr><td>PNG, WebP, SVG without <code>--motion</code></td><td>still: the arrows are drawn as plain solid lines</td></tr>
+</table>
+<p>Motion and steps combine: a diagram that unfolds step by step can have pulsing arrows at every step
+  (<a href="step-by-step-animations.html">Step-by-step animations</a>).</p>
+
+<h2>See also</h2>
+<ul>
+  <li><a href="arrows.html">Arrows</a>: every arrow class.</li>
+  <li><a href="cli.html">Command line</a>: <code>--fps</code>, <code>--hold</code> and the other timing options.</li>
+</ul>

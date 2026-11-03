@@ -34,7 +34,7 @@ project crate, `engine` uses both, `cli` only calls `engine` and `lang`. A featu
 
 - **The format is a contract.** `lang/FORMAT.md` describes the language. A change to the syntax starts with a
   change to `FORMAT.md`, discussed in a pull request, before the code. User-visible features also update the user
-  documentation (`lang/site/pages/`) and get an example in `lang/site/examples/`, which the tests render.
+  documentation (`lang/site/pages/en/` and `pages/fr/`, the same page in both languages) and get an example in `lang/site/examples/`, which the tests render.
 - **Reference data is read-only.** The `fixtures/` folders hold reference outputs of an earlier JavaScript
   prototype of skemo (the "oracle"): sizes, positions and models the Rust code is checked against. They are never
   edited by hand.

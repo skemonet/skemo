@@ -1,0 +1,40 @@
+<!--
+title: Process and pipeline diagrams from text
+nav: Processes and pipelines
+description: Draw CI/CD pipelines, data pipelines and business processes as code with skemo: stages as zones, steps as cards, forks and joins drawn for you, left to right.
+-->
+<h1>Process and pipeline diagrams</h1>
+<p class="lead">A delivery pipeline, a data flow or a business process reads from left to right: stages are zones, steps are
+  cards, and the arrows between them fork and join on their own.</p>
+
+<skemo name="pipeline"></skemo>
+
+<h2>How it is written</h2>
+<ul>
+  <li><code>diagram(dir="right")</code> lays the steps from left to right; cards of one stage stay in their zone, in the order you
+    wrote them.</li>
+  <li><code>to(test lint)</code> starts two steps in parallel: their arrows share a fork. Two steps that lead to the same next step
+    meet there.</li>
+  <li>A state class marks an outcome: <code>.ok</code>, <code>.warn</code>, <code>.error</code> add a ring and a mark to the card
+    (<a href="rich-cards.html">Rich cards</a>).</li>
+  <li>A label on an arrow names the condition: <code>to(prod) approved</code>, <code>to(screen).dashed no</code>.</li>
+</ul>
+
+<h2>Loops and decisions</h2>
+<p>An arrow may go back to an earlier step: it is routed around the row instead of through it. Give a decision its own type and
+  label its outgoing arrows:</p>
+<pre><code>card#decision.choice Decision
+  to(send).ok yes
+  to(screen).ko.dashed no</code></pre>
+<p>skemo draws boxes, not flowchart symbols: a decision is a card with its own colour, not a diamond.</p>
+
+<h2>Show it step by step</h2>
+<p>Add <code>@1</code>, <code>@2</code>… at the end of lines and the same file plays as an animation in HTML, GIF or animated
+  PNG, one stage at a time (<a href="step-by-step-animations.html">Step-by-step animations</a>). Or keep the drawing still and
+  let dots run along the arrows (<a href="animated-flows.html">Animated flows</a>).</p>
+
+<h2>See also</h2>
+<ul>
+  <li><a href="layout.html">Layout and positions</a>: directions, rows, wrapping long processes.</li>
+  <li><a href="timelines.html">Timelines</a> when the steps have dates.</li>
+</ul>

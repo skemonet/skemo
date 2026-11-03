@@ -1,0 +1,42 @@
+<!--
+title: Premiers pas avec skemo : installer et rendre un premier diagramme
+nav: Premiers pas
+description: Installez skemo sous Linux, macOS ou Windows, écrivez un premier fichier .skemo et rendez-le en PNG, SVG ou HTML en deux minutes.
+-->
+<h1>Premiers pas</h1>
+<p class="lead">Installez l’exécutable <code>skemo</code>, écrivez un fichier, rendez-le. Deux minutes.</p>
+
+<h2>Installer</h2>
+<p>Sous Linux (x86_64, ARM) et macOS (ARM) :</p>
+<pre><code>curl -fsSL https://raw.githubusercontent.com/skemonet/skemo/main/cli/install.sh | sh</code></pre>
+<p>Le script télécharge la dernière version, vérifie son SHA-256 et l’installe dans <code>~/.local/bin</code>
+  (<code>SKEMO_BIN</code> change le dossier, <code>SKEMO_VERSION</code> choisit une version). Sous Windows, prenez
+  <code>skemo-windows-x86_64.exe</code> sur la page des versions. skemo est un seul exécutable : ni Node, ni navigateur, ni
+  Graphviz ; les polices et le thème sont intégrés.</p>
+<pre><code>skemo --version</code></pre>
+
+<h2>Un premier diagramme</h2>
+<p>Créez <code>hello.skemo</code> :</p>
+<skemo name="first"></skemo>
+<p>puis rendez-le :</p>
+<pre><code>skemo hello.skemo                 # écrit hello.png à côté de la source
+skemo hello.skemo -o hello.svg    # l’extension choisit le format : svg, webp, html, gif, apng</code></pre>
+<p>Une carte s’écrit <code>card#id Titre</code>. Une flèche s’écrit <em>dans</em> la carte qu’elle quitte : <code>to(b)</code> sous
+  <code>card#a</code> dessine <code>a → b</code>.</p>
+
+<h2>Partir d’un exemple</h2>
+<pre><code>skemo init mon-diagramme   # example.skemo et un custom.css commenté ; n’écrase rien
+cd mon-diagramme
+skemo example.skemo --css custom.css
+skemo watch example.skemo --css custom.css   # aperçu en direct sur http://127.0.0.1:8710</code></pre>
+<p><code>watch</code> refait le rendu à chaque enregistrement et la page du navigateur se recharge d’elle-même.</p>
+
+<h2>Vérifier avant de rendre</h2>
+<pre><code>skemo check example.skemo</code></pre>
+<p>Les erreurs donnent leur ligne et leur colonne, par exemple <code>cible « databse » inconnue</code>, avec l’aide
+  <code>vouliez-vous « database » ?</code>. Le code de sortie vaut 1 en cas d’erreur. Voir <a href="diagnostics.html">Erreurs et avertissements</a>.</p>
+
+<h2>Et ensuite</h2>
+<p>Lisez la <a href="syntax.html">syntaxe</a>, puis <a href="cards-and-zones.html">cartes et zones</a> et
+  <a href="arrows.html">flèches</a>. Si vous préférez dessiner, l’éditeur de skemo montre le texte et le dessin côte à côte et
+  réécrit vos déplacements dans le fichier.</p>

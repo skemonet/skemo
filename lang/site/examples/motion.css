@@ -1,0 +1,4 @@
+.client { --c: #7048E8; }
+.svc    { --c: #3E6FC4; --label: "Service"; }
+.store  { --c: #B45309; --label: "Kafka"; }
+.edge.orders { color: #E8590C; --flow-speed: 40px; }

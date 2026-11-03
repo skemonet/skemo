@@ -1,0 +1,52 @@
+<!--
+title: Diagrammes cloud et réseau en texte
+nav: Cloud et réseau
+description: Dessinez votre infrastructure cloud et vos réseaux en code avec skemo : VPC, sous-réseaux, plages CIDR, groupes d’instances, icônes et ports, flèches tracées autour de chaque zone.
+-->
+<h1>Diagrammes cloud et réseau</h1>
+<p class="lead">Régions, réseaux et sous-réseaux sont des zones imbriquées ; les machines sont des cartes, un groupe d’instances
+  identiques est une pile. Plages d’adresses, ports et protocoles vont dans des pastilles et des étiquettes. skemo garde chaque
+  flèche à l’écart des boîtes qu’elle ne relie pas.</p>
+
+<skemo name="cloud"></skemo>
+
+<h2>Les briques</h2>
+<table>
+  <tr><th>Écrire</th><th>Pour</th></tr>
+  <tr><td><code>zone#vpc(tag="10.0.0.0/16") VPC de production</code></td><td>un réseau avec sa plage en pastille ; les zones s’imbriquent</td></tr>
+  <tr><td><code>| eu-west-1 · 3 zones de disponibilité</code> sous une zone</td><td>une ligne de description sous le titre de la zone</td></tr>
+  <tr><td><code>cards#app(count="6") Serveurs</code></td><td>une pile d’instances identiques avec un badge <code>×6</code></td></tr>
+  <tr><td><code>icon="database"</code></td><td>l’une des 1 866 icônes intégrées, ou votre propre image (<a href="icons-and-links.html">Icônes</a>)</td></tr>
+  <tr><td><code>to(db) 5432</code></td><td>une flèche étiquetée avec son port</td></tr>
+  <tr><td><code>|.pill 8080 · http</code></td><td>un port en pastille dans la carte</td></tr>
+  <tr><td><code>to(nat constraint="false")</code></td><td>un lien dessiné sans changer le placement (retours, supervision)</td></tr>
+</table>
+<p>Une ligne qui commence par une adresse IPv4 ou un bloc CIDR s’affiche en chasse fixe, pour que les plans d’adressage s’alignent.</p>
+
+<h2>Un réseau classique</h2>
+<p>Le thème par défaut fournit des types réseau (<code>.t0</code> à <code>.t3</code> pour les niveaux, <code>.dmz</code>,
+  <code>.lan</code>, <code>.cloud</code> pour les zones), pratiques pour une esquisse :</p>
+<skemo name="zones"></skemo>
+
+<h2>Kubernetes</h2>
+<p>Les colonnes (<code>.col-*</code>) alignent les pods, les services et les machines qui les hébergent d’une zone à l’autre ; les
+  jonctions nommées fusionnent les appels de plusieurs pods en une seule ligne :</p>
+<skemo name="kubernetes" figure></skemo>
+<p>La source est sur la page <a href="layout.html">Placement</a>.</p>
+
+<h2>Conseils</h2>
+<ul>
+  <li>Écrivez les zones de l’extérieur vers l’intérieur (région, réseau, sous-réseau) et mettez chaque carte dans la zone la plus
+    profonde à laquelle elle appartient.</li>
+  <li>Une flèche qui remonte (un retour, un trafic sortant par une passerelle NAT) peut bousculer le placement : donnez-lui
+    <code>constraint="false"</code>.</li>
+  <li>Plusieurs instances d’une même chose forment une pile, pas plusieurs cartes : le dessin reste aussi large que l’idée.</li>
+  <li>Pour une page sur un réseau, mettez une légende des types de flux dans un coin : <code>card.legend(at="ne")</code>.</li>
+</ul>
+
+<h2>Voir aussi</h2>
+<ul>
+  <li><a href="cards-and-zones.html">Cartes et zones</a> : piles, cartes larges, colonnes, pastilles de zone.</li>
+  <li><a href="animated-flows.html">Flux animés</a> : montrer le trafic qui circule sur les flèches.</li>
+  <li><a href="architecture-diagrams.html">Diagrammes d’architecture</a> pour la vue applicative du même système.</li>
+</ul>

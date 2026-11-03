@@ -3,56 +3,89 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>skemo — text diagrams, fewer tokens</title>
-<meta name="description" content="skemo turns a few lines of text into a polished diagram. Your AI agent writes the structure, skemo does the layout on your CPU: about {{tokens:ratio}}× fewer tokens than drawing the picture as SVG.">
-<meta property="og:title" content="skemo — text diagrams, fewer tokens">
-<meta property="og:description" content="Your AI agent writes a few lines of text; skemo lays them out and renders PNG, SVG, WebP or animated HTML. {{tokens:saving_percent}} % fewer tokens than SVG.">
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="brand/icon-light.png">
-<link rel="stylesheet" href="style.css">
+<title>skemo: diagrams as code, laid out and rendered for you</title>
+<meta name="description" content="skemo turns a few lines of text into architecture, cloud, process and timeline diagrams. Automatic layout and routing, styled in CSS, rendered offline to PNG, SVG or animated HTML. Free and open source.">
+{{seo}}
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/brand/icon-dark.png">
+<link rel="preload" href="/fonts/Inter-Regular.otf" as="font" type="font/otf" crossorigin>
+<link rel="stylesheet" href="/brand.css">
+<link rel="stylesheet" href="/style.css">
 </head>
 <body>
 
-<header class="top">
-  <div class="wrap">
-    <a class="logo" href="./"><picture><source srcset="brand/logo-dark.png" media="(prefers-color-scheme: dark)"><img src="brand/logo-light.png" height="28" width="136" alt="skemo"></picture></a>
-    <nav aria-label="Main">
-      <a href="#tokens">Why fewer tokens</a>
-      <a href="#features">Features</a>
-      <a href="#agents">For AI agents</a>
-      <a href="https://docs.skemo.net/">Documentation</a>
-      <a href="https://github.com/skemonet/skemo">GitHub</a>
-    </nav>
-  </div>
-</header>
+{{header}}
 
 <main>
 
 <section class="hero">
   <div class="wrap">
-    <span class="eyebrow">Text diagrams · pre-release {{version}}</span>
-    <h1>Diagrams that cost your AI<br><em>{{tokens:ratio}}× fewer tokens.</em></h1>
-    <p class="lead">An AI agent that draws a diagram as SVG writes every coordinate, every path, every colour. With skemo it writes a
-      few lines of readable text, and a small engine on your own machine does the layout, the routing and the rendering in
-      milliseconds. Same picture, a fraction of the tokens — and of the energy behind them.</p>
+    <span class="eyebrow">Diagrams as code · open source · {{version}}</span>
+    <h1>Write the structure.<br><em>skemo draws the diagram.</em></h1>
+    <p class="lead">Cards, zones and arrows in a few lines of plain text. skemo lays them out, routes every arrow around the boxes and
+      renders the result to PNG, SVG, WebP or animated HTML, on your own machine, in milliseconds. Your AI agent writes
+      {{tokens:ratio}}× fewer tokens than drawing the picture itself.</p>
     <div class="actions">
       <a class="btn primary" href="#install">Install skemo</a>
+      <a class="btn ghost" href="/docs/">Read the docs</a>
       <a class="btn ghost" href="#agents">Add the agent skill</a>
-      <a class="btn ghost" href="https://docs.skemo.net/">Read the docs</a>
     </div>
-    <div style="margin-top:48px">{{diagram:hero}}</div>
+    <div class="install-line"><b>$</b> curl -fsSL https://raw.githubusercontent.com/skemonet/skemo/main/cli/install.sh | sh</div>
+    <div class="window"><div class="window-bar"><i></i><i></i><i></i><span>diagram.skemo → diagram.svg</span></div>{{diagram:hero}}</div>
   </div>
 </section>
 
 <section>
   <div class="wrap">
     <span class="eyebrow">How it reads</span>
-    <h2>Write the structure. skemo draws the rest.</h2>
+    <h2>Plain text in, a polished diagram out.</h2>
     <p class="lead">A <code>.skemo</code> file is plain text: cards, zones that group them, and arrows written inside the card they
       leave. No coordinates unless you want them. The look is CSS: one card type is one line.</p>
     <div class="pair">
-      <div><p class="label">network.skemo — {{example:network:skemo_tokens}} tokens</p>{{source:network}}</div>
-      <div><p class="label">skemo network.skemo → network.png</p>{{diagram:network}}<p class="muted" style="font-size:.9rem;margin-top:8px">The same picture as SVG: {{example:network:svg_tokens}} tokens.</p></div>
+      <div class="panel"><p class="label">network.skemo — {{example:network:skemo_tokens}} tokens</p>{{source:network}}</div>
+      <div class="panel"><p class="label">skemo network.skemo → network.png</p>{{diagram:network}}<p class="note">The same picture as SVG: {{example:network:svg_tokens}} tokens.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="draw">
+  <div class="wrap">
+    <span class="eyebrow">What you can draw</span>
+    <h2>One language, many kinds of diagrams.</h2>
+    <p class="lead">The same four tags draw a system, a network, a plan or a history. Each page shows a complete example, its source
+      and the options that matter.</p>
+    <div class="draw">
+      <a href="/docs/architecture-diagrams/"><strong>{{icon:boxes}} Architecture diagrams</strong><span>systems, services, data stores, the C4 model</span></a>
+      <a href="/docs/cloud-and-network-diagrams/"><strong>{{icon:cloud}} Cloud and network</strong><span>VPCs, subnets, piles of instances, Kubernetes</span></a>
+      <a href="/docs/process-diagrams/"><strong>{{icon:workflow}} Processes and pipelines</strong><span>CI/CD, data flows, business processes</span></a>
+      <a href="/docs/org-charts/"><strong>{{icon:network}} Org charts and trees</strong><span>hierarchies with shared trunks</span></a>
+      <a href="/docs/mind-maps/"><strong>{{icon:brain}} Mind maps</strong><span>a central idea, balanced branches</span></a>
+      <a href="/docs/timelines/"><strong>{{icon:calendar-range}} Timelines and roadmaps</strong><span>periods, milestones, lanes, dependencies</span></a>
+      <a href="/docs/chronological-friezes/"><strong>{{icon:landmark}} Chronological friezes</strong><span>history over centuries, BC dates included</span></a>
+      <a href="/docs/step-by-step-animations/"><strong>{{icon:presentation}} Step-by-step animations</strong><span>diagrams that unfold during a talk</span></a>
+      <a href="/docs/animated-flows/"><strong>{{icon:activity}} Animated flows</strong><span>dots and dashes running along the arrows</span></a>
+    </div>
+  </div>
+</section>
+
+<section id="why" class="alt">
+  <div class="wrap">
+    <span class="eyebrow">Why skemo</span>
+    <h2>A diagram you can keep, review and rerun.</h2>
+    <div class="grid">
+      <div class="tile"><h3>{{icon:git-compare}} The same diagram every run</h3><p>Fonts and theme are built in: one file gives the
+        same pixels on every machine. Commit the source, review it in a pull request, <a href="/docs/diagrams-as-code/">render it in
+        CI</a>.</p></div>
+      <div class="tile"><h3>{{icon:layout-dashboard}} Automatic, stable layout</h3><p>Cards place themselves and arrows route around
+        obstacles. Editing one card only moves its own arrows; pin what you care about with <code>at="x,y"</code>.</p></div>
+      <div class="tile"><h3>{{icon:palette}} Styled with CSS</h3><p>A type is a class: <code>.server { --c: #5B6CFF; }</code>.
+        Tints, borders and inks derive from one accent, so light, dark and print themes come for free.</p></div>
+      <div class="tile"><h3>{{icon:package}} One binary, offline</h3><p>No Node, no browser, no Graphviz, no network. The diagram of a
+        private system never leaves your machine. Also available as WebAssembly.</p></div>
+      <div class="tile"><h3>{{icon:presentation}} Animated when you need it</h3><p>Add <code>@1</code>, <code>@2:up</code> to unfold a
+        diagram in a talk, or <code>.pulse</code> to show traffic, as HTML, GIF, animated PNG or WebP.</p></div>
+      <div class="tile"><h3>{{icon:contrast}} Readable by design</h3><p>A built-in contrast check, a print theme that survives black
+        and white, and types that never rely on colour alone.</p></div>
     </div>
   </div>
 </section>
@@ -74,19 +107,6 @@
 
     {{chart}}
 
-    <div class="grid two" style="margin-top:32px">
-      <div class="tile">
-        <h3>{{icon:pencil-line}} Edits stay small</h3>
-        <p>Add a card and skemo re-lays out the diagram; only the arrows attached to what changed move. Your agent edits one line
-          instead of regenerating a whole drawing — and the diff in your repository stays one line too.</p>
-      </div>
-      <div class="tile">
-        <h3>{{icon:circle-check}} Checked without looking</h3>
-        <p><code>skemo check</code> reports unknown targets, duplicate ids or bad dates as precise, line-numbered messages. The agent
-          fixes text, not pixels, and does not need to send screenshots back to the model to find overlapping boxes.</p>
-      </div>
-    </div>
-
     <details class="faq" style="margin-top:28px">
       <summary>How these numbers are measured</summary>
       <p>For each gallery example we count the tokens of the <code>.skemo</code> source plus its CSS, and the tokens of the SVG that
@@ -101,37 +121,17 @@
   </div>
 </section>
 
-<section id="features">
-  <div class="wrap">
-    <span class="eyebrow">Features</span>
-    <h2>A small tool that does one thing carefully.</h2>
-    <div class="grid">
-      <div class="tile"><h3>{{icon:layout-dashboard}} Automatic layout</h3><p>Cards place themselves and arrows route around
-        obstacles. Pin only what you care about with <code>at="x,y"</code>, force a side or a waypoint on an arrow.</p></div>
-      <div class="tile"><h3>{{icon:palette}} Styled with CSS</h3><p>A type is a class: <code>.server { --c: #5B6CFF; }</code>.
-        Tints, borders and inks derive from one accent, so light, dark and print themes come for free.</p></div>
-      <div class="tile"><h3>{{icon:contrast}} Readable by design</h3><p>A built-in contrast check, a print theme that survives black
-        and white, and types that never rely on colour alone.</p></div>
-      <div class="tile"><h3>{{icon:presentation}} Step by step</h3><p>Add <code>@1</code>, <code>@2:up</code>,
-        <code>@3-5:focus</code> to unfold a diagram in a talk, as HTML, GIF, animated PNG or animated WebP.</p></div>
-      <div class="tile"><h3>{{icon:calendar-range}} More than boxes</h3><p>Timelines with lanes, chronological friezes down to
-        BC dates, mind maps and organisation charts, from the same four tags.</p></div>
-      <div class="tile"><h3>{{icon:package}} One binary, offline</h3><p>No Node, no browser, no Graphviz: fonts and theme are
-        embedded and the output is identical from one machine to the next. Also available as WebAssembly.</p></div>
-    </div>
-  </div>
-</section>
-
-<section>
+<section id="gallery" class="alt">
   <div class="wrap">
     <span class="eyebrow">Gallery</span>
     <h2>Rendered by skemo, as you see them.</h2>
-    <p class="lead">Every picture on this page is generated from its text when the site is built.</p>
+    <p class="lead">Every picture on this page is generated from its text when the site is built. Switch to the source to see what was
+      written.</p>
     <div class="gallery">
-      <figure class="wide">{{diagram:process}}<figcaption>A process, left to right, with a custom theme</figcaption></figure>
-      <figure>{{diagram:mindmap}}<figcaption>A mind map: the tree comes from the arrows</figcaption></figure>
-      <figure class="wide">{{diagram:timeline}}<figcaption>A timeline with lanes, milestones and periods</figcaption></figure>
-      <figure>{{diagram:hyperedge}}<figcaption>An organisation chart with shared trunks</figcaption></figure>
+      <figure class="wide">{{tabbed:process}}<figcaption>A process, left to right, with a custom theme · <a href="/docs/process-diagrams/">Processes and pipelines</a></figcaption></figure>
+      <figure>{{tabbed:mindmap}}<figcaption>A mind map: the tree comes from the arrows · <a href="/docs/mind-maps/">Mind maps</a></figcaption></figure>
+      <figure>{{tabbed:hyperedge}}<figcaption>An organisation chart with shared trunks · <a href="/docs/org-charts/">Org charts</a></figcaption></figure>
+      <figure class="wide">{{tabbed:timeline}}<figcaption>A timeline with lanes, milestones and periods · <a href="/docs/timelines/">Timelines</a></figcaption></figure>
     </div>
   </div>
 </section>
@@ -141,7 +141,7 @@
     <span class="eyebrow">For AI agents</span>
     <h2>Teach your agent skemo in one file.</h2>
     <p class="lead">The skemo skill tells a coding agent (Claude Code, or any agent that reads <code>SKILL.md</code> skills) how to
-      write a diagram, check it and render it, with the rules that keep files short.</p>
+      write a diagram, check it and render it, with the rules that keep files short. <a href="/docs/ai-agents/">More on agents</a>.</p>
     <ol class="steps">
       <li>Install the <code>skemo</code> binary (below) so the agent can run it.</li>
       <li>Copy the skill into your skills folder:
@@ -162,12 +162,13 @@ curl -fsSL https://skemo.net/skill/skemo/references/format.md -o ~/.claude/skill
       <div><p class="label">Linux and macOS</p>
         <pre class="code"><code>curl -fsSL https://raw.githubusercontent.com/skemonet/skemo/main/cli/install.sh | sh</code></pre>
         <p class="muted" style="margin-top:10px;font-size:.92rem">Installs into <code>~/.local/bin</code> after checking the SHA-256.
-          Windows: take the <code>.exe</code> from the releases page.</p></div>
+          Windows: take the <code>.exe</code> from the <a href="https://github.com/skemonet/skemo/releases">releases page</a>.</p></div>
       <div><p class="label">First diagram</p>
         <pre class="code"><code>skemo init my-diagram
 cd my-diagram
 skemo example.skemo --css custom.css    # → example.png
-skemo watch example.skemo               # live preview</code></pre></div>
+skemo watch example.skemo               # live preview</code></pre>
+        <p class="muted" style="margin-top:10px;font-size:.92rem">Next: <a href="/docs/getting-started/">getting started</a>.</p></div>
     </div>
   </div>
 </section>
@@ -176,10 +177,11 @@ skemo watch example.skemo               # live preview</code></pre></div>
   <div class="wrap">
     <span class="eyebrow">Questions</span>
     <h2>Good to know</h2>
-    <details><summary>How is it different from Mermaid?</summary>
-      <p>Both are text. skemo is built for diagrams people show: the look is plain CSS, layout is stable when you edit (only the arrows
-        of what changed move), positions can be pinned by hand or from the editor and written back into the text, and rendering
-        needs no browser. Both keep the source short, which is what an agent pays for.</p></details>
+    <details><summary>How is it different from Mermaid or D2?</summary>
+      <p>All three are text. skemo is built for diagrams people show: the look is plain CSS, layout is stable when you edit (only the
+        arrows of what changed move), positions can be pinned by hand or from the editor and written back into the text, rendering
+        needs no browser, and the same file can unfold step by step. Mermaid has more diagram kinds (sequence diagrams, class
+        diagrams, charts); skemo does not draw those today.</p></details>
     <details><summary>Does the agent need to see the image?</summary>
       <p>It looks, as a person would: in our test on a Terraform platform the agent read every image it rendered. What changes is what
         it fixes there. <code>skemo check</code> catches structural mistakes as text and the layout is automatic, so the agent
@@ -198,12 +200,7 @@ skemo watch example.skemo               # live preview</code></pre></div>
 
 </main>
 
-<footer>
-  <div class="wrap">
-    <span>skemo · text diagrams · <a href="https://docs.skemo.net/">docs.skemo.net</a></span>
-    <span>Fonts: Inter, JetBrains Mono (SIL OFL 1.1) · Icons: Lucide (ISC) · This page: no tracker, no cookie, no script.</span>
-  </div>
-</footer>
+{{footer}}
 
 </body>
 </html>

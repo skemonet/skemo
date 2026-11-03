@@ -1,0 +1,23 @@
+//- Cloud infrastructure: a VPC, its subnets, piles of instances
+diagram(dir="down")
+
+  card#users.edge-svc(icon="globe") Internet
+    to(lb) HTTPS 443
+
+  zone#vpc.vpc(tag="10.0.0.0/16") Production VPC
+    | eu-west-1 · 3 availability zones
+    zone#public.subnet(tag="10.0.0.0/24") Public subnet
+      card#lb.net(icon="network") Load balancer
+        | TLS 1.3
+        to(app) 8080
+      card#nat.net(icon="arrow-up-right") NAT gateway
+        | outbound only
+    zone#private.subnet(tag="10.0.1.0/24") Private subnet
+      cards#app.compute(icon="server" count="6") App servers
+        | autoscaling 3–12
+        to(db) 5432
+        to(cache) 6379
+        to(nat constraint="false").dashed updates
+      card#db.data(icon="database") PostgreSQL
+        | primary + replica
+      card#cache.data(icon="zap") Redis

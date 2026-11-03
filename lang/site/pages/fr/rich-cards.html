@@ -1,0 +1,73 @@
+<!--
+title: Cartes enrichies, tableaux, légendes et panneaux dans skemo
+nav: Cartes enrichies et tableaux
+description: Emphase Markdown, tableaux, états, légendes, notes de bas de page et panneaux ancrés dans les diagrammes skemo, écrits en simples lignes.
+-->
+<h1>Cartes enrichies, tableaux et panneaux <em>(préversion)</em></h1>
+<p class="lead">Une carte peut dire ce qu’elle est, souligner un mot, porter un tableau ou un constat ; un diagramme peut avoir une
+  légende, une note de bas de page et des panneaux autour du dessin. Rien de tout cela ne demande de nouvelle balise : des lignes
+  <code>|</code>, du Markdown, des classes et <code>at=</code>.</p>
+
+<h2>Catégorie, emphase et états</h2>
+<skemo name="rich-card"></skemo>
+<table>
+  <tr><th>Écrire</th><th>Effet</th></tr>
+  <tr><td><code>label="RDS PostgreSQL 16.4"</code></td><td>la catégorie de la carte, une petite ligne au-dessus de son nom ; par
+    défaut le <code>--label</code> du type ; <code>label=""</code> n’en montre aucune. <code>tag=</code> reste la pastille à droite</td></tr>
+  <tr><td><code>**gras**</code>, <code>*italique*</code>, <code>`mono`</code></td><td>emphase Markdown dans une ligne ou une cellule</td></tr>
+  <tr><td><code>==texte==</code>, <code>==.ok texte==</code></td><td>un surlignage : en rouge, ou à la couleur de l’état de la ligne,
+    ou de la classe écrite après <code>==</code></td></tr>
+  <tr><td><code>.ok</code>, <code>.warn</code>, <code>.error</code></td><td>sur une carte : un anneau et une marque avant le nom ; sur
+    une ligne (<code>|.warn …</code>) : une marque et la couleur de l’état ; sur une cellule : la couleur de l’état</td></tr>
+</table>
+<p>Les délimiteurs ne comptent que s’ils entourent un mot : <code>cron(0 2 * * ? *)</code> et <code>status == 200</code> restent tels
+  quels, et <code>_</code> n’est jamais une emphase. Écrivez <code>\*</code>, <code>\`</code> ou <code>\==</code> pour les caractères
+  eux-mêmes.</p>
+
+<h2>Tableaux</h2>
+<skemo name="table"></skemo>
+<p>Un tableau s’écrit comme un tableau Markdown dans une carte : une ligne qui finit par <code>|</code> est une rangée, les rangées
+  qui se suivent forment un tableau, et la carte peut avoir des lignes de texte avant et après. Les espaces autour d’une cellule
+  sont retirées : un tableau aligné par n’importe quel formateur Markdown reste valide.</p>
+<table>
+  <tr><th>Écrire</th><th>Effet</th></tr>
+  <tr><td><code>|---|---|</code> après la première rangée</td><td>la première rangée est un en-tête ; <code>:---:</code> centre une
+    colonne, <code>---:</code> l’aligne à droite</td></tr>
+  <tr><td><code>||</code> (rien dans la cellule)</td><td>la cellule de gauche s’étend aussi sur cette colonne ; une cellule vide
+    s’écrit <code>| |</code></td></tr>
+  <tr><td><code>^^</code></td><td>la cellule du dessus s’étend aussi sur cette rangée</td></tr>
+  <tr><td><code>|.error lambda |</code></td><td>la cellule prend la classe (collée à la barre)</td></tr>
+  <tr><td><code>|</code> seul</td><td>une ligne vide ; elle sépare aussi deux tableaux</td></tr>
+</table>
+<p>Un tableau ne passe jamais à la ligne : sa carte s’élargit autant qu’il le faut. Les flèches s’arrêtent sur la carte, pas sur une
+  rangée.</p>
+
+<h2>Légendes et texte libre</h2>
+<skemo name="legend"></skemo>
+<p><code>card.legend</code> est une légende : chaque ligne <code>|.classe texte</code> montre un échantillon de la classe qu’elle
+  nomme, une flèche pour une classe de flèche, une pastille pour un type de carte, un petit cadre pour un type de zone, l’icône
+  d’une classe qui définit <code>--icon</code>, la marque d’un état. Une légende sans lignes liste d’elle-même les classes du
+  diagramme qui ont un <code>--label</code> dans la feuille de style (classes de flèche comprises :
+  <code>.edge.events { --label: "événements"; }</code>). <code>card.text</code> est du texte sans cadre, pour une note ou une note
+  de bas de page.</p>
+
+<h2>Panneaux, légendes et notes autour du dessin</h2>
+<skemo name="docking"></skemo>
+<p><code>at=</code> avec un point cardinal ancre une carte ou une zone de premier niveau <em>hors</em> du dessin, qui est placé
+  comme si elle n’existait pas : rien n’y bouge.</p>
+<table>
+  <tr><th>Écrire</th><th>Où</th></tr>
+  <tr><td><code>at="s"</code>, <code>at="n"</code></td><td>une bande sous (au-dessus de) le dessin, sur toute la largeur ; plusieurs
+    éléments se placent côte à côte dans l’ordre d’écriture ; un élément <code>.wide</code> prend une rangée à lui (une note de bas
+    de page : <code>card.text.wide(at="s")</code>)</td></tr>
+  <tr><td><code>at="e"</code>, <code>at="w"</code></td><td>une colonne à droite (à gauche) du dessin</td></tr>
+  <tr><td><code>at="ne"</code>, <code>at="nw"</code>, <code>at="se"</code>, <code>at="sw"</code></td><td>dans cette colonne, en haut
+    ou en bas : une légende en haut à droite s’écrit <code>at="ne"</code></td></tr>
+</table>
+<p>Une zone ancrée est placée à part, comme un petit diagramme. Une flèche entre un élément ancré et le reste du dessin n’est pas
+  dessinée (avertissement <code>docked-arrow</code>).</p>
+
+<h2>Sous-titre et descriptions de zone</h2>
+<p>Les lignes <code>|</code> sous <code>title</code> sont des lignes de sous-titre ; les lignes <code>|.pill</code> sont des pastilles
+  sur la ligne du titre. Les lignes sous une zone forment une description sous son titre (« 3 zones de disponibilité ») ; la zone
+  leur garde de la place.</p>

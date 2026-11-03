@@ -55,7 +55,7 @@ assert!(edited.contains(r#"at="120,40""#));
 ```
 
 **WebAssembly**-compatible, no system dependency. The format contract is [`FORMAT.md`](FORMAT.md): any change
-to the parser starts with an update of that document. The user documentation (docs.skemo.net) is built from
+to the parser starts with an update of that document. The user documentation (skemo.net/docs/, in English and French) is built from
 [`site/`](site/README.md).
 
 ## Repository contents
@@ -65,7 +65,7 @@ to the parser starts with an update of that document. The user documentation (do
 | `FORMAT.md` | **the format specification** (syntax, attributes, modes, animation, style) |
 | `src/` | parser (`parse`, `syntax`), `model`, `edit`, `fmt`, `anim`, `dates`, `style/` (CSS) |
 | `default.reference.css`, `theme/` | default theme |
-| `site/` | the documentation site (docs.skemo.net): pages, examples, builder |
+| `site/` | the documentation (skemo.net/docs/, English and French): pages, examples, builder |
 | `fixtures/` | test data (reference models from the prototype, sources with errors) |
 
 ## Development

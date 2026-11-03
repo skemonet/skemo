@@ -1,7 +1,7 @@
 # skemo format reference
 
 Complete reference of the `.skemo` language as implemented by `skemo` 0.1. The specification of record is
-`FORMAT.md` in the `skemo-lang` repository; the documentation site is https://docs.skemo.net/.
+`FORMAT.md` in the `skemo-lang` repository; the documentation is https://skemo.net/docs/.
 
 ## Contents
 

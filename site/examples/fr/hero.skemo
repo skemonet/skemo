@@ -1,0 +1,19 @@
+//- La chaîne skemo, dessinée par skemo
+diagram(dir="right" lang="fr")
+
+  card#agent.ai(icon="bot") Votre agent IA
+    | écrit quelques centaines de tokens de texte
+    to(source)
+
+  card#source.text(icon="file-code") diagramme.skemo
+    | cartes, zones, flèches
+    | types stylés en CSS
+    to(engine)
+
+  zone#cpu.local skemo, sur votre processeur
+    card#engine.step(icon="cpu") Placement + routage
+      | déterministe, hors ligne
+      to(out) ~50 ms
+
+  card#out.output(icon="image") PNG · SVG · WebP · HTML
+    | clair, sombre et impression

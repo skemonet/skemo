@@ -73,7 +73,7 @@ Useful attributes: `at="x,y"` (pinned position), `side="bottom-top"` (attachment
 `tag="Owner"` (badge), `join="trunk"` (several targets sharing one trunk). The `.type` classes are CSS classes: see the `custom.css` created by `skemo init`, and
 `skemo theme --print` for the default theme. The **full specification** is
 [`FORMAT.md`](../lang/FORMAT.md) in the `lang` folder; the user
-documentation is the site built from `lang/site/` (docs.skemo.net).
+documentation is the site built from `lang/site/` (skemo.net/docs/).
 
 ## For AI agents: the skemo skill
 

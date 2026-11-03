@@ -1,0 +1,96 @@
+/* skemo brand: fonts, colour tokens and the pieces every page shares (header, buttons, code, footer).
+   The landing page (style.css) and the documentation (docs/style.css) add their own layout on top.
+   The charter behind these values is site/BRAND.md. */
+@font-face { font-family: Inter; font-weight: 400; font-display: swap; src: local("Inter"), local("Inter Regular"), url(/fonts/Inter-Regular.otf) format("opentype"); }
+@font-face { font-family: Inter; font-weight: 500; font-display: swap; src: local("Inter Medium"), url(/fonts/Inter-Medium.otf) format("opentype"); }
+@font-face { font-family: Inter; font-weight: 700; font-display: swap; src: local("Inter Bold"), url(/fonts/Inter-Bold.otf) format("opentype"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-display: swap; src: local("JetBrains Mono"), url(/fonts/JetBrainsMono-Regular.ttf) format("truetype"); }
+
+:root {
+  /* the logo's colours */
+  --amber: #E8A33D;          /* the route's end: fills, dots, the primary button */
+  --ink-brand: #14161B;      /* the mark on light */
+  --paper-brand: #F3F1EC;    /* the mark on dark */
+
+  /* light scheme: warm paper, near-black ink */
+  --bg: #F6F5F1; --bg-2: #EFEDE7; --surface: #FFFFFF; --surface-2: #FAF9F6;
+  --ink: #14161B; --ink-2: #3A3D45; --muted: #5C6068; --line: #DEDBD3; --line-2: #CFCBC1;
+  --accent: var(--amber); --accent-ink: #8F550A; --accent-soft: #FBEEDA; --on-accent: #14161B;
+  --code-bg: #14161B; --code-ink: #F3F1EC; --code-muted: #9BA0A8;
+  --shadow: 0 1px 2px rgb(20 22 27 / .06), 0 8px 24px -12px rgb(20 22 27 / .18);
+  --dots: rgb(20 22 27 / .07);
+  --radius: 12px; --radius-lg: 18px; --wrap: 1160px;
+  --font: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* dark scheme: the icon's background, warm off-white ink */
+    --bg: #0F1115; --bg-2: #0B0D10; --surface: #16191F; --surface-2: #1B1F26;
+    --ink: #F3F1EC; --ink-2: #C9C7C1; --muted: #9BA0A8; --line: #262A32; --line-2: #343943;
+    --accent-ink: #F0B65A; --accent-soft: #2A2114;
+    --code-bg: #0B0D10; --code-ink: #F3F1EC; --code-muted: #8A8F98;
+    --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 12px 32px -16px rgb(0 0 0 / .7);
+    --dots: rgb(243 241 236 / .06);
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: 80px; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.65 var(--font); -webkit-font-smoothing: antialiased; }
+a { color: var(--accent-ink); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+a:hover { text-decoration-thickness: 2px; }
+::selection { background: var(--accent); color: var(--on-accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+h1, h2, h3 { color: var(--ink); line-height: 1.12; letter-spacing: -0.025em; margin: 0 0 .5em; font-weight: 700; }
+code, pre, kbd { font-family: var(--mono); font-size: .86em; }
+:not(pre) > code { background: var(--bg-2); border: 1px solid var(--line); padding: .05em .35em; border-radius: 5px; color: var(--ink); }
+pre { background: var(--code-bg); color: var(--code-ink); border-radius: var(--radius); overflow-x: auto; line-height: 1.6; }
+.skip { position: absolute; left: -999px; }
+.skip:focus { left: 16px; top: 10px; z-index: 20; background: var(--surface); padding: 6px 10px; }
+
+/* The eyebrow: a small mono label with the route's amber dot */
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; font: 500 .74rem/1 var(--mono); letter-spacing: .08em;
+           text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+.eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+
+/* Header: the same on every page */
+.top { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 82%, transparent);
+       backdrop-filter: saturate(1.4) blur(10px); -webkit-backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--line); }
+.top-inner { display: flex; align-items: center; gap: 20px; height: 60px; padding: 0 20px; max-width: var(--wrap); margin: 0 auto; }
+.logo { display: flex; align-items: center; text-decoration: none; flex: none; }
+.logo img { display: block; height: 26px; width: auto; }
+.top nav { display: flex; align-items: center; gap: 22px; margin-left: auto; }
+.top nav a { color: var(--ink-2); text-decoration: none; font-weight: 500; font-size: .92rem; }
+.top nav a:hover, .top nav a[aria-current] { color: var(--ink); }
+.top nav .lang { font: 500 .78rem/1 var(--mono); border: 1px solid var(--line-2); border-radius: 6px; padding: 5px 7px; }
+.only-dark { display: none; }
+@media (prefers-color-scheme: dark) { .only-dark { display: block; } .only-light { display: none; }
+  picture.only-dark, img.only-dark { display: inline; } }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 10px; font-weight: 600; font-size: .95rem;
+       text-decoration: none; border: 1px solid transparent; transition: background .15s, border-color .15s; }
+.btn.primary { background: var(--accent); color: var(--on-accent); }
+.btn.primary:hover { background: #F0B65A; }
+.btn.ghost { color: var(--ink); background: var(--surface); border-color: var(--line-2); }
+.btn.ghost:hover { border-color: var(--ink-2); }
+
+/* Footer */
+.site-footer { border-top: 1px solid var(--line); background: var(--bg-2); color: var(--muted); font-size: .9rem; }
+.site-footer .cols { display: grid; grid-template-columns: 1.4fr repeat(3, 1fr); gap: 32px; max-width: var(--wrap); margin: 0 auto; padding: 48px 20px 28px; }
+.site-footer h3 { font: 500 .74rem/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); margin: 4px 0 14px; }
+.site-footer ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.site-footer a { color: var(--muted); text-decoration: none; }
+.site-footer a:hover { color: var(--ink); }
+.site-footer .fine { max-width: var(--wrap); margin: 0 auto; padding: 18px 20px 36px; border-top: 1px solid var(--line); font-size: .82rem; }
+.site-footer .logo img { height: 24px; margin-bottom: 12px; }
+
+@media (max-width: 760px) {
+  .top-inner { gap: 14px; padding: 0 16px; }
+  .top nav { gap: 14px; }
+  .top nav .wide-only { display: none; }
+  .site-footer .cols { grid-template-columns: 1fr 1fr; }
+}

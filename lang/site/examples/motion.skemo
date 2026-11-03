@@ -1,0 +1,15 @@
+//- Arrows in motion: a dot per request, dashes for a stream
+diagram(dir="right")
+
+  card#phone.client(icon="smartphone") Mobile app
+    to(gateway).pulse requests
+
+  card#gateway.svc(icon="shield") API gateway
+    to(orders).pulse
+    to(stock).pulse
+
+  card#orders.svc Orders
+    to(kafka).flow.orders events
+  card#stock.svc Stock
+
+  card#kafka.store(icon="activity") Event stream

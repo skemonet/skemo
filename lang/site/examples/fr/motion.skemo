@@ -1,0 +1,15 @@
+//- Flèches en mouvement : un point par requête, des tirets pour un flux
+diagram(dir="right")
+
+  card#phone.client(icon="smartphone") Application mobile
+    to(gateway).pulse requêtes
+
+  card#gateway.svc(icon="shield") Passerelle d’API
+    to(orders).pulse
+    to(stock).pulse
+
+  card#orders.svc Commandes
+    to(kafka).flow.orders événements
+  card#stock.svc Stock
+
+  card#kafka.store(icon="activity") Flux d’événements

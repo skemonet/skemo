@@ -1,0 +1,6 @@
+.edge-svc { --c: #6B7280; }
+.net      { --c: #7048E8; --label: "Network"; }
+.compute  { --c: #3E6FC4; --label: "Compute"; }
+.data     { --c: #B45309; --label: "Data"; }
+.vpc      { --z-ink: #2F9E44; --z-border: #8CD69A; }
+.subnet   { --z-ink: #3E6FC4; }

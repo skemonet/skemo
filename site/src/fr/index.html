@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>skemo : des diagrammes en texte, placés et rendus pour vous</title>
+<meta name="description" content="skemo transforme quelques lignes de texte en diagrammes d’architecture, de cloud, de processus et en chronologies. Placement et tracé automatiques, style en CSS, rendu hors ligne en PNG, SVG ou HTML animé. Libre et gratuit.">
+{{seo}}
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/brand/icon-dark.png">
+<link rel="preload" href="/fonts/Inter-Regular.otf" as="font" type="font/otf" crossorigin>
+<link rel="stylesheet" href="/brand.css">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+{{header}}
+
+<main>
+
+<section class="hero">
+  <div class="wrap">
+    <span class="eyebrow">Diagrammes en code · libre · {{version}}</span>
+    <h1>Écrivez la structure.<br><em>skemo dessine le diagramme.</em></h1>
+    <p class="lead">Des cartes, des zones et des flèches en quelques lignes de texte. skemo les place, trace chaque flèche autour des
+      boîtes et rend le résultat en PNG, SVG, WebP ou HTML animé, sur votre propre machine, en quelques millisecondes. Votre agent IA
+      écrit {{tokens:ratio}} fois moins de tokens qu’en dessinant l’image lui-même.</p>
+    <div class="actions">
+      <a class="btn primary" href="#install">Installer skemo</a>
+      <a class="btn ghost" href="/fr/docs/">Lire la documentation</a>
+      <a class="btn ghost" href="#agents">Ajouter la compétence pour agents</a>
+    </div>
+    <div class="install-line"><b>$</b> curl -fsSL https://raw.githubusercontent.com/skemonet/skemo/main/cli/install.sh | sh</div>
+    <div class="window"><div class="window-bar"><i></i><i></i><i></i><span>diagramme.skemo → diagramme.svg</span></div>{{diagram:hero}}</div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <span class="eyebrow">Comment ça se lit</span>
+    <h2>Du texte simple en entrée, un diagramme soigné en sortie.</h2>
+    <p class="lead">Un fichier <code>.skemo</code>, c’est du texte : des cartes, des zones qui les regroupent, et des flèches écrites
+      dans la carte qu’elles quittent. Pas de coordonnées, sauf si vous en voulez. L’apparence, c’est du CSS : un type de carte tient
+      en une ligne.</p>
+    <div class="pair">
+      <div class="panel"><p class="label">network.skemo — {{example:network:skemo_tokens}} tokens</p>{{source:network}}</div>
+      <div class="panel"><p class="label">skemo network.skemo → network.png</p>{{diagram:network}}<p class="note">La même image en SVG : {{example:network:svg_tokens}} tokens.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="draw">
+  <div class="wrap">
+    <span class="eyebrow">Ce que vous pouvez dessiner</span>
+    <h2>Un langage, de nombreux types de diagrammes.</h2>
+    <p class="lead">Les mêmes quatre balises dessinent un système, un réseau, un planning ou une histoire. Chaque page montre un exemple
+      complet, sa source et les options qui comptent.</p>
+    <div class="draw">
+      <a href="/fr/docs/architecture-diagrams/"><strong>{{icon:boxes}} Diagrammes d’architecture</strong><span>systèmes, services, bases de données, modèle C4</span></a>
+      <a href="/fr/docs/cloud-and-network-diagrams/"><strong>{{icon:cloud}} Cloud et réseau</strong><span>VPC, sous-réseaux, groupes d’instances, Kubernetes</span></a>
+      <a href="/fr/docs/process-diagrams/"><strong>{{icon:workflow}} Processus et chaînes</strong><span>CI/CD, flux de données, processus métier</span></a>
+      <a href="/fr/docs/org-charts/"><strong>{{icon:network}} Organigrammes et arbres</strong><span>hiérarchies à tronc commun</span></a>
+      <a href="/fr/docs/mind-maps/"><strong>{{icon:brain}} Cartes mentales</strong><span>une idée centrale, des branches équilibrées</span></a>
+      <a href="/fr/docs/timelines/"><strong>{{icon:calendar-range}} Chronologies et feuilles de route</strong><span>périodes, jalons, couloirs, dépendances</span></a>
+      <a href="/fr/docs/chronological-friezes/"><strong>{{icon:landmark}} Frises chronologiques</strong><span>l’histoire sur des siècles, dates av. J.-C. comprises</span></a>
+      <a href="/fr/docs/step-by-step-animations/"><strong>{{icon:presentation}} Animations pas à pas</strong><span>des diagrammes qui se déploient pendant un exposé</span></a>
+      <a href="/fr/docs/animated-flows/"><strong>{{icon:activity}} Flux animés</strong><span>des points et des tirets qui courent sur les flèches</span></a>
+    </div>
+  </div>
+</section>
+
+<section id="why" class="alt">
+  <div class="wrap">
+    <span class="eyebrow">Pourquoi skemo</span>
+    <h2>Un diagramme que l’on garde, relit et refait.</h2>
+    <div class="grid">
+      <div class="tile"><h3>{{icon:git-compare}} Le même diagramme à chaque fois</h3><p>Polices et thème sont intégrés : un fichier
+        donne les mêmes pixels sur toutes les machines. Versionnez la source, relisez-la en pull request,
+        <a href="/fr/docs/diagrams-as-code/">rendez-la en CI</a>.</p></div>
+      <div class="tile"><h3>{{icon:layout-dashboard}} Un placement automatique et stable</h3><p>Les cartes se placent seules et les
+        flèches contournent les obstacles. Modifier une carte ne déplace que ses flèches ; épinglez ce qui compte avec
+        <code>at="x,y"</code>.</p></div>
+      <div class="tile"><h3>{{icon:palette}} Stylé en CSS</h3><p>Un type est une classe : <code>.server { --c: #5B6CFF; }</code>.
+        Teintes, bordures et encres découlent d’un accent : les thèmes clair, sombre et impression viennent tout seuls.</p></div>
+      <div class="tile"><h3>{{icon:package}} Un exécutable, hors ligne</h3><p>Ni Node, ni navigateur, ni Graphviz, ni réseau. Le
+        schéma d’un système privé ne quitte jamais votre machine. Existe aussi en WebAssembly.</p></div>
+      <div class="tile"><h3>{{icon:presentation}} Animé quand il le faut</h3><p>Ajoutez <code>@1</code>, <code>@2:up</code> pour
+        dérouler un diagramme pendant un exposé, ou <code>.pulse</code> pour montrer le trafic, en HTML, GIF, PNG ou WebP animé.</p></div>
+      <div class="tile"><h3>{{icon:contrast}} Lisible par construction</h3><p>Un contrôle de contraste intégré, un thème impression qui
+        tient en noir et blanc, et des types qui ne reposent jamais sur la couleur seule.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="tokens">
+  <div class="wrap">
+    <span class="eyebrow">Moins de tokens, moins de CO₂</span>
+    <h2>Chaque token non généré est de l’énergie non dépensée.</h2>
+    <p class="lead">Générer du texte est la partie coûteuse d’un modèle de langage : chaque token produit est un passage complet du
+      modèle sur un GPU de centre de données. Quand le modèle dessine l’image lui-même, la plupart de ces tokens sont des
+      coordonnées. skemo confie ce travail à un programme déterministe qui tourne sur votre processeur en quelques millisecondes.</p>
+
+    <div class="figures">
+      <div class="figure"><b>{{tokens:saving_percent}} %</b><span>de tokens en moins qu’en écrivant la même image en SVG</span></div>
+      <div class="figure"><b>×{{tokens:ratio}}</b><span>sur les {{tokens:count}} diagrammes de la galerie ci-dessous, tous leurs tokens comptés ensemble</span></div>
+      <div class="figure"><b>1 ligne</b><span>pour changer une étiquette ou déplacer une carte : rien d’autre n’est réécrit</span></div>
+      <div class="figure"><b>0</b><span>GPU, réseau ou service cloud nécessaire au rendu</span></div>
+    </div>
+
+    {{chart}}
+
+    <details class="faq" style="margin-top:28px">
+      <summary>Comment ces chiffres sont mesurés</summary>
+      <p>Pour chaque exemple de la galerie, nous comptons les tokens de la source <code>.skemo</code> et de son CSS, et les tokens du
+        SVG que skemo en tire : la même image avec chaque coordonnée écrite, ce qu’un modèle doit produire quand il dessine lui-même.
+        Ce SVG est d’abord réduit à ce qu’une main soigneuse écrirait : pas de source intégrée, pas d’attributs de classe ou de
+        données, la police déclarée une fois, des coordonnées à une décimale. Les deux côtés sont comptés avec la même approximation
+        de type byte-pair (mots, groupes de trois chiffres au plus, ponctuation) ; les vrais tokeniseurs donnent d’autres valeurs
+        absolues, mais c’est le rapport entre les deux voies qui compte. Le script est <code>site/tools/measure_tokens.py</code>, et
+        le build de cette page le relance : les chiffres ne sont jamais tapés à la main. Ils ne comptent que le texte du diagramme :
+        sur une tâche complète, où lire l’entrée, la compétence et les images rendues domine, l’économie est plus faible
+        ({{task:saving_percent}} % sur notre première tâche mesurée, voir les questions plus bas).</p>
+    </details>
+  </div>
+</section>
+
+<section id="gallery" class="alt">
+  <div class="wrap">
+    <span class="eyebrow">Galerie</span>
+    <h2>Rendus par skemo, tels que vous les voyez.</h2>
+    <p class="lead">Chaque image de cette page est produite à partir de son texte au moment du build. Passez à la source pour voir ce
+      qui a été écrit.</p>
+    <div class="gallery">
+      <figure class="wide">{{tabbed:process}}<figcaption>Un processus, de gauche à droite, avec un thème personnalisé · <a href="/fr/docs/process-diagrams/">Processus et chaînes</a></figcaption></figure>
+      <figure>{{tabbed:mindmap}}<figcaption>Une carte mentale : l’arbre vient des flèches · <a href="/fr/docs/mind-maps/">Cartes mentales</a></figcaption></figure>
+      <figure>{{tabbed:hyperedge}}<figcaption>Un organigramme à troncs communs · <a href="/fr/docs/org-charts/">Organigrammes</a></figcaption></figure>
+      <figure class="wide">{{tabbed:timeline}}<figcaption>Une chronologie avec couloirs, jalons et périodes · <a href="/fr/docs/timelines/">Chronologies</a></figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section id="agents">
+  <div class="wrap">
+    <span class="eyebrow">Pour les agents IA</span>
+    <h2>Apprenez skemo à votre agent en un fichier.</h2>
+    <p class="lead">La compétence skemo explique à un agent de code (Claude Code, ou tout agent qui lit les compétences
+      <code>SKILL.md</code>) comment écrire un diagramme, le vérifier et le rendre, avec les règles qui gardent les fichiers courts.
+      <a href="/fr/docs/ai-agents/">En savoir plus</a>.</p>
+    <ol class="steps">
+      <li>Installez l’exécutable <code>skemo</code> (ci-dessous) pour que l’agent puisse le lancer.</li>
+      <li>Copiez la compétence dans votre dossier de compétences :
+        <pre class="code"><code>mkdir -p ~/.claude/skills/skemo/references
+curl -fsSL https://skemo.net/skill/skemo/SKILL.md -o ~/.claude/skills/skemo/SKILL.md
+curl -fsSL https://skemo.net/skill/skemo/references/format.md -o ~/.claude/skills/skemo/references/format.md</code></pre></li>
+      <li>Demandez un diagramme : <em>« dessine notre déploiement en diagramme skemo »</em>. L’agent écrit le fichier
+        <code>.skemo</code>, lance <code>skemo check</code>, puis le rend.</li>
+    </ol>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <span class="eyebrow">Installation</span>
+    <h2>Prêt en une minute.</h2>
+    <div class="grid two">
+      <div><p class="label">Linux et macOS</p>
+        <pre class="code"><code>curl -fsSL https://raw.githubusercontent.com/skemonet/skemo/main/cli/install.sh | sh</code></pre>
+        <p class="muted" style="margin-top:10px;font-size:.92rem">S’installe dans <code>~/.local/bin</code> après vérification du
+          SHA-256. Windows : prenez le <code>.exe</code> sur la <a href="https://github.com/skemonet/skemo/releases">page des
+          versions</a>.</p></div>
+      <div><p class="label">Premier diagramme</p>
+        <pre class="code"><code>skemo init mon-diagramme
+cd mon-diagramme
+skemo example.skemo --css custom.css    # → example.png
+skemo watch example.skemo               # aperçu en direct</code></pre>
+        <p class="muted" style="margin-top:10px;font-size:.92rem">Ensuite : <a href="/fr/docs/getting-started/">premiers pas</a>.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="faq">
+  <div class="wrap">
+    <span class="eyebrow">Questions</span>
+    <h2>Bon à savoir</h2>
+    <details><summary>Quelle différence avec Mermaid ou D2 ?</summary>
+      <p>Les trois sont du texte. skemo est fait pour les diagrammes que l’on montre : l’apparence est du CSS, le placement reste
+        stable quand on modifie (seules les flèches de ce qui a changé bougent), les positions s’épinglent à la main ou depuis
+        l’éditeur et sont réécrites dans le texte, le rendu n’a pas besoin de navigateur, et le même fichier peut se dérouler pas à
+        pas. Mermaid couvre plus de types (diagrammes de séquence, de classes, graphiques) ; skemo ne les dessine pas aujourd’hui.</p></details>
+    <details><summary>L’agent a-t-il besoin de voir l’image ?</summary>
+      <p>Il la regarde, comme une personne : dans notre test sur une plateforme Terraform, l’agent a lu chaque image qu’il a rendue.
+        Ce qui change, c’est ce qu’il y corrige. <code>skemo check</code> repère les erreurs de structure sous forme de texte et le
+        placement est automatique : l’agent lit l’image pour en juger, pas pour déplacer des boîtes à la main.</p></details>
+    <details><summary>Est-ce gratuit ?</summary>
+      <p>Oui. skemo est libre, sous licence MIT OU Apache-2.0, et en préversion ({{version}}) : le format peut encore changer avant
+        la 1.0. Les polices intégrées sont sous SIL Open Font License, les icônes sous ISC.</p></details>
+    <details><summary>Que mesurent les chiffres de tokens ?</summary>
+      <p>Les chiffres ci-dessus comparent le texte d’un diagramme : une source <code>.skemo</code> contre le SVG de la même image. Une
+        tâche complète coûte plus que sa sortie : lire l’entrée, la compétence et les images rendues. Mesuré sur une tâche complète
+        (un diagramme d’architecture tiré d’un export Terraform, {{task:runs}} essai, même modèle avec et sans la compétence),
+        l’agent avec skemo a dépensé {{task:saving_percent}} % de tokens en moins ({{task:tokens_with}} contre
+        {{task:tokens_without}}) et a été {{task:speedup}} fois plus rapide. D’autres tâches seront mesurées de la même façon.</p></details>
+  </div>
+</section>
+
+</main>
+
+{{footer}}
+
+</body>
+</html>

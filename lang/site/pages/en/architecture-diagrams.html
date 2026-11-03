@@ -1,0 +1,50 @@
+<!--
+title: Software architecture diagrams as code
+nav: Architecture diagrams
+description: Draw software architecture diagrams from text with skemo: containers, services, data stores and their links, laid out and routed automatically, styled in CSS.
+-->
+<h1>Software architecture diagrams</h1>
+<p class="lead">Describe the people, applications, services and data stores of a system and the calls between them. skemo places
+  every box, routes every arrow and keeps the drawing tidy when the system changes.</p>
+
+<skemo name="architecture"></skemo>
+
+<h2>How it is written</h2>
+<ul>
+  <li><strong>One card per building block</strong>: <code>card#api.app API</code>. The <code>#id</code> names it for arrows, the
+    class gives it a type.</li>
+  <li><strong>One zone per boundary</strong>: a system, a team, a deployment unit. What is indented under the zone is inside it.</li>
+  <li><strong>Arrows are written inside the card they leave</strong>: <code>to(db) SQL</code> under the Orders service draws the call
+    and its label. <code>to(catalog orders)</code> draws two arrows that share a fork.</li>
+  <li><strong>Types are CSS</strong>: <code>.app { --c: #3E6FC4; --label: "Container"; }</code> colours every container and writes
+    its category above the name. Change one line to restyle the whole diagram.</li>
+</ul>
+
+<h2>The C4 model</h2>
+<p>The example follows the container level of the <a href="https://c4model.com/">C4 model</a>: a person, the containers of one
+  system, an external system. Each C4 level is a separate <code>.skemo</code> file with the same types:</p>
+<table>
+  <tr><th>C4 level</th><th>In skemo</th></tr>
+  <tr><td>System context</td><td>one card per system and per kind of user; your system as a single card</td></tr>
+  <tr><td>Container</td><td>your system as a zone holding its applications and data stores</td></tr>
+  <tr><td>Component</td><td>one container as a zone holding its components</td></tr>
+  <tr><td>Deployment</td><td>nested zones for regions, networks and machines: see <a href="cloud-and-network-diagrams.html">cloud
+    and network diagrams</a></td></tr>
+</table>
+
+<h2>Keeping it readable</h2>
+<ul>
+  <li>Choose the direction that follows the main flow: <code>diagram(dir="down")</code> for request paths,
+    <code>dir="right"</code> for data pipelines (<a href="layout.html">Layout</a>).</li>
+  <li>Give asynchronous flows their own arrow class (<code>.async</code>, dashed) so they read without colour.</li>
+  <li>Add a legend that lists the types for you: <code>card.legend(at="ne")</code> (<a href="rich-cards.html">Rich cards</a>).</li>
+  <li>Edit freely: adding a service re-lays out the diagram, and pinning a card with <code>at="x,y"</code> keeps it where you want
+    it.</li>
+</ul>
+
+<h2>See also</h2>
+<ul>
+  <li><a href="cards-and-zones.html">Cards and zones</a> and <a href="arrows.html">Arrows</a>, the reference of every attribute.</li>
+  <li><a href="styling.html">Styling with CSS</a>: card looks, colours, dark mode.</li>
+  <li><a href="diagrams-as-code.html">Diagrams as code</a>: keep the file in the repository and render it in CI.</li>
+</ul>

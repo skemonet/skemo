@@ -1,0 +1,25 @@
+//- Architecture logicielle : une boutique en ligne, ses services et leurs données
+diagram(dir="down")
+
+  card#shopper.person(icon="user") Client
+    to(web) HTTPS
+
+  zone#shop.system Boutique en ligne
+    card#web.app(icon="monitor") Vitrine
+      | React, servie par le CDN
+      to(api) JSON
+    card#api.app(icon="server") API
+      | Rust, 3 instances
+      to(catalog orders)
+    card#catalog.app Service catalogue
+      to(search)
+    card#orders.app Service commandes
+      to(db) SQL
+      to(queue).async commande passée
+      to(pay) débit
+    card#search.store(icon="search") Index de recherche
+    card#db.store(icon="database") Base commandes
+      | PostgreSQL
+    card#queue.store Bus d’événements
+
+  card#pay.external(icon="credit-card") Prestataire de paiement

@@ -1,0 +1,4 @@
+.trigger { --c: #6B7280; --label: "Trigger"; }
+.job     { --c: #3E6FC4; --label: "Job"; }
+.env     { --c: #2F9E44; --label: "Environment"; }
+.gate    { --c: #E8590C; --label: "Manual gate"; }

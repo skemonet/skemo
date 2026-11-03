@@ -1,0 +1,6 @@
+.person   { --c: #7048E8; --label: "Personne"; }
+.app      { --c: #3E6FC4; --label: "Conteneur"; }
+.store    { --c: #B45309; --label: "Données"; }
+.external { --c: #6B7280; --label: "Système externe"; }
+.system   { --z-ink: #3E6FC4; }
+.edge.async .line { stroke-dasharray: 5 4; }

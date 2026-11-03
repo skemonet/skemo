@@ -1,0 +1,7 @@
+diagram(dir="right")
+  card#idea.t3 Idée             @1
+    to(proto)
+  card#proto.t2 Prototype       @2:up
+    | deux semaines            @2.5
+    to(prod)
+  card#prod.t1 Produit          @3:zoom @4:focus

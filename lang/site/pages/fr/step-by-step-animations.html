@@ -1,0 +1,70 @@
+<!--
+title: Diagrammes animés pas à pas pour exposés et tutoriels
+nav: Animations pas à pas
+description: Faites se déployer un diagramme étape par étape avec des marqueurs comme @1 et @2:up, puis exportez-le en présentation HTML, GIF, PNG ou WebP animé, ou une image par étape.
+-->
+<h1>Animations pas à pas</h1>
+<p class="lead">Des marqueurs en fin de ligne font se déployer un diagramme étape par étape, pour un exposé, un tutoriel ou une
+  analyse d’incident. Un seul fichier donne le lecteur HTML, le GIF et une image par étape.</p>
+
+<skemo-source name="animation"></skemo-source>
+<skemo name="animation" steps="1 2 2.5 3 4" figure></skemo>
+
+<h2>Marqueurs</h2>
+<table>
+  <tr><th>Écrire</th><th>Sens</th></tr>
+  <tr><td><code>@2</code></td><td>apparaît à l’étape 2 (effet <code>fade</code> ; <code>draw</code> pour une flèche)</td></tr>
+  <tr><td><code>@2:up</code></td><td>apparaît à l’étape 2 avec l’effet <code>up</code> ; effets : <code>fade</code> <code>up</code>
+    <code>zoom</code> <code>draw</code></td></tr>
+  <tr><td><code>@2-4</code></td><td>visible de l’étape 2 à l’étape 4 incluse, puis masqué</td></tr>
+  <tr><td><code>@0-2</code> <em>(préversion)</em></td><td>visible dès le début jusqu’à l’étape 2 incluse, puis masqué</td></tr>
+  <tr><td><code>@4:focus</code>, <code>@4-6:focus</code></td><td>mis en avant à l’étape 4 (ou de 4 à 6) : le reste est estompé</td></tr>
+</table>
+<p>Les marqueurs se placent en fin de ligne <code>card</code>, <code>zone</code>, <code>|</code> ou <code>to(…)</code>, après au moins
+  une espace, et sont retirés du texte affiché. Les étapes sont des valeurs ordonnées, pas un compte : <code>@2.5</code> s’insère
+  entre 2 et 3 sans rien renuméroter.</p>
+
+<h2>Remplacer une ligne <em>(préversion)</em></h2>
+<skemo name="replace-line" steps="0 1 2" figure></skemo>
+<skemo-source name="replace-line"></skemo-source>
+<p><code>@0-1</code> montre une ligne dès le début et la masque après l’étape 1 ; la ligne suivante apparaît à l’étape 2. Des lignes
+  jamais visibles ensemble partagent une même place : la carte fait une ligne de haut et le texte change sur place.</p>
+
+<h2>Animer une pastille <em>(préversion)</em></h2>
+<skemo name="tag-step" steps="1 2" figure></skemo>
+<skemo-source name="tag-step"></skemo-source>
+<p>Des marqueurs à la fin d’une valeur <code>tag="…"</code> animent la pastille seule : <code>tag="8080 @1"</code> montre le port à
+  l’étape 1. En HTML, cela fonctionne avec les apparences <code>band</code> (par défaut) et <code>header</code>.</p>
+
+<h2>Règles</h2>
+<ul>
+  <li>Au plus un marqueur d’apparition par élément ; autant de <code>:focus</code> que vous voulez.</li>
+  <li>Un enfant n’apparaît jamais avant son parent et ne lui survit pas (une carte dans une zone, une ligne dans une carte).</li>
+  <li>Une flèche sans marqueur apparaît avec la plus tardive de ses deux extrémités, tracée progressivement.</li>
+  <li>Seuls les derniers mots d’une ligne sont des marqueurs : <code>réunion @3 demain</code> reste du texte. <code>\@2</code> écrit
+    un <code>@2</code> littéral ; <code>admin@example.com</code> n’a pas besoin d’échappement.</li>
+  <li>Un marqueur incohérent (plus tôt que son parent, un intervalle sans étape ultérieure) donne un avertissement et est ajusté.</li>
+</ul>
+
+<h2>Sorties</h2>
+<table>
+  <tr><th>Commande</th><th>Résultat</th></tr>
+  <tr><td><code>skemo expose.skemo -o expose.html</code></td><td>page autonome avec un lecteur d’étapes : flèches du clavier, espace ou
+    Page suivante</td></tr>
+  <tr><td><code>-o expose.gif</code>, <code>-o expose.apng</code>, <code>-o expose.webp</code></td><td>animation avec les effets
+    (<code>--hold</code>, <code>--transition</code>, <code>--fps</code>, <code>--final-hold</code>, <code>--no-loop</code>)</td></tr>
+  <tr><td><code>--step 2 -o e2.png</code></td><td>un état</td></tr>
+  <tr><td><code>--animated -o expose.png</code></td><td>un PNG par état (<code>expose.00.png</code>…)</td></tr>
+  <tr><td><code>--board -o planche.png</code></td><td>une planche de tous les états</td></tr>
+</table>
+<p>En SVG, skemo n’anime rien lui-même : il marque les éléments avec <code>data-step</code>, <code>data-fx</code>,
+  <code>data-until</code> et <code>data-focus</code>, pour votre propre lecteur. Le <code>&lt;svg&gt;</code> racine liste les étapes
+  dans l’ordre dans <code>data-states</code> (<code>["1","2","2.5","3"]</code>) : un lecteur qui ne compte que des étapes entières,
+  comme les fragments de reveal.js, peut ramener <code>2.5</code> à son propre indice.</p>
+
+<h2>Voir aussi</h2>
+<ul>
+  <li><a href="animated-flows.html">Flux animés</a> : points et tirets en mouvement sur les flèches.</li>
+  <li><a href="cli.html">Ligne de commande</a> : <code>fit</code> et <code>--font-scale</code> pour un diagramme à la taille d’une
+    diapositive.</li>
+</ul>

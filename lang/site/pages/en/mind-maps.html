@@ -1,0 +1,31 @@
+<!--
+title: Mind maps from text
+nav: Mind maps
+description: Write a mind map as an indented list of ideas and arrows; skemo puts the root in the centre, balances the branches left and right and draws them curved.
+-->
+<h1>Mind maps</h1>
+<p class="lead">A central idea, branches to the right and to the left. Write the ideas and the arrows from each one to its children; skemo balances the two sides and draws the branches.</p>
+
+<skemo name="mindmap"></skemo>
+
+<h2>Rules</h2>
+<ul>
+  <li><code>diagram(layout="mindmap")</code> enables the mode; <code>root="id"</code> picks the centre. By default the root is the
+    first card that no arrow targets.</li>
+  <li>The root's children are spread between the right and the left, balancing the height of both sides; on each side, writing order
+    reads top to bottom.</li>
+  <li>A node is centred on the block of its children; arrows of one parent share a trunk.</li>
+  <li>An arrow to a card already in the tree is drawn as an ordinary cross-link.</li>
+  <li>A card that cannot be reached from the root is placed under the map, with a warning.</li>
+  <li>Zones are not allowed; <code>at=</code> has no effect. Classes, themes and animation markers work as everywhere.</li>
+</ul>
+
+<h2>When to use it</h2>
+<p>Brainstorms, the outline of a talk or a document, the parts of a product. When the tree has a single direction (an organisation,
+  a breakdown), an <a href="org-charts.html">organisation chart</a> reads better.</p>
+
+<h2>See also</h2>
+<ul>
+  <li><a href="styling.html">Styling with CSS</a>: the mind map look (root pill, tinted branches, plain leaves).</li>
+  <li><a href="step-by-step-animations.html">Step-by-step animations</a>: reveal one branch at a time.</li>
+</ul>

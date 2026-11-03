@@ -1,0 +1,55 @@
+<!--
+title: Diagrammes en code : dans Git, dans la doc et en CI
+nav: Diagrammes en code
+description: Gardez vos diagrammes en texte à côté du code : relus en pull request, vérifiés et rendus en CI, publiés en PNG, SVG ou HTML, identiques sur toutes les machines.
+-->
+<h1>Diagrammes en code</h1>
+<p class="lead">Un fichier <code>.skemo</code>, c’est quelques lignes de texte. Il vit dans le dépôt à côté de ce qu’il décrit,
+  change en pull request comme le code, et donne la même image sur toutes les machines.</p>
+
+<skemo name="docs-as-code"></skemo>
+
+<h2>Pourquoi du texte</h2>
+<ul>
+  <li><strong>Relisible.</strong> Ajouter un service, c’est une ligne dans le diff, pas une image binaire à comparer à l’œil.</li>
+  <li><strong>Déterministe.</strong> Polices et thème sont intégrés à l’exécutable : le même fichier donne les mêmes pixels
+    partout, on peut donc versionner et comparer les images rendues.</li>
+  <li><strong>Stable à l’édition.</strong> Une modification ne déplace que les flèches de ce qui a changé ; épinglez une carte avec
+    <code>at="x,y"</code> pour la garder en place.</li>
+  <li><strong>Hors ligne.</strong> Un exécutable, pas de navigateur, pas de Node, pas de réseau : le schéma d’un système privé ne
+    quitte jamais votre machine.</li>
+</ul>
+
+<h2>Vérifier et rendre en CI</h2>
+<pre><code>skemo check docs/*.skemo --deny-warnings          # code de sortie 1 au moindre problème
+skemo render docs/architecture.skemo -o docs/architecture.svg --deny-warnings</code></pre>
+<p>Une étape GitHub Actions, par exemple :</p>
+<pre><code>- run: curl -fsSL https://raw.githubusercontent.com/skemonet/skemo/main/cli/install.sh | sh
+- run: ~/.local/bin/skemo check docs/*.skemo --deny-warnings</code></pre>
+
+<h2>Sorties</h2>
+<table>
+  <tr><th>Format</th><th>Usage</th></tr>
+  <tr><td>PNG, WebP</td><td>README, wikis, messageries, présentations (<code>--scale 2</code> pour les écrans denses,
+    <code>--transparent</code>)</td></tr>
+  <tr><td>SVG</td><td>sites de documentation : net à toute taille, texte sélectionnable et indexé par les moteurs de recherche</td></tr>
+  <tr><td>HTML</td><td>une page autonome avec thèmes clair et sombre, lecteur pas à pas et flèches animées</td></tr>
+  <tr><td>GIF, APNG, WebP animé</td><td>des animations là où aucun script ne tourne</td></tr>
+</table>
+
+<h2>Des images qui se rouvrent</h2>
+<p>Chaque image rendue par skemo porte sa source et ses feuilles de style dans des métadonnées que les visionneuses ignorent.
+  Partagez le PNG seul ; plus tard, <code>skemo extract diagramme.png</code> rend le texte, et toute commande accepte l’image à la
+  place de la source. Rendez avec <code>--no-source</code> quand la source ne doit pas voyager avec l’image.</p>
+
+<h2>Aperçu en direct pendant l’écriture</h2>
+<pre><code>skemo watch docs/architecture.skemo --css docs/architecture.css   # http://127.0.0.1:8710</code></pre>
+<p>La page se recharge à chaque enregistrement. <code>skemo fmt</code> garde les fichiers sous une forme canonique : les diffs
+  restent petits.</p>
+
+<h2>Voir aussi</h2>
+<ul>
+  <li><a href="cli.html">Ligne de commande</a> : toutes les commandes et options.</li>
+  <li><a href="ai-agents.html">Agents IA</a> : laisser un agent de code écrire et mettre à jour les fichiers.</li>
+  <li><a href="diagnostics.html">Erreurs et avertissements</a> : ce que signale <code>skemo check</code>.</li>
+</ul>

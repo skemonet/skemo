@@ -1,0 +1,24 @@
+//- An organisation chart: shared trunks from each manager
+diagram(dir="down")
+
+  card#ceo.lead(icon="crown") Camille Martin
+    | Chief executive
+    to(cto cfo cpo join="trunk")
+
+  card#cto.manager Alex Moreau
+    | Engineering
+    to(platform apps join="trunk")
+  card#cfo.manager Robin Petit
+    | Finance
+  card#cpo.manager Sam Leroy
+    | Product
+    to(design research join="trunk")
+
+  card#platform.team Platform team
+    | 8 people
+  card#apps.team Apps team
+    | 12 people
+  card#design.team Design
+    | 4 people
+  card#research.team User research
+    | 2 people

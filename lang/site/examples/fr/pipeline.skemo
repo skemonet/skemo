@@ -1,0 +1,29 @@
+//- Une chaîne de livraison, de gauche à droite, avec une validation manuelle
+diagram(dir="right")
+
+  card#push.trigger(icon="git-branch") Push sur main
+    to(build)
+
+  zone#ci.stage Intégration continue
+    card#build.job Compilation
+      | cargo build --release
+      to(test lint)
+    card#test.job Tests unitaires
+      | 1 240 tests
+      to(image)
+    card#lint.job Lint et audit
+      | clippy · cargo-deny
+      to(image)
+    card#image.job Image de conteneur
+      | signée, poussée au registre
+      to(staging)
+
+  zone#cd.stage Livraison
+    card#staging.env Préproduction
+      | tests de fumée
+      to(approve)
+    card#approve.gate(icon="user-check") Validation
+      | responsable des versions
+      to(prod) validé
+    card#prod.env.ok Production
+      | canari 10 % → 100 %

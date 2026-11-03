@@ -1,0 +1,25 @@
+//- Software architecture: a web shop, its services and their data
+diagram(dir="down")
+
+  card#shopper.person(icon="user") Shopper
+    to(web) HTTPS
+
+  zone#shop.system Web shop
+    card#web.app(icon="monitor") Storefront
+      | React, served by the CDN
+      to(api) JSON
+    card#api.app(icon="server") API
+      | Rust, 3 instances
+      to(catalog orders)
+    card#catalog.app Catalog service
+      to(search)
+    card#orders.app Orders service
+      to(db) SQL
+      to(queue).async order placed
+      to(pay) charge
+    card#search.store(icon="search") Search index
+    card#db.store(icon="database") Orders DB
+      | PostgreSQL
+    card#queue.store Event bus
+
+  card#pay.external(icon="credit-card") Payment provider

@@ -1,0 +1,24 @@
+//- Un organigramme : un tronc commun sous chaque responsable
+diagram(dir="down")
+
+  card#ceo.lead(icon="crown") Camille Martin
+    | Direction générale
+    to(cto cfo cpo join="trunk")
+
+  card#cto.manager Alex Moreau
+    | Ingénierie
+    to(platform apps join="trunk")
+  card#cfo.manager Robin Petit
+    | Finances
+  card#cpo.manager Sam Leroy
+    | Produit
+    to(design research join="trunk")
+
+  card#platform.team Équipe plateforme
+    | 8 personnes
+  card#apps.team Équipe applications
+    | 12 personnes
+  card#design.team Design
+    | 4 personnes
+  card#research.team Recherche utilisateur
+    | 2 personnes

@@ -1,0 +1,35 @@
+<!--
+title: Organisation charts and trees from text
+nav: Org charts and trees
+description: Draw organisation charts, hierarchies and trees as code with skemo: each manager's reports share one trunk, every parent is centred over its children.
+-->
+<h1>Organisation charts and trees</h1>
+<p class="lead">A hierarchy is cards and the arrows from each parent to its children. With <code>join="trunk"</code>, the arrows of
+  one parent share a trunk and branch out, the way organisation charts are drawn.</p>
+
+<skemo name="org-chart"></skemo>
+
+<h2>How it is written</h2>
+<ul>
+  <li><code>diagram(dir="down")</code>: the root on top, each level one row lower.</li>
+  <li><code>to(cto cfo cpo join="trunk")</code> under the root draws one trunk to its three reports. Each report still has its own
+    arrow, so it can have its own style or animation marker.</li>
+  <li>Children keep the order you wrote them in. A parent is centred over its children.</li>
+  <li>A type per level (<code>.lead</code>, <code>.manager</code>, <code>.team</code>) colours the levels and writes their category
+    above the name.</li>
+</ul>
+<div class="note"><p>Name your types after what they mean (<code>.manager</code>, <code>.team</code>). A few class names belong to the
+  drawing itself and would style a part of every card: avoid <code>.head</code>, <code>.title</code> and <code>.line</code> as
+  types.</p></div>
+
+<h2>Other trees</h2>
+<p>The same writing draws any hierarchy: a product breakdown, a decision tree, a file layout. Without <code>join</code>, plain arrows
+  from one card to several cards of the next row also fork:</p>
+<skemo name="trunk"></skemo>
+<p>For a tree that grows from a central idea in both directions, use a <a href="mind-maps.html">mind map</a>.</p>
+
+<h2>See also</h2>
+<ul>
+  <li><a href="arrows.html">Arrows</a>: trunks, forks, buses and named joins.</li>
+  <li><a href="styling.html">Styling with CSS</a>: card looks for a lighter chart.</li>
+</ul>

@@ -1,0 +1,39 @@
+<!--
+title: Diagrammes de flux animés : points et tirets en mouvement
+nav: Flux animés
+description: Rendez le trafic visible avec skemo : un point lumineux court sur chaque flèche .pulse et des tirets défilent sur les flèches .flow, en HTML, SVG, GIF, APNG et WebP animé.
+-->
+<h1>Flux animés <em>(préversion)</em></h1>
+<p class="lead">Deux classes de flèche tournent en boucle tant que le diagramme est affiché : <code>.pulse</code> envoie un point
+  lumineux de la source à la pointe, <code>.flow</code> fait défiler des tirets sur la ligne. On voit d’un coup d’œil où vont les
+  requêtes et les événements.</p>
+
+<skemo name="motion"></skemo>
+<p>Le diagramme ci-dessus bouge dans votre navigateur : c’est la sortie SVG avec <code>--motion</code>.</p>
+
+<h2>Comment l’écrire</h2>
+<ul>
+  <li><code>to(gateway).pulse requêtes</code> : un seul point par flèche à la fois. Tous les points vont à la même vitesse : ceux
+    de toutes les flèches partent ensemble, et une flèche longue prend plus de temps.</li>
+  <li><code>to(kafka).flow événements</code> : des tirets qui avancent vers la pointe, pour un flux continu.</li>
+  <li>Les réglages sont des propriétés CSS sur la classe de la flèche :</li>
+</ul>
+<pre><code>.edge.orders { --pulse-color: #E8590C; --pulse-size: 7px; --pulse-speed: 200px; }
+.edge.flow   { --flow-speed: 30px; }   /* px par seconde */</code></pre>
+
+<h2>Où ça bouge</h2>
+<table>
+  <tr><th>Sortie</th><th>Mouvement</th></tr>
+  <tr><td>HTML (<code>-o f.html</code>)</td><td>joué ; arrêté pour les lecteurs qui demandent moins d’animations à leur système</td></tr>
+  <tr><td>SVG avec <code>--motion</code></td><td>joué, y compris dans une balise <code>&lt;img&gt;</code> (animation CSS, sans script)</td></tr>
+  <tr><td>GIF, APNG, WebP animé</td><td>une boucle, image par image ; l’APNG rend le mieux les couleurs du halo</td></tr>
+  <tr><td>PNG, WebP, SVG sans <code>--motion</code></td><td>fixe : les flèches sont dessinées en traits pleins</td></tr>
+</table>
+<p>Mouvement et étapes se combinent : un diagramme qui se déploie pas à pas peut avoir des flèches animées à chaque étape
+  (<a href="step-by-step-animations.html">Animations pas à pas</a>).</p>
+
+<h2>Voir aussi</h2>
+<ul>
+  <li><a href="arrows.html">Flèches</a> : toutes les classes de flèche.</li>
+  <li><a href="cli.html">Ligne de commande</a> : <code>--fps</code>, <code>--hold</code> et les autres options de durée.</li>
+</ul>

@@ -1,0 +1,34 @@
+<!--
+title: Cartes mentales en texte
+nav: Cartes mentales
+description: Écrivez une carte mentale comme une liste d’idées et de flèches ; skemo met la racine au centre, équilibre les branches à gauche et à droite et les dessine en courbes.
+-->
+<h1>Cartes mentales</h1>
+<p class="lead">Une idée centrale, des branches à droite et à gauche. Écrivez les idées et les flèches de chacune vers ses enfants ;
+  skemo équilibre les deux côtés et dessine les branches.</p>
+
+<skemo name="mindmap"></skemo>
+
+<h2>Règles</h2>
+<ul>
+  <li><code>diagram(layout="mindmap")</code> active le mode ; <code>root="id"</code> choisit le centre. Par défaut, la racine est la
+    première carte qu’aucune flèche ne vise.</li>
+  <li>Les enfants de la racine se répartissent entre la droite et la gauche en équilibrant la hauteur des deux côtés ; de chaque
+    côté, l’ordre d’écriture se lit de haut en bas.</li>
+  <li>Un nœud est centré sur le bloc de ses enfants ; les flèches d’un même parent partagent un tronc.</li>
+  <li>Une flèche vers une carte déjà dans l’arbre est dessinée comme un lien transversal ordinaire.</li>
+  <li>Une carte que la racine n’atteint pas est placée sous la carte, avec un avertissement.</li>
+  <li>Les zones ne sont pas permises ; <code>at=</code> est sans effet. Classes, thèmes et marqueurs d’animation fonctionnent comme
+    partout.</li>
+</ul>
+
+<h2>Quand l’utiliser</h2>
+<p>Remue-méninges, plan d’un exposé ou d’un document, parties d’un produit. Quand l’arbre n’a qu’une direction (une organisation,
+  une décomposition), un <a href="org-charts.html">organigramme</a> se lit mieux.</p>
+
+<h2>Voir aussi</h2>
+<ul>
+  <li><a href="styling.html">Styler en CSS</a> : l’apparence carte mentale (racine en pilule, branches teintées, feuilles en texte
+    simple).</li>
+  <li><a href="step-by-step-animations.html">Animations pas à pas</a> : révéler une branche à la fois.</li>
+</ul>

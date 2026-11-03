@@ -1,0 +1,6 @@
+diagram(layout="frieze" start="-800" end="600" scale="century" lang="fr")
+  card#rep.rep(start="-509" end="-27") République
+  card#emp.emp(start="-27" end="476") Empire
+  card#caesar.evt(date="-44-03-15") Mort de César
+    | Ides de mars
+  card#fall.evt(date="476") Chute de l’Occident

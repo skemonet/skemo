@@ -1,0 +1,39 @@
+<!--
+title: Thèmes clair, sombre et impression, et contrôle du contraste
+nav: Thèmes et contraste
+description: Chaque diagramme skemo se rend en thèmes clair, sombre, impression et automatique, avec un contrôle de contraste WCAG intégré.
+-->
+<h1>Thèmes et contraste</h1>
+<p class="lead">Chaque diagramme existe en quatre thèmes. Comme les types ne définissent qu’un accent, changer de thème ne demande
+  aucune modification de votre CSS.</p>
+
+<h2>Les thèmes</h2>
+<table>
+  <tr><th>Thème</th><th>Usage</th></tr>
+  <tr><td><code>light</code></td><td>par défaut ; textes secondaires, flèches et bordures gardent un contraste d’au moins 4,5:1</td></tr>
+  <tr><td><code>dark</code></td><td>écrans sombres : seules les couleurs de base changent, les teintes sont recalculées depuis
+    <code>--c</code></td></tr>
+  <tr><td><code>print</code></td><td>papier, noir et blanc compris : fond blanc, encre noire, pas d’ombre, remplissages plus foncés et
+    traits plus épais. Appliqué automatiquement quand la sortie HTML est imprimée</td></tr>
+  <tr><td><code>auto</code></td><td>HTML seulement : suit le réglage du système du lecteur. PNG et SVG se rendent en <code>light</code></td></tr>
+</table>
+<p>Choisissez avec <code>diagram(theme="dark")</code> ou, en passant outre le fichier, <code>skemo render --theme dark</code>.</p>
+
+<h2>Sombre</h2>
+<skemo name="themes" theme="dark" figure></skemo>
+
+<h2>Impression</h2>
+<skemo name="themes" theme="print" figure></skemo>
+<p>Le thème impression peut changer légèrement les dimensions (bordures plus épaisses) : le placement est calculé pour le thème
+  demandé.</p>
+
+<h2>Contraste</h2>
+<pre><code>skemo check --contrast diagramme.skemo           # signale les textes sous le seuil WCAG
+skemo render --contrast high diagramme.skemo     # fonce (ou éclaircit) ces textes, placement inchangé</code></pre>
+<p>Le seuil est de 4,5:1 pour le texte, 3:1 pour le texte sur un fond d’accent et pour les icônes. Un accent personnalisé trop clair
+  est signalé, avec l’élément et le rapport mesuré.</p>
+
+<h2>Jamais la couleur seule</h2>
+<p>Les lecteurs qui ne voient pas les couleurs, et les imprimantes, doivent aussi distinguer les types : donnez aux types un
+  <code>--label</code>, et aux flèches dont le sens compte un style de trait (<code>.dashed</code>, <code>.dotted</code>,
+  <code>.thick</code>, <code>.link</code>).</p>

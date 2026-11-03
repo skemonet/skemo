@@ -1,0 +1,83 @@
+<!--
+title: Cartes et zones : les boîtes et les groupes d’un diagramme skemo
+nav: Cartes et zones
+description: Cartes, piles de cartes, zones, titres, notes et pastilles dans skemo : ce que dessine chaque élément et les attributs qu’il accepte.
+-->
+<h1>Cartes et zones</h1>
+<p class="lead">Les cartes sont les boîtes d’un diagramme ; les zones les regroupent. Les deux prennent un titre, des classes et
+  quelques attributs.</p>
+
+<h2>Cartes</h2>
+<skemo name="cards"></skemo>
+<table>
+  <tr><th>Écrire</th><th>Effet</th></tr>
+  <tr><td><code>card#id Titre</code></td><td>une carte ; le texte après la balise est son titre</td></tr>
+  <tr><td><code>| texte</code></td><td>une ligne de contenu, indentée sous la carte. Une ligne qui commence par une adresse IPv4 ou un
+    bloc CIDR l’affiche en chasse fixe. <em>(Préversion)</em> <code>|.pill 8080 · http</code> : la ligne prend ses classes ; le
+    <code>.pill</code> du thème la dessine en pastille teintée de la couleur de la carte</td></tr>
+  <tr><td><code>.type</code></td><td>le type de la carte : sa couleur et son badge viennent du CSS</td></tr>
+  <tr><td><code>tag="…"</code></td><td>le texte de la pastille de la carte (un propriétaire, un module, un port)</td></tr>
+  <tr><td><code>label="…"</code> <em>(préversion)</em></td><td>la catégorie de la carte, au-dessus de son nom ; par défaut le
+    <code>--label</code> du type ; <code>label=""</code> n’en montre aucune. Voir <a href="rich-cards.html">Cartes enrichies</a></td></tr>
+  <tr><td><code>icon="…"</code>, <code>href="…"</code></td><td>une icône avant le titre, un lien : voir <a href="icons-and-links.html">Icônes et liens</a></td></tr>
+  <tr><td><code>at="x,y"</code></td><td>une position épinglée : voir <a href="layout.html">Placement</a></td></tr>
+</table>
+<p>Gardez des titres courts (moins d’une trentaine de caractères) : un titre long élargit la carte, alors que les lignes longues
+  passent à la ligne. Trois ou quatre lignes par carte se lisent le mieux.</p>
+
+<p>Une carte sans lignes a son titre centré ; avec des lignes, le titre reste à gauche au-dessus d’elles. Dans une colonne de
+  cartes (une zone <code>wrap="1"</code>, un <code>stack</code>) où d’autres ont des lignes, une carte sans lignes garde
+  l’alignement de la colonne.</p>
+
+<h2>Piles de cartes <em>(préversion)</em></h2>
+<skemo name="piles"></skemo>
+<p><code>cards</code> au lieu de <code>card</code> dessine une pile : plusieurs instances d’une même chose (les tâches d’un service,
+  les machines d’un groupe). C’est une carte en tout point : lignes, flèches, classes, pastille. <code>count="4"</code> dit combien :
+  trois cartes au plus sont dessinées, et un badge <code>×4</code> se place au coin inférieur droit de la pile, au même endroit dans
+  toutes les apparences. Sans <code>count</code>, trois cartes et pas de badge. Les cartes de derrière font partie de la boîte de la
+  carte : les flèches s’y arrêtent et la carte du dessus garde la largeur de ses voisines.</p>
+
+<h2>Zones</h2>
+<skemo name="zones"></skemo>
+<p>Une zone entoure tout ce qui est indenté dessous, avec une marge et la place pour son titre. Les zones s’imbriquent. Une zone
+  donne sa couleur d’accent aux cartes sans type qu’elle contient, et une zone vide garde un cadre visible. Avec
+  <code>at="x,y"</code>, une zone peut aussi recevoir une taille imposée <code>size="l,h"</code>. <em>(Préversion)</em>
+  <code>tag="…"</code> sur une zone ajoute une pastille après son titre (<code>zone#pods(tag="172.30.0.0/16") Pods</code>), comme
+  sur une carte. <code>.tag-left</code> et <code>.tag-right</code> sur une carte ou une zone placent son badge avant ou après le nom.
+  Une feuille de style peut mettre le titre d’une zone en bas (<code>zone.svc &gt; .title { top: auto; bottom: 12px }</code>) :
+  la place est alors réservée sous les cartes.</p>
+
+<h2>Titre du diagramme <em>(préversion)</em></h2>
+<pre><code>diagram
+  title Architecture d’une application Kubernetes
+    |.pill namespace mon_namespace</code></pre>
+<p>Un <code>title</code>, écrit une seule fois juste sous <code>diagram</code>, est dessiné au-dessus du dessin, à gauche ; chacune
+  de ses lignes <code>|</code> est un sous-titre, chaque ligne <code>|.pill</code> une pastille à droite de la même ligne. Le titre
+  élargit l’image si besoin et ne déplace jamais une carte. Voir l’exemple Kubernetes dans <a href="layout.html">Placement</a>.</p>
+
+<h2>Notes, pastilles et encadrés</h2>
+<p>Le thème fournit des cartes secondaires pour les annotations, et une zone sans cadre pour les légendes :</p>
+<skemo name="secondary"></skemo>
+<table>
+  <tr><th>Classe</th><th>Sur</th><th>Rendu</th></tr>
+  <tr><td><code>.note</code></td><td>carte</td><td>annotation : bord en tirets, fond teinté, texte centré, pas de badge</td></tr>
+  <tr><td><code>.chip</code></td><td>carte</td><td>une pilule arrondie sur une ligne</td></tr>
+  <tr><td><code>.info</code></td><td>carte</td><td>un petit encadré discret</td></tr>
+  <tr><td><code>.bare</code></td><td>zone</td><td>pas de cadre ; le titre devient une légende dessous, centrée et en italique ; sans
+    titre, rien n’est dessiné</td></tr>
+  <tr><td><code>.wide</code> <em>(préversion)</em></td><td>carte</td><td>occupe la largeur de son groupe, comme un réseau ou un bus ;
+    ses flèches y descendent droit et finissent par un point</td></tr>
+  <tr><td><code>.wide</code> <em>(préversion)</em></td><td>zone</td><td>occupe aussi la largeur de son groupe ; ses cartes, sur une
+    rangée, se partagent cette largeur</td></tr>
+  <tr><td><code>.col-<em>nom</em></code> <em>(préversion)</em></td><td>carte, zone</td><td>une colonne : les nœuds d’une même classe
+    <code>.col-…</code> s’alignent en travers de la direction, d’une zone à l’autre (pods et services au-dessus de la machine qui
+    les héberge)</td></tr>
+</table>
+<p>Elles se combinent avec vos propres types et gardent leur style simple quelle que soit l’apparence des cartes du diagramme.
+  Utilisez le style de flèche <code>.link</code> pour rattacher une note à une carte.</p>
+
+<h2>Types intégrés</h2>
+<p>Le thème par défaut fournit quelques types à saveur réseau, pratiques pour une esquisse : <code>.t0</code> (rouge, « T0 »),
+  <code>.t1</code> (orange), <code>.t2</code> (bleu), <code>.t3</code> (gris) pour les cartes, et <code>.cloud</code>,
+  <code>.dmz</code>, <code>.lan</code> pour les zones. Pour tout le reste, définissez vos propres types en quelques lignes de
+  <a href="styling.html">CSS</a>.</p>

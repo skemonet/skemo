@@ -1,0 +1,29 @@
+//- A delivery pipeline, left to right, with a manual gate
+diagram(dir="right")
+
+  card#push.trigger(icon="git-branch") Push to main
+    to(build)
+
+  zone#ci.stage Continuous integration
+    card#build.job Build
+      | cargo build --release
+      to(test lint)
+    card#test.job Unit tests
+      | 1,240 tests
+      to(image)
+    card#lint.job Lint and audit
+      | clippy · cargo-deny
+      to(image)
+    card#image.job Container image
+      | signed, pushed to the registry
+      to(staging)
+
+  zone#cd.stage Delivery
+    card#staging.env Staging
+      | smoke tests
+      to(approve)
+    card#approve.gate(icon="user-check") Approval
+      | release manager
+      to(prod) approved
+    card#prod.env.ok Production
+      | canary 10 % → 100 %

@@ -1,0 +1,54 @@
+<!--
+title: Frises chronologiques et chronologies historiques en texte
+nav: Frises chronologiques
+description: Dessinez des frises historiques en code avec skemo : les époques en bandes, les événements au-dessus et au-dessous d’un axe, de l’année au millénaire, dates avant notre ère comprises.
+-->
+<h1>Frises chronologiques</h1>
+<p class="lead">Un axe central pour les longues durées (décennies, siècles, millénaires), avec les époques en bandes et les
+  événements au-dessus et au-dessous. Les dates avant notre ère sont des années négatives.</p>
+
+<skemo name="frieze-small"></skemo>
+
+<h2>Options</h2>
+<table>
+  <tr><th>Attribut</th><th>Sur</th><th>Sens</th></tr>
+  <tr><td><code>layout="frieze"</code></td><td>diagram</td><td>active le mode</td></tr>
+  <tr><td><code>start</code>, <code>end</code></td><td>diagram</td><td>bornes de l’axe, en années ; par défaut les dates extrêmes.
+    <code>end</code> est inclus : <code>end="2017"</code> s’arrête sur la graduation 2018</td></tr>
+  <tr><td><code>scale</code></td><td>diagram</td><td><code>year</code> · <code>decade</code> · <code>century</code> (par défaut) ·
+    <code>millennium</code> ; les graduations restent à au moins 90 px les unes des autres</td></tr>
+  <tr><td><code>width</code></td><td>diagram</td><td>largeur imposée de l’axe</td></tr>
+  <tr><td><code>date</code></td><td>card</td><td><strong>événement</strong> : une carte centrée sur sa date, reliée à l’axe par une tige</td></tr>
+  <tr><td><code>start</code>, <code>end</code></td><td>card</td><td><strong>époque</strong> : une bande sur l’axe</td></tr>
+</table>
+
+<h2>Dates</h2>
+<p>Une année, négative avant notre ère, éventuellement suivie de <code>-MM</code> ou <code>-MM-JJ</code> :
+  <code>date="-44-03-15"</code>. <strong>Il n’y a pas d’année 0</strong> : 1 av. J.-C. est suivi de 1 apr. J.-C., et <code>0</code>
+  est une erreur. Comme dans les chronologies, <code>end</code> est inclus : <code>end="476"</code> va jusqu’à la fin de 476. Deux
+  époques qui partagent une année frontière (<code>-509 → -27</code>, puis <code>-27 → 476</code>) se chevauchent de moins de
+  2 pixels et se touchent, sur une même rangée.</p>
+
+<h2>Placement</h2>
+<ul>
+  <li>Les époques s’empilent en rangées sous l’axe, les plus longues d’abord ; un nom trop long pour sa bande passe à sa droite.</li>
+  <li>Les événements vont en haut ou en bas, du côté qui demande le niveau le plus bas, en alternant à égalité ; la tige reste sur
+    la date exacte.</li>
+  <li>À l’échelle du siècle, les siècles sont écrits en chiffres romains, dans la langue du diagramme.</li>
+  <li>Les flèches sont permises, pour le rare lien de cause à effet.</li>
+</ul>
+
+<h2>Regrouper des événements <em>(préversion)</em></h2>
+<skemo name="frieze-zone"></skemo>
+<p>Une zone encadre ses événements et leurs tiges, avec son titre au-dessus. Ses événements vont tous du même côté de l’axe
+  (au-dessus, sauf si une autre zone occupe déjà ce côté sur les mêmes dates) ; les autres événements de la période vont de l’autre
+  côté. Les zones ne s’imbriquent pas dans une frise.</p>
+
+<h2>Un exemple plus grand</h2>
+<skemo name="frieze" figure></skemo>
+
+<h2>Voir aussi</h2>
+<ul>
+  <li><a href="timelines.html">Chronologies et feuilles de route</a> pour des plannings en jours et en mois.</li>
+  <li><a href="themes.html">Thèmes</a> : le thème impression pour un document papier.</li>
+</ul>

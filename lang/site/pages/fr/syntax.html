@@ -1,0 +1,67 @@
+<!--
+title: Syntaxe de skemo : cartes, zones, flèches et lignes
+nav: Syntaxe
+description: Comment se lit un fichier .skemo : un texte indenté proche de Pug, quatre balises, des identifiants, des classes, des attributs et des lignes de contenu.
+-->
+<h1>Syntaxe</h1>
+<p class="lead">Un fichier <code>.skemo</code> est un document <a href="https://pugjs.org/">Pug</a> valide qui utilise une poignée de
+  balises et des lignes écrites <code>| texte</code>. Chaque ligne est un élément ; l’indentation dit ce qui contient quoi ; le texte
+  des lignes suit Markdown.</p>
+
+<skemo name="syntax"></skemo>
+
+<h2>Balises et lignes</h2>
+<table>
+  <tr><th>Écrire</th><th>Rôle</th><th>Contenu</th></tr>
+  <tr><td><code>diagram(…)</code></td><td>première ligne facultative : options globales</td><td>tout le reste, indenté dessous</td></tr>
+  <tr><td><code>card#id.type</code></td><td>une carte</td><td>texte = titre · <code>| …</code> = lignes de contenu · <code>to(…)</code> = flèches qui en partent</td></tr>
+  <tr><td><code>zone#id.type</code></td><td>un groupe</td><td>texte = titre · <code>| …</code> = lignes de description · cartes et zones indentées</td></tr>
+  <tr><td><code>to(cible).type</code></td><td>une flèche, dans sa carte source</td><td>texte = étiquette (facultative)</td></tr>
+  <tr><td><code>| texte</code></td><td>une ligne de la carte, de la zone ou du titre au-dessus</td><td>emphase Markdown ; une ligne qui finit par <code>|</code> est une ligne de tableau</td></tr>
+</table>
+<p><code>title</code>, <code>cards</code> et <code>stack</code> complètent l’ensemble : voir <a href="cards-and-zones.html">Cartes et
+  zones</a>. Les classes collent au symbole qui ouvre : <code>|.warn texte</code> donne à une ligne la classe <code>warn</code> ;
+  <code>| .env</code> (avec une espace d’abord) est le texte « .env ».</p>
+
+<h2>Anatomie d’une ligne</h2>
+<pre><code>card#fw.t0.critical(tag="Edge" at="40,120") Pare-feu périmétrique   @2:up
+│    │  │           │                       │                       └ marqueur d’animation (facultatif)
+│    │  │           │                       └ texte : le titre
+│    │  │           └ attributs : un seul groupe, entre parenthèses
+│    │  └ classes : les types de la carte, stylés en CSS (plusieurs permis)
+│    └ id : unique, sert de cible aux flèches
+└ balise</code></pre>
+<ul>
+  <li><strong>Id</strong> : <code>#</code> suivi de lettres, chiffres, <code>_</code> ou <code>-</code>. Toute carte ou zone visée par
+    une flèche en a besoin, et les ids sont uniques dans le fichier.</li>
+  <li><strong>Classes</strong> : <code>.nom</code>, autant que vous voulez. Ce sont des classes CSS : voir <a href="styling.html">Styler
+    en CSS</a>.</li>
+  <li><strong>Attributs</strong> : <code>nom="valeur"</code>, séparés par des espaces ou des virgules. Un nom seul est une cible de
+    flèche dans <code>to(a b)</code>. Les valeurs prennent des guillemets doubles ou simples ; les nombres peuvent s’en passer.</li>
+  <li><strong>Texte</strong> : tout ce qui suit la première espace après la balise.</li>
+</ul>
+
+<h2>Un seul groupe d’attributs par balise</h2>
+<p>Les attributs vont dans une seule paire de parenthèses, juste après l’id ou les classes :</p>
+<pre><code>to(core side="right-top").dashed      ✓
+to(core).dashed(side="right-top")     ✗ erreur : plusieurs groupes d’attributs</code></pre>
+
+<h2>Indentation</h2>
+<p>L’imbrication suit l’indentation. Utilisez 2 espaces (recommandé) ou des tabulations, mais jamais les deux dans un fichier. Une
+  zone contient des cartes et des zones ; une carte ne contient que des lignes <code>|</code> et des flèches <code>to(…)</code>.</p>
+
+<h2>Commentaires</h2>
+<pre><code>//- un commentaire, non rendu (son bloc indenté est ignoré aussi)
+// aussi un commentaire</code></pre>
+
+<h2>Anciennes écritures</h2>
+<p>Les fichiers écrits avant la forme actuelle du langage s’ouvrent encore : <code>li texte</code> se lit <code>| texte</code>,
+  <code>from</code>/<code>to</code> sur <code>diagram</code> se lisent <code>start</code>/<code>end</code>, <code>step=</code>/<code>fx=</code>
+  se lisent comme des marqueurs <code>@</code>. <code>skemo fmt</code> les réécrit.</p>
+
+<h2>Mise en forme</h2>
+<p><code>skemo fmt fichier.skemo</code> réécrit un fichier sous sa forme canonique (indentation, ordre des attributs, marqueurs) ;
+  <code>skemo fmt --check</code> dit seulement s’il est déjà en forme. Les commentaires et l’ordre des éléments sont conservés.</p>
+
+<h2>Extension de fichier</h2>
+<p><code>.skemo</code>. Le contenu reste du Pug valide : un éditeur peut utiliser sa coloration Pug.</p>
