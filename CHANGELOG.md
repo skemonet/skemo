@@ -5,6 +5,8 @@ and the project uses [Semantic Versioning](https://semver.org/) (pre-1.0: minor 
 
 ## [Unreleased]
 
+## [0.1.0-rc.7] — 2026-11-03
+
 - **Arrows in motion** (D-079): `.pulse`, a new arrow style, runs one glowing dot along the line from the source
   to the head, every dot at the same speed; `.flow` dashes now run at a set speed. Tuned in CSS with
   `--flow-speed`, `--pulse-speed`, `--pulse-size` and `--pulse-color`. They play in HTML, GIF, APNG and
@@ -12,6 +14,9 @@ and the project uses [Semantic Versioning](https://semver.org/) (pre-1.0: minor 
   **Changed**: a still image (PNG, still WebP, SVG without `--motion`) draws a `.flow` arrow as a solid line,
   no longer as fixed dashes.
 - GIF: each frame after the first only holds the rectangle that changed, as APNG and WebP already did.
+- **Site**: the documentation moves to <https://skemo.net/docs/> (docs.skemo.net is not used), in English and
+  French, with a page per kind of diagram (architecture, cloud and network, processes, org charts, mind maps,
+  timelines, friezes, animations, animated flows), each example's source in a tab, and a new look from the logo.
 
 ## [0.1.0-rc.6] — 2026-10-31
 
@@ -52,7 +57,8 @@ The first public version of skemo, as one repository.
   `icons`, `licences`; messages in the system language; release binaries for Linux, macOS and Windows.
 - **Agent skill**: `cli/skill/skemo/`, for AI agents that write diagrams.
 
-[Unreleased]: https://github.com/skemonet/skemo/compare/v0.1.0-rc.6...HEAD
+[Unreleased]: https://github.com/skemonet/skemo/compare/v0.1.0-rc.7...HEAD
+[0.1.0-rc.7]: https://github.com/skemonet/skemo/compare/v0.1.0-rc.6...v0.1.0-rc.7
 [0.1.0-rc.6]: https://github.com/skemonet/skemo/compare/v0.1.0-rc.3...v0.1.0-rc.6
 [0.1.0-rc.3]: https://github.com/skemonet/skemo/releases/tag/v0.1.0-rc.3
 [0.1.0-rc.2]: https://github.com/skemonet/skemo/tree/28d0a43
