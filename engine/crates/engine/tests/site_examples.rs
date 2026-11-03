@@ -40,3 +40,32 @@ fn teams_stay_under_their_manager_when_the_row_is_reordered() {
     // the teams of the middle manager end before the last manager's left edge
     assert!(d.boxes["research"].right() < d.boxes["cfo"].x + d.boxes["cfo"].w);
 }
+
+/// The cloud example: Internet, outside the VPC, above its only target, the load balancer of a
+/// subnet whose title would have been crossed before the zones made room for it (D-064).
+const CLOUD: &str = "diagram(dir=\"down\")
+  card#users(icon=\"globe\") Internet
+    to(lb) HTTPS 443
+  zone#vpc(tag=\"10.0.0.0/16\") Production VPC
+    | eu-west-1 · 3 availability zones
+    zone#public(tag=\"10.0.0.0/24\") Public subnet
+      card#lb(icon=\"network\") Load balancer
+        | TLS 1.3
+        to(app) 8080
+      card#nat NAT gateway
+        | outbound only
+    zone#private(tag=\"10.0.1.0/24\") Private subnet
+      card#app App servers
+        to(nat constraint=\"false\").dashed updates
+";
+
+#[test]
+fn a_card_outside_a_zone_stands_above_its_only_target_in_it() {
+    let d = build(CLOUD);
+    assert!(
+        (cx(&d, "users") - cx(&d, "lb")).abs() < 1.0,
+        "straight above"
+    );
+    // stacked subnets as wide as each other (D-085)
+    assert_eq!(d.boxes["public"].w, d.boxes["private"].w);
+}

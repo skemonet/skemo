@@ -81,6 +81,51 @@ pub fn center_parents(model: &Model, boxes: &mut Boxes, titles: &[(String, Box2)
     }
 }
 
+/// A card linked one-to-one to a card inside a zone it is not in (Internet above a load balancer in
+/// a subnet), centred on it again once the zones have made room for their titles (D-064): before,
+/// the straight arrow would have crossed a title (`clear_of_titles`), and the card stayed where ELK
+/// put it, the arrow bending. `titles`: the zone titles on the widened frames. The card moves
+/// only if the place is free.
+pub fn spines_into_zones(model: &Model, boxes: &mut Boxes, titles: &[(String, Box2)]) {
+    let ax = Axes::of(model);
+    let edges = constrained(model);
+    let zones_of = |id: &str| {
+        let mut out = Vec::new();
+        let mut n = model.node(id).and_then(|n| n.parent.as_deref());
+        while let Some(z) = n {
+            out.push(z);
+            n = model.node(z).and_then(|n| n.parent.as_deref());
+        }
+        out
+    };
+    for p in model
+        .nodes
+        .iter()
+        .filter(|n| n.kind == Kind::Card && n.at.is_none() && !in_grid(model, &n.id))
+    {
+        let out: Vec<&&Edge> = edges.iter().filter(|e| e.from == p.id).collect();
+        let [e] = out[..] else { continue };
+        let (Some(pb), Some(cb)) = (boxes.get(&p.id).copied(), boxes.get(&e.to).copied()) else {
+            continue;
+        };
+        let entered = zones_of(&e.to).iter().any(|z| !within(model, &p.id, z));
+        if !is_card(model, &e.to) || !entered || !only_parent(&edges, &p.id, &e.to) {
+            continue;
+        }
+        if !ax.beyond(&pb, &cb) {
+            continue;
+        }
+        let Some(m) = clear_of_titles(model, titles, ax, (&p.id, &e.to), &cb) else {
+            continue;
+        };
+        let d = m - ax.mid(&pb);
+        let moved = ax.moved(&pb, d);
+        if d.abs() >= 0.5 && fits(model, &p.id, &moved, &[p.id.as_str()], boxes) {
+            boxes.insert(p.id.clone(), moved);
+        }
+    }
+}
+
 /// The span (across the flow) parent `p` (box `pb`) should be centred on, or `None`.
 fn parent_target(
     model: &Model,

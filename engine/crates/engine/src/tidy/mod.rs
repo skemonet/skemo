@@ -71,6 +71,15 @@ pub fn after_elk(
     title_room(model, elk, (pad, head));
     // room between two cards side by side for the label of the arrow between them
     label_room(model, sizes, elk, (pad, head));
+    // a card above its only target in a zone, now that the titles have room (D-064)
+    let mut framed = elk.boxes.clone();
+    framed.extend(crate::layout::zone_frames(
+        model, &elk.boxes, elk, pad, head,
+    ));
+    let titles = crate::labels::zone_titles(model, scene, &framed);
+    run(model, elk, Hints::Drop, |m, b| {
+        centre::spines_into_zones(m, b, &titles);
+    });
     // and last, to restore the stacks' order and gaps, then wide nodes and columns (D-050, D-051);
     // a zone in a stack counts by its frame as the passes left it, not by ELK's box (a card lifted
     // to its first row made it shorter, D-056)
