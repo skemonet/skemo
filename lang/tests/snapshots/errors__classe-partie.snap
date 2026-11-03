@@ -1,0 +1,22 @@
+---
+source: lang/tests/errors.rs
+expression: out
+---
+warning[part-class]: « .head » is also the class of a part the engine draws: a rule on « .head » styles that part everywhere in the drawing
+  ┌─ classe-partie.skemo:2:8
+  │
+2 │ card#a.head A
+  │        ^^^^
+  = help: name the class after what it means (« .manager », « .team »)
+warning[part-class]: « .line » is also the class of a part the engine draws: a rule on « .line » styles that part everywhere in the drawing
+  ┌─ classe-partie.skemo:3:9
+  │
+3 │   to(b).line x
+  │         ^^^^
+  = help: name the class after what it means (« .manager », « .team »)
+warning[part-class]: « .title » is also the class of a part the engine draws: a rule on « .title » styles that part everywhere in the drawing
+  ┌─ classe-partie.skemo:4:8
+  │
+4 │ card#b(class="title team") B
+  │        ^^^^^^^^^^^^^^^^^^
+  = help: name the class after what it means (« .manager », « .team »)

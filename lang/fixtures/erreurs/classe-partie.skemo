@@ -1,0 +1,5 @@
+//- A class named like a part the engine draws (part-class)
+card#a.head A
+  to(b).line x
+card#b(class="title team") B
+card#c.text Plain text

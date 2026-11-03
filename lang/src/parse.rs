@@ -453,6 +453,7 @@ fn node(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
     let (tag, tag_anim) = tag_of(cx, t);
     let wrap = attr(t, "wrap").and_then(|a| parse_wrap(cx, a, kind));
     let deck = deck_of(cx, t);
+    warn_part_classes(cx, t);
     cx.map
         .nodes
         .insert(id.clone(), Located::of(t, text_span, markers));
@@ -790,6 +791,63 @@ fn icon_attr(t: &Tag) -> Option<String> {
         .map(String::from)
 }
 
+/// Classes the engine gives the parts it draws inside cards, zones and arrows (FORMAT §4.2): a
+/// card or an arrow with one of them as its class makes `.head { … }` style the head of every
+/// card and arrow too. `.text` and `.pulse` are provided classes of their own and stay out.
+const PART_CLASSES: [&str; 19] = [
+    "head",
+    "title",
+    "tag",
+    "type",
+    "kind",
+    "count",
+    "sub",
+    "mono",
+    "swatch",
+    "sample",
+    "pill",
+    "icon",
+    "state-mark",
+    "link-mark",
+    "label",
+    "line",
+    "tail",
+    "origin",
+    "edge-label",
+];
+
+/// Warning `part-class` for each class of `t` named like a rendered part (`PART_CLASSES`).
+fn warn_part_classes(cx: &mut Ctx, t: &Tag) {
+    let written = t.classes.iter().map(|(c, sp)| (c.as_str(), *sp)).chain(
+        t.attrs.iter().filter(|a| a.name == "class").flat_map(|a| {
+            a.value
+                .iter()
+                .flat_map(|v| v.split_whitespace())
+                .map(|c| (c, a.span))
+        }),
+    );
+    let found: Vec<(String, Span)> = written
+        .filter(|(c, _)| PART_CLASSES.contains(c))
+        .map(|(c, sp)| (c.to_string(), sp))
+        .collect();
+    for (c, span) in found {
+        cx.diags.push(
+            Diagnostic::warning(
+                "part-class",
+                span,
+                tr!(
+                    "« .{c} » is also the class of a part the engine draws: a rule on « .{c} » styles that part everywhere in the drawing",
+                    "« .{c} » est aussi la classe d'une partie que le moteur dessine : une règle sur « .{c} » style cette partie partout dans le dessin"
+                ),
+            )
+            .with_help(tr!(
+                "name the class after what it means (« .manager », « .team »)",
+                "nommez la classe d'après ce qu'elle signifie (« .manager », « .team »)"
+            )),
+        );
+    }
+}
+
 fn warn_icon_ignored(cx: &mut Ctx, a: &Attr) {
     cx.diags.push(Diagnostic::warning(
         "icon-ignored",
@@ -1049,6 +1107,7 @@ fn edges(cx: &mut Ctx, t: &Tag, from: &str) {
     }
     let (step, fx) = compat_step(&anim);
     let cls = classes(t);
+    warn_part_classes(cx, t);
     let targets: Vec<&Attr> = t
         .attrs
         .iter()

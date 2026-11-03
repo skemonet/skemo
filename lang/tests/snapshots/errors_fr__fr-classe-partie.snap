@@ -1,0 +1,22 @@
+---
+source: lang/tests/errors_fr.rs
+expression: out
+---
+avertissement[part-class] : « .head » est aussi la classe d'une partie que le moteur dessine : une règle sur « .head » style cette partie partout dans le dessin
+  ┌─ classe-partie.skemo:2:8
+  │
+2 │ card#a.head A
+  │        ^^^^
+  = aide : nommez la classe d'après ce qu'elle signifie (« .manager », « .team »)
+avertissement[part-class] : « .line » est aussi la classe d'une partie que le moteur dessine : une règle sur « .line » style cette partie partout dans le dessin
+  ┌─ classe-partie.skemo:3:9
+  │
+3 │   to(b).line x
+  │         ^^^^
+  = aide : nommez la classe d'après ce qu'elle signifie (« .manager », « .team »)
+avertissement[part-class] : « .title » est aussi la classe d'une partie que le moteur dessine : une règle sur « .title » style cette partie partout dans le dessin
+  ┌─ classe-partie.skemo:4:8
+  │
+4 │ card#b(class="title team") B
+  │        ^^^^^^^^^^^^^^^^^^
+  = aide : nommez la classe d'après ce qu'elle signifie (« .manager », « .team »)
