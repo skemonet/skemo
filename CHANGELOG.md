@@ -5,6 +5,18 @@ and the project uses [Semantic Versioning](https://semver.org/) (pre-1.0: minor 
 
 ## [Unreleased]
 
+- **Changed**: zones stacked one under the other take the width of the widest by default (D-085);
+  `diagram(zones="fit")` keeps fitted frames, `zones="stretch"` also evens them along `dir` right or left.
+- **Changed**: in the default look, a card without lines keeps its title on the left, like its neighbours.
+- A card outside a zone stands straight above its only target in it (Internet above a subnet's load
+  balancer), once the zones have made room for their titles.
+- Sibling zones linked both ways keep their writing order (a private subnet reaching out through the
+  public subnet's NAT no longer goes above it); `constraint="false"` is no longer needed there (D-086).
+- A clearer help and clearer messages: headings, values and defaults in the user's language, examples,
+  `demo.skemo → demo.png` after a render, a summary after `lint`, file errors in the user's language, the
+  replacement of a removed command.
+- For contributors: a `local` profile, incremental (`cargo build --profile local`).
+
 ## [0.1.0-rc.8] — 2026-11-03
 
 The tag v0.1.0-rc.7 was not published: its changes are released here.
