@@ -319,7 +319,7 @@ fn compact(cmd: Command, lang: Lang) -> Command {
         .get_arguments()
         .map(|a| a.get_id().to_string())
         .collect();
-    for id in ids {
+    for (order, id) in ids.into_iter().enumerate() {
         cmd = cmd.mut_arg(id, |a| {
             let name = a
                 .get_value_names()
@@ -339,6 +339,12 @@ fn compact(cmd: Command, lang: Lang) -> Command {
                 .long_help(None)
                 .hide_default_value(true)
                 .hide_possible_values(true);
+            // under a heading of ours, positional arguments keep their order (clap would sort them)
+            let a = if a.is_positional() {
+                a.display_order(order)
+            } else {
+                a
+            };
             let a = match heading {
                 Some(h) => a.help_heading(h),
                 None => a,
