@@ -316,6 +316,8 @@ fn arrange(
     let mut layout_model = crate::tidy::notes_unconstrained(model);
     // D-050: an arrow against a stack's order is turned round for the layout (its order holds)
     crate::stack::layout_view(&mut layout_model);
+    // sibling zones linked both ways keep their writing order: the arrows back do not shape it
+    crate::tidy::zones_in_order(&mut layout_model);
     // an inventory (a zone of cards with no arrow) is laid as a grid rather than one long row
     crate::tidy::inventory_grids(&mut layout_model);
     let placed = place(&layout_model, scene, sizes, layout, (pad, head), warnings)?;

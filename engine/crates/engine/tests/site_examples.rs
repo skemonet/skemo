@@ -69,3 +69,15 @@ fn a_card_outside_a_zone_stands_above_its_only_target_in_it() {
     // stacked subnets as wide as each other (D-085)
     assert_eq!(d.boxes["public"].w, d.boxes["private"].w);
 }
+
+/// The app servers reach out through the NAT of the public subnet, which feeds them: without
+/// `constraint="false"`, the subnets keep their writing order (public above private).
+#[test]
+fn zones_linked_both_ways_keep_their_writing_order() {
+    let d = build(&CLOUD.replace("to(nat constraint=\"false\")", "to(nat)"));
+    assert!(
+        d.boxes["public"].bottom() <= d.boxes["private"].y,
+        "public above private"
+    );
+    assert!((cx(&d, "users") - cx(&d, "lb")).abs() < 1.0);
+}

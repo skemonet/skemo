@@ -20,6 +20,7 @@ mod widths;
 pub use columns::stretch_zones;
 pub use grid::{Hidden, hidden_by_wrap, inventory_grids};
 pub use notes::notes_unconstrained;
+pub use rows::zones_in_order;
 
 use crate::layout::{Box2, Placement};
 use crate::measure::Sizes;

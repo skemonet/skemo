@@ -327,6 +327,8 @@ card.text.wide(at="s")
 | `constraint="false"` *(preview, D-045)* | the arrow is drawn and routed but plays **no part in the automatic layout** (like Graphviz's `constraint=false`): its target is not pushed a row further. For cross links (service discovery, monitoring) that would otherwise turn the diagram into a long chain |
 | `#id` **[Rust]** | explicit identifier: `to#e1(core)` |
 
+**Zones linked both ways** *(D-086)*: when a zone sends an arrow into a sibling zone written after it, the arrows coming back from that later zone (outbound traffic through a NAT) do not shape the layout, as if written `constraint="false"`: sibling zones keep their writing order.
+
 An arrow also automatically receives the **`from-<type>` and `to-<type>` classes** of its endpoints: `.edge.from-uplink { color: … }` colours all arrows leaving a `.uplink` card.
 
 **Hyperedges.** `to(a b c join="trunk")` draws one trunk leaving the source card, which splits towards `a`, `b` and `c`. Each target still has its own arrow (own id `start->a`, own class, label, animation marker), but the arrows leave the **same attachment point** and are **not spread apart** from each other, so that their common part reads as a single line. Only arrows written in the same `to(…)` are joined. Any other name *(preview, D-051)* joins arrows **into** one card instead: they are routed from their target, like a fork out of it, so that they meet before the card and end on one line; the side a trunk leaves by, or its branches come in by, is left to it (the other arrows of those cards use the opposite side). An empty `join=""` is the warning `bad-join`.

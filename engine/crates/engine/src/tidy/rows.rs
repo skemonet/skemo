@@ -1,7 +1,7 @@
 //! Rows: leaves back on their siblings' row, writing order inside a row, sibling zones on one
 //! line, isolated cards lined up.
 
-use super::geom::{Axes, Boxes, constrained, fits, is_card, only_parent, rows, whole};
+use super::geom::{Axes, Boxes, constrained, fits, is_card, only_parent, rows, whole, within};
 use crate::layout::Box2;
 use skemo_lang::{Kind, Model};
 
@@ -390,5 +390,43 @@ pub fn row_isolated(model: &Model, boxes: &mut Boxes) {
         };
         x += b.w + GAP;
         boxes.insert(id.to_string(), whole(moved));
+    }
+}
+
+/// Sibling zones that link both ways (a load balancer of the public subnet to the app servers of
+/// the private one, which reach out through the public NAT) stay in writing order: the arrows from
+/// the later zone into the earlier one do not shape the layout, like `constraint="false"`. Left to
+/// ELK, the chain lb → app → nat put the NAT a row below the app servers, so the public subnet
+/// went under the private one and Internet's arrow crossed it. Applied to the model the layout
+/// sees, not the one routed.
+pub fn zones_in_order(model: &mut Model) {
+    let zones: Vec<(Option<String>, String)> = model
+        .nodes
+        .iter()
+        .filter(|n| n.kind == Kind::Zone)
+        .map(|n| (n.parent.clone(), n.id.clone()))
+        .collect();
+    let mut back: Vec<String> = Vec::new();
+    for (i, (parent, a)) in zones.iter().enumerate() {
+        for (p2, b) in &zones[i + 1..] {
+            if p2 != parent {
+                continue;
+            }
+            let from_to = |x: &str, y: &str| {
+                let m = &*model;
+                m.edges
+                    .iter()
+                    .filter(move |e| e.constraint && within(m, &e.from, x) && within(m, &e.to, y))
+                    .map(|e| e.id.clone())
+                    .collect::<Vec<_>>()
+            };
+            let (ahead, against) = (from_to(a, b), from_to(b, a));
+            if !ahead.is_empty() {
+                back.extend(against);
+            }
+        }
+    }
+    for e in model.edges.iter_mut().filter(|e| back.contains(&e.id)) {
+        e.constraint = false;
     }
 }

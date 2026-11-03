@@ -18,7 +18,7 @@ description: Draw cloud infrastructure and network diagrams as code with skemo: 
   <tr><td><code>icon="database"</code></td><td>one of the 1,866 built-in icons, or your own image (<a href="icons-and-links.html">Icons</a>)</td></tr>
   <tr><td><code>to(db) 5432</code></td><td>an arrow labelled with its port</td></tr>
   <tr><td><code>|.pill 8080 · http</code></td><td>a port as a pill inside the card</td></tr>
-  <tr><td><code>to(nat constraint="false")</code></td><td>a link drawn without changing the layout (return paths, monitoring)</td></tr>
+  <tr><td><code>to(nat).dashed updates</code></td><td>outbound traffic back up to the public subnet: the subnets keep the order they are written in</td></tr>
 </table>
 <p>A line that starts with an IPv4 address or a CIDR block is shown in monospace, so address plans line up.</p>
 
@@ -36,7 +36,8 @@ description: Draw cloud infrastructure and network diagrams as code with skemo: 
 <h2>Tips</h2>
 <ul>
   <li>Write zones from the outside in (region, network, subnet) and put each card in the deepest zone it belongs to.</li>
-  <li>An arrow that goes back up (a return path, outbound traffic through a NAT) can push the layout around: give it
+  <li>Two zones linked both ways (the load balancer to the app, the app out through the NAT) keep the order they are
+    written in. Another arrow that goes back up (a return path, monitoring) can still push the layout around: give it
     <code>constraint="false"</code>.</li>
   <li>Several instances of one thing are one pile, not several cards: the drawing stays as wide as the idea.</li>
   <li>For a page about one network, put a legend of the flow kinds in a corner: <code>card.legend(at="ne")</code>.</li>

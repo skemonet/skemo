@@ -19,7 +19,7 @@ description: Dessinez votre infrastructure cloud et vos réseaux en code avec sk
   <tr><td><code>icon="database"</code></td><td>l’une des 1 866 icônes intégrées, ou votre propre image (<a href="icons-and-links.html">Icônes</a>)</td></tr>
   <tr><td><code>to(db) 5432</code></td><td>une flèche étiquetée avec son port</td></tr>
   <tr><td><code>|.pill 8080 · http</code></td><td>un port en pastille dans la carte</td></tr>
-  <tr><td><code>to(nat constraint="false")</code></td><td>un lien dessiné sans changer le placement (retours, supervision)</td></tr>
+  <tr><td><code>to(nat).dashed mises à jour</code></td><td>un trafic sortant qui remonte vers le sous-réseau public : les sous-réseaux gardent leur ordre d’écriture</td></tr>
 </table>
 <p>Une ligne qui commence par une adresse IPv4 ou un bloc CIDR s’affiche en chasse fixe, pour que les plans d’adressage s’alignent.</p>
 
@@ -38,8 +38,9 @@ description: Dessinez votre infrastructure cloud et vos réseaux en code avec sk
 <ul>
   <li>Écrivez les zones de l’extérieur vers l’intérieur (région, réseau, sous-réseau) et mettez chaque carte dans la zone la plus
     profonde à laquelle elle appartient.</li>
-  <li>Une flèche qui remonte (un retour, un trafic sortant par une passerelle NAT) peut bousculer le placement : donnez-lui
-    <code>constraint="false"</code>.</li>
+  <li>Deux zones reliées dans les deux sens (le répartiteur vers l’application, l’application vers la sortie NAT) gardent leur
+    ordre d’écriture. Une autre flèche qui remonte (un retour, de la supervision) peut encore bousculer le placement :
+    donnez-lui <code>constraint="false"</code>.</li>
   <li>Plusieurs instances d’une même chose forment une pile, pas plusieurs cartes : le dessin reste aussi large que l’idée.</li>
   <li>Pour une page sur un réseau, mettez une légende des types de flux dans un coin : <code>card.legend(at="ne")</code>.</li>
 </ul>

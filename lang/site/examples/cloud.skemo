@@ -17,7 +17,7 @@ diagram(dir="down")
         | autoscaling 3–12
         to(db) 5432
         to(cache) 6379
-        to(nat constraint="false").dashed updates
+        to(nat).dashed updates
       card#db.data(icon="database") PostgreSQL
         | primary + replica
       card#cache.data(icon="zap") Redis
