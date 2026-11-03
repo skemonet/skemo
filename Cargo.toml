@@ -58,6 +58,15 @@ lto = "thin"
 codegen-units = 4
 strip = true
 
+# The checks (tools/ci.sh): the release optimisations without link-time optimisation, which
+# otherwise links each of the ~60 test binaries over the whole workspace (34 min instead of 5 on the
+# maintainers' CI). Binaries that are published keep `release`.
+[profile.ci-fast]
+inherits = "release"
+lto = false
+codegen-units = 16
+incremental = false
+
 # WebAssembly: optimised for size (F-WASM-5)
 [profile.wasm]
 inherits = "release"

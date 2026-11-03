@@ -2,7 +2,7 @@
 # The skemo pipeline — the SAME one as the CI (the workflow only calls this script).
 #
 #   tools/ci.sh            everything: quality and security IN PARALLEL (logs in target/ci/)
-#   tools/ci.sh quality    format, lints, tests, documentation, coverage, WebAssembly, smoke test
+#   tools/ci.sh quality    format, lints, tests with coverage, documentation, WebAssembly, smoke test
 #   tools/ci.sh security   dependencies (advisories, licences, sources), unsafe, secrets, workflows
 #   tools/ci.sh --list     lists the stages
 set -euo pipefail
@@ -14,36 +14,45 @@ export RUSTDOCFLAGS="${RUSTDOCFLAGS:--D warnings}"
 step() { printf '\n\033[1m▶ %s\033[0m\n' "$*"; }
 need() { command -v "$1" > /dev/null || { echo "missing tool: $1 ($2)" >&2; exit 127; }; }
 
+# Everything is built once, in the `ci-fast` profile (release optimisations, no link-time
+# optimisation: Cargo.toml); the tests run once, measured by the coverage when cargo-llvm-cov is there.
+PROFILE=ci-fast
+
 quality() {
   step "format";  cargo fmt --all -- --check
-  step "lints (clippy, -D warnings)"; cargo clippy --workspace --release --all-targets --locked -- -D warnings
-  step "tests";   cargo test --workspace --release --locked
-  step "documentation (links and code blocks)"; cargo doc --workspace --release --no-deps --locked
-  coverage
+  step "lints (clippy, -D warnings)"; cargo clippy --workspace --profile $PROFILE --all-targets --locked -- -D warnings
+  tests
+  step "documentation (links and code blocks)"; cargo doc --workspace --profile $PROFILE --no-deps --locked
   step "WebAssembly: router and lang (wasm32-unknown-unknown)"
-  cargo build --release --locked -p skemo-router -p skemo-lang --target wasm32-unknown-unknown
-  step "WebAssembly: the same layout.json as native"; (cd engine && tools/wasm-parity.sh)
+  cargo build --profile $PROFILE --locked -p skemo-router -p skemo-lang --target wasm32-unknown-unknown
+  step "WebAssembly: the same layout.json as native"; (cd engine && PROFILE=$PROFILE tools/wasm-parity.sh)
   smoke_test
 }
 
-# Line coverage (cargo-llvm-cov) of the whole workspace: must not fall below tools/coverage.min.
-coverage() {
-  if ! command -v cargo-llvm-cov > /dev/null; then
-    echo "(cargo-llvm-cov missing: coverage skipped — cargo install cargo-llvm-cov --locked)"; return 0
+# The tests, once: under cargo-llvm-cov, whose line coverage of the whole workspace must not fall below
+# tools/coverage.min (a failing test fails it too); without it, plainly. Doctests apart (coverage of
+# doctests needs a nightly toolchain).
+tests() {
+  if command -v cargo-llvm-cov > /dev/null; then
+    step "tests and coverage (minimum $(cat tools/coverage.min) % of lines)"
+    cargo llvm-cov --workspace --profile $PROFILE --locked --summary-only \
+      --fail-under-lines "$(cat tools/coverage.min)" 2>&1 | grep -vE '^test .* ok$'
+  else
+    echo "(cargo-llvm-cov missing: coverage skipped — cargo install cargo-llvm-cov --locked)"
+    step "tests"; cargo test --workspace --profile $PROFILE --locked
   fi
-  step "coverage (minimum $(cat tools/coverage.min) % of lines)"
-  cargo llvm-cov --workspace --release --locked --summary-only \
-    --fail-under-lines "$(cat tools/coverage.min)" | tail -n 3
+  step "doctests"; cargo test --workspace --profile $PROFILE --locked --doc
 }
 
-# The release binary starts and renders a sample.
+# The binary starts and renders a sample (the published binaries, in `release`, are built and started
+# by the tag pipeline: .gitlab-ci.yml).
 smoke_test() {
-  step "smoke test: release binary"
-  cargo build --release --locked -p skemo-cli
-  local d; d=$(mktemp -d)
-  target/release/skemo init "$d/x" > /dev/null 2>&1
-  target/release/skemo render "$d/x/example.skemo" --css "$d/x/custom.css" -o "$d/x.svg" --deny-warnings
-  target/release/skemo check "$d/x/example.skemo"
+  step "smoke test: the skemo binary"
+  cargo build --profile $PROFILE --locked -p skemo-cli
+  local d bin=target/$PROFILE/skemo; d=$(mktemp -d)
+  $bin init "$d/x" > /dev/null 2>&1
+  $bin render "$d/x/example.skemo" --css "$d/x/custom.css" -o "$d/x.svg" --deny-warnings
+  $bin check "$d/x/example.skemo"
   rm -rf "$d"
 }
 
