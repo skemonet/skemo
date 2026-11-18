@@ -3,7 +3,7 @@
 Rust library that **reads, checks, formats and edits** `.skemo` diagram files, and resolves their CSS styles. It
 is the "language" part of [skemo](https://github.com/skemonet/skemo): it draws nothing, it understands the text.
 
-A diagram is a **Pug** file restricted to seven tags (`diagram`, `title`, `card`, `cards`, `zone`, `stack`, `to`),
+A diagram is a **Pug** file restricted to eight tags (`diagram`, `title`, `card`, `cards`, `node`, `zone`, `stack`, `to`),
 with content lines written `| text`, typed by CSS classes:
 
 ```pug

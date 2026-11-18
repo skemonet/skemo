@@ -1,7 +1,7 @@
 //! # skemo-lang — langage de diagramme skemo
 //!
-//! A diagram is a Pug file limited to 7 tags (`diagram`, `title`, `card`, `cards`, `zone`, `stack`,
-//! `to`) and lines `|` whose text follows Markdown (emphasis, tables). The contract of the format
+//! A diagram is a Pug file limited to 8 tags (`diagram`, `title`, `card`, `cards`, `node`, `zone`,
+//! `stack`, `to`) and lines `|` whose text follows Markdown (emphasis, tables). The contract of the format
 //! is `FORMAT.md`.
 //!
 //! ```

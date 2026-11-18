@@ -126,6 +126,61 @@ fn place_decor(scene: &Scene, d: &Decor, (x, end): (f64, f64), (top, lh): (f64, 
     }
 }
 
+/// How far a node's text (D-087) is moved down to be centred against an icon taller than it;
+/// 0 for a card, or a node without an icon.
+pub fn node_text_offset(scene: &Scene, card: &CardEl, (w, h): (f64, f64), column: f64) -> f64 {
+    if column <= 0.0 {
+        return 0.0;
+    }
+    let cs = scene.style(card.el);
+    let (pad, bor) = (cs.padding(), border(cs));
+    let content_h = h - bor[0] - pad[0] - bor[2] - pad[2];
+    ((content_h - crate::measure::text_height(scene, card, w, column)) / 2.0).max(0.0)
+}
+
+/// Stroke of a built-in icon, in the units of its 24 px drawing: 2, thinner from 30 px up so that
+/// a large icon (a node's, D-087) keeps a 2.5 px line.
+pub fn icon_stroke(size: f64) -> f64 {
+    2.0 * (30.0 / size).min(1.0)
+}
+
+/// The icon of a title without a band: before its first line (at `x`, on the line at `top`), or a
+/// node's, in its column (D-087).
+fn title_icon(
+    scene: &Scene,
+    card: &CardEl,
+    (d, cb, h): (&Decor, &CardBox, f64),
+    (x, top, lh): (f64, f64, f64),
+) -> Option<IconBox> {
+    if card.column {
+        let content_h = h - cb.bor[0] - cb.pad[0] - cb.bor[2] - cb.pad[2];
+        node_icon(scene, card, d, (cb.left, content_h))
+    } else {
+        place_decor(scene, d, (x, x), (top, lh)).icon
+    }
+}
+
+/// A node's icon in its column (D-087), left of the text that starts at `left`, centred in the
+/// content's height `content_h`.
+fn node_icon(
+    scene: &Scene,
+    card: &CardEl,
+    d: &Decor,
+    (left, content_h): (f64, f64),
+) -> Option<IconBox> {
+    let cs = scene.style(card.el);
+    let top = border(cs)[0] + cs.padding()[0];
+    let (size, column) = card.node_icon(scene)?;
+    d.icon.as_ref().map(|(el, icon)| IconBox {
+        x: left - column,
+        y: top + (content_h - size) / 2.0,
+        size,
+        el: *el,
+        icon: *icon,
+        is_mark: false,
+    })
+}
+
 #[derive(Debug, Clone)]
 pub struct CardGeom {
     pub deco: DecoGeom,
@@ -165,13 +220,17 @@ struct CardBox {
 pub fn card(scene: &Scene, card: &CardEl, w: f64, h: f64) -> CardGeom {
     let cs = scene.style(card.el);
     let (pad, bor) = (cs.padding(), border(cs));
+    // a node (D-087): the title and the lines start after the icon's column; the icon is as tall
+    // as the content
+    let column = card.node_icon(scene).map_or(0.0, |(_, c)| c);
+    let dy = node_text_offset(scene, card, (w, h), column);
     let cb = CardBox {
-        left: bor[3] + pad[3],
-        avail: w - bor[3] - pad[3] - bor[1] - pad[1],
+        left: bor[3] + pad[3] + column,
+        avail: w - bor[3] - pad[3] - bor[1] - pad[1] - column,
         bor,
         pad,
     };
-    let mut y = bor[0] + pad[0];
+    let mut y = bor[0] + pad[0] + dy;
     let mut deco = DecoGeom::default();
     let head = card
         .header
@@ -401,8 +460,9 @@ fn card_title(
     let badge_w = inline.map_or(0.0, |(_, bc, txt)| {
         tw(bc, txt) + bc.padding()[1] + bc.padding()[3] + bc.margin()[1] + bc.margin()[3]
     });
-    // icon before the first line (if it is not in the band), mark after the last
-    let lead = if card.header.is_some() {
+    // icon before the first line (if it is not in the band, nor in a node's column), mark after
+    // the last
+    let lead = if card.header.is_some() || card.column {
         0.0
     } else {
         scene.icon_lead(&card.decor).0
@@ -459,7 +519,7 @@ fn card_title(
                 mark: None,
                 ..card.decor
             };
-            deco.icon = place_decor(scene, &d, (x, x), (line_top, lh)).icon;
+            deco.icon = title_icon(scene, card, (&d, cb, h), (x, line_top, lh));
             x += lead;
         }
         if k == 0

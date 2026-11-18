@@ -346,7 +346,7 @@ fn walk(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
                 }
             }
         }
-        "card" | "cards" | "zone" | "stack" => node(cx, t, parent),
+        "card" | "cards" | "node" | "zone" | "stack" => node(cx, t, parent),
         "title" => cx.diags.push(Diagnostic::warning(
             "title-misplaced",
             t.name_span,
@@ -390,15 +390,15 @@ fn walk(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
                 ),
             )
             .with_help(tr!(
-                "known tags: diagram, title, card, cards, zone, stack, to; a line starts with « | »",
-                "balises reconnues : diagram, title, card, cards, zone, stack, to ; une ligne commence par « | »"
+                "known tags: diagram, title, card, cards, node, zone, stack, to; a line starts with « | »",
+                "balises reconnues : diagram, title, card, cards, node, zone, stack, to ; une ligne commence par « | »"
             )),
         ),
     }
 }
 
 fn node(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
-    let kind = if t.name == "card" || t.name == "cards" {
+    let kind = if matches!(t.name.as_str(), "card" | "cards" | "node") {
         Kind::Card
     } else {
         Kind::Zone
@@ -450,7 +450,7 @@ fn node(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
     let size = point_attr(cx, t, "size", "« largeur,hauteur »");
     let (step, fx) = compat_step(&anim);
     let href = attr(t, "href").and_then(|a| parse_href(cx, a));
-    let (tag, tag_anim) = tag_of(cx, t);
+    let (tag, tag_anim, label) = chip_of(cx, t);
     let wrap = attr(t, "wrap").and_then(|a| parse_wrap(cx, a, kind));
     let deck = deck_of(cx, t);
     warn_part_classes(cx, t);
@@ -465,7 +465,7 @@ fn node(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
         classes: classes(t),
         title,
         tag,
-        label: value(t, "label").map(|v| v.trim().to_string()),
+        label,
         dock,
         tag_anim,
         items: Vec::new(),
@@ -483,6 +483,7 @@ fn node(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
         wrap,
         stack,
         deck,
+        node: t.name == "node",
     });
     for c in &t.children {
         if matches!(c.name.as_str(), "li" | "|") && !stack {
@@ -492,6 +493,30 @@ fn node(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
         }
     }
     check_tables(cx, idx, &id);
+}
+
+/// `tag=` (with its markers) and `label=`; a `node` has neither (D-087): warning, ignored.
+fn chip_of(cx: &mut Ctx, t: &Tag) -> (Option<String>, Option<Anim>, Option<String>) {
+    if t.name != "node" {
+        let (tag, anim) = tag_of(cx, t);
+        return (tag, anim, value(t, "label").map(|v| v.trim().to_string()));
+    }
+    for a in t
+        .attrs
+        .iter()
+        .filter(|a| matches!(a.name.as_str(), "tag" | "label"))
+    {
+        cx.diags.push(Diagnostic::warning(
+            "unknown-attribute",
+            a.span,
+            tr!(
+                "« {} » is not read on « node » (no chip nor category): ignored",
+                "« {} » ne se lit pas sur « node » (ni pastille ni catégorie) : ignoré",
+                a.name
+            ),
+        ));
+    }
+    (None, None, None)
 }
 
 /// A line of card or zone `id` (index `idx` in the model): `| …`, or the old `li …` (§7).
@@ -803,8 +828,9 @@ fn icon_attr(t: &Tag) -> Option<String> {
 
 /// Classes the engine gives the parts it draws inside cards, zones and arrows (FORMAT §4.2): a
 /// card or an arrow with one of them as its class makes `.head { … }` style the head of every
-/// card and arrow too. `.text` and `.pulse` are provided classes of their own and stay out.
-const PART_CLASSES: [&str; 19] = [
+/// card and arrow too. `node` is the class the engine gives a node (D-087). `.text` and `.pulse`
+/// are provided classes of their own and stay out.
+const PART_CLASSES: [&str; 20] = [
     "head",
     "title",
     "tag",
@@ -824,6 +850,7 @@ const PART_CLASSES: [&str; 19] = [
     "tail",
     "origin",
     "edge-label",
+    "node",
 ];
 
 /// Warning `part-class` for each class of `t` named like a rendered part (`PART_CLASSES`).

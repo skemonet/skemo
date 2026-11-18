@@ -5,6 +5,10 @@ and the project uses [Semantic Versioning](https://semver.org/) (pre-1.0: minor 
 
 ## [Unreleased]
 
+- **Added**: `node` (D-087), a thing drawn by its icon rather than by a box: the icon on the left, its name and
+  lines beside it, no frame. Nodes mix with cards whatever the look; every node's icon has the same size (32 px),
+  centred on its text, and arrows end on the icon. A node takes what a card takes, except `tag` and `label`.
+- **Changed**: a built-in icon of 30 px or more is drawn with a thinner line (2.5 px).
 - **Changed**: a short address for the installer on Linux and macOS, `curl -fsSL https://skemo.net/install.sh | sh`:
   the site publishes `cli/install.sh` there (the GitHub address keeps working).
 - **Changed**: zones stacked one under the other take the width of the widest by default (D-085);

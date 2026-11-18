@@ -40,8 +40,9 @@ impl Session {
         };
         let mut router = skemo_router::Router::new(p);
         let titles = crate::labels::zone_titles(&d.model, &d.scene, &d.boxes);
+        let (anchored, titles) = crate::route::anchors(&d.model, &d.scene, &d.boxes, &titles);
         let (obstacles, conns) =
-            router_scene(&d.model, &d.boxes, &d.elk, Mode::Graph, &[], &titles);
+            router_scene(&d.model, &anchored, &d.elk, Mode::Graph, &[], &titles);
         for o in obstacles {
             router.set_obstacle(o);
         }
@@ -94,8 +95,9 @@ impl Session {
     fn reroute(&mut self) -> Vec<String> {
         let d = &mut self.diagram;
         let titles = crate::labels::zone_titles(&d.model, &d.scene, &d.boxes);
+        let (anchored, titles) = crate::route::anchors(&d.model, &d.scene, &d.boxes, &titles);
         let (obstacles, conns) =
-            router_scene(&d.model, &d.boxes, &d.elk, Mode::Graph, &[], &titles);
+            router_scene(&d.model, &anchored, &d.elk, Mode::Graph, &[], &titles);
         let groups = groups_of(&conns);
         for o in obstacles {
             self.router.set_obstacle(o);
@@ -108,7 +110,14 @@ impl Session {
         }
         // the finishing passes look at neighbouring arrows: an arrow the router left alone may
         // still change, so the arrows re-traced are those whose drawing changed
-        let routes = finish(&d.model, &d.boxes, &titles, &groups, &self.raw, Mode::Graph);
+        let routes = finish(
+            &d.model,
+            &anchored,
+            &titles,
+            &groups,
+            &self.raw,
+            Mode::Graph,
+        );
         let ids: Vec<String> = routes
             .iter()
             .filter(|(id, p)| d.routes.get(*id) != Some(*p))

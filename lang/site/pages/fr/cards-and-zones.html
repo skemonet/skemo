@@ -37,6 +37,15 @@ description: Cartes, piles de cartes, zones, titres, notes et pastilles dans ske
   toutes les apparences. Sans <code>count</code>, trois cartes et pas de badge. Les cartes de derrière font partie de la boîte de la
   carte : les flèches s’y arrêtent et la carte du dessus garde la largeur de ses voisines.</p>
 
+<h2 id="nodes">Nœuds</h2>
+<skemo name="nodes"></skemo>
+<p><code>node</code> au lieu de <code>card</code> dessine une chose par son icône plutôt que par une boîte : l’icône à gauche, le
+  nom à côté, les lignes sous le nom ; ni cadre ni bandeau. Nœuds et cartes se mélangent dans un même schéma : l’apparence du
+  schéma et le <code>--look</code> d’un type ne s’appliquent pas à un nœud. Toutes les icônes de nœud ont la même taille (32 px,
+  <code>--icon-size</code>), centrées sur la hauteur de leur texte et colorées par leur type ; les flèches arrivent au milieu de
+  l’icône. Un nœud prend ce que prend une carte (classes, <code>icon</code>, <code>href</code>, lignes, flèches,
+  <code>at</code>, marqueurs), sauf <code>tag</code> et <code>label</code> : il n’a ni pastille ni catégorie.</p>
+
 <h2>Zones</h2>
 <skemo name="zones"></skemo>
 <p>Une zone entoure tout ce qui est indenté dessous, avec une marge et la place pour son titre. Les zones s’imbriquent. Une zone

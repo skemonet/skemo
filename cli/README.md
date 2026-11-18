@@ -56,12 +56,13 @@ skemo demo.skemo --watch           # live preview in the browser, reloaded on ev
 
 ### The format in 30 seconds
 
-A `.skemo` file is **Pug** restricted to seven tags, with content lines written `| text`:
+A `.skemo` file is **Pug** restricted to eight tags, with content lines written `| text`:
 
 | Tag | Role |
 |---|---|
 | `card#id.type Title` | a card; its `\|` lines are content lines (Markdown emphasis; a line ending in `\|` is a table row) |
 | `cards#id.type Title` | a card drawn as a pile of several instances; `count="N"` adds a `×N` badge |
+| `node#id.type Title` | a thing drawn by its icon, its name and lines beside it, without a frame; mixes with cards whatever their look |
 | `zone#id.type Title` | a group containing cards or other zones (by indentation); its `\|` lines are description lines |
 | `stack` | an invisible group that lays its children one after the other |
 | `to(target).type Label` | an arrow, written inside its source card |

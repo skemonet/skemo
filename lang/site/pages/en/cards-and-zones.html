@@ -34,6 +34,15 @@ description: Cards, piles of cards, zones, titles, notes and chips in skemo: wha
   Without <code>count</code>, three cards and no badge. The cards behind belong to the card's box: arrows end on them and the top
   card keeps the width of its neighbours.</p>
 
+<h2 id="nodes">Nodes</h2>
+<skemo name="nodes"></skemo>
+<p><code>node</code> instead of <code>card</code> draws a thing by its icon rather than by a box: the icon on the left, the name
+  beside it, the lines under the name; no frame, no band. Nodes and cards mix in one diagram: the diagram's look and a type's
+  <code>--look</code> do not apply to a node. Every node's icon has the same size (32 px, <code>--icon-size</code>), centred on
+  the height of its text and coloured by its type; arrows end in the middle of the icon. A node takes what a card takes (classes,
+  <code>icon</code>, <code>href</code>, lines, arrows, <code>at</code>, markers), except <code>tag</code> and <code>label</code>:
+  it has no chip nor category.</p>
+
 <h2>Zones</h2>
 <skemo name="zones"></skemo>
 <p>A zone encloses everything indented below it, with a margin and room for its title. Zones nest. A zone gives its accent

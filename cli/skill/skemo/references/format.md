@@ -22,8 +22,8 @@ Complete reference of the `.skemo` language as implemented by `skemo` 0.1. The s
 
 ## 1. Syntax
 
-A file is a valid Pug document restricted to the tags `diagram`, `title`, `card`, `cards`, `zone`, `stack`
-and `to`, and lines written with Pug's text marker `|`, whose text follows Markdown (emphasis, tables).
+A file is a valid Pug document restricted to the tags `diagram`, `title`, `card`, `cards`, `node`, `zone`,
+`stack` and `to`, and lines written with Pug's text marker `|`, whose text follows Markdown (emphasis, tables).
 
 ```
 tag        := name ("#" id | "." class)* attributes? (" " text)?
@@ -97,6 +97,22 @@ Predefined classes:
 
 Default theme types: `.t0` (red, "T0"), `.t1` (orange, "T1"), `.t2` (blue, "T2"), `.t3` (grey, "T3"),
 zones `.cloud`, `.dmz`, `.lan`.
+
+**Nodes**. `node` instead of `card` draws a thing by its icon: the icon on the left, the name beside it, the
+lines under the name, no frame. Nodes and cards mix freely: the looks (`look="header"`, `--look`) leave nodes
+alone. Every node's icon is 32 px, centred on its text and coloured by its type; arrows end on the icon. A node
+takes what a card takes except `tag` and `label`.
+
+```pug
+diagram(dir="right")
+  node#user(icon="user") Customer
+    | web and mobile
+    to(api) HTTPS
+  card#api.t2(tag="ECS") API
+    to(db)
+  node#db.t1(icon="database") Orders
+    | PostgreSQL 16
+```
 
 **Piles** (pre-release). `cards` instead of `card` draws a pile of cards (several instances: the tasks of a
 service, the machines of a group); it takes everything a card takes. `count="4"` draws up to three cards and a

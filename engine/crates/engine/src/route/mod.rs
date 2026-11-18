@@ -80,6 +80,59 @@ pub fn graph_params(model: &Model) -> Params {
     }
 }
 
+/// The boxes the arrows see (D-087): a node with an icon takes its arrows at the icon's middle.
+/// Drawn down or up, the node is its icon and its text, beside it, joins the zone titles as an
+/// obstacle; drawn right or left, it is a band at the icon's height from the icon to the end of
+/// the text, so that an arrow leaving on the text's side starts after the text. Other boxes are
+/// kept.
+pub fn anchors(
+    model: &Model,
+    scene: &crate::scene::Scene,
+    boxes: &BTreeMap<String, Box2>,
+    titles: &[(String, Box2)],
+) -> (BTreeMap<String, Box2>, Vec<(String, Box2)>) {
+    let mut out = boxes.clone();
+    let mut obstacles = titles.to_vec();
+    let across = matches!(model.option("dir"), Some("right" | "left"));
+    for n in model.nodes.iter().filter(|n| n.node) {
+        let (Some(card), Some(b)) = (scene.cards.get(&n.id), boxes.get(&n.id)) else {
+            continue;
+        };
+        let cs = scene.style(card.el);
+        let (pad, bor) = (cs.padding(), crate::measure::border(cs));
+        let content_h = b.h - pad[0] - pad[2] - bor[0] - bor[2];
+        let Some((size, column)) = card.node_icon(scene) else {
+            continue;
+        };
+        let x = b.x + bor[3] + pad[3];
+        let icon = Box2 {
+            x,
+            y: b.y + bor[0] + pad[0] + (content_h - size) / 2.0,
+            w: size,
+            h: size,
+        };
+        if across {
+            out.insert(
+                n.id.clone(),
+                Box2 {
+                    w: b.right() - x,
+                    ..icon
+                },
+            );
+            continue;
+        }
+        let text = Box2 {
+            x: x + column,
+            y: b.y,
+            w: b.right() - x - column,
+            h: b.h,
+        };
+        out.insert(n.id.clone(), icon);
+        obstacles.push((n.id.clone(), text));
+    }
+    (out, obstacles)
+}
+
 /// Routes every arrow. Returns the routes, the warnings and the group of each grouped arrow
 /// (trunk, fork, bus: `junctions`).
 pub fn route_all(

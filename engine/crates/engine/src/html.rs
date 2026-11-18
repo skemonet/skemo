@@ -519,6 +519,41 @@ fn deck_style(
 
 /// Card: classes (type, mode, look), inline style (position, period variables, label), then
 /// header, title and lines.
+/// A node's room for its icon (D-087): the left padding makes its column, the text is centred
+/// against a taller icon and `--icon-top` centres the icon in the content's height, as
+/// `geometry::card` lays them.
+fn node_style(d: &Diagram, c: &crate::scene::CardEl, id: &str, st: &mut String) {
+    let Some((size, column)) = c.node_icon(&d.scene) else {
+        return;
+    };
+    let cs = d.scene.style(c.el);
+    let (pad, bor) = (cs.padding(), crate::measure::border(cs));
+    let (w, h) = d.boxes.get(id).map_or((0.0, 0.0), |b| (b.w, b.h));
+    let content_h = h - pad[0] - pad[2] - bor[0] - bor[2];
+    let dy = crate::geometry::node_text_offset(&d.scene, c, (w, h), column);
+    let _ = write!(
+        st,
+        ";padding-left:{}px;padding-top:{}px;--icon-top:{}px",
+        pad[3] + column,
+        pad[0] + dy,
+        bor[0] + pad[0] + (content_h - size) / 2.0
+    );
+}
+
+/// A node's icon, in its column (D-087), with the same thinner line as the SVG (`icon_stroke`);
+/// nothing for a card.
+fn node_icon_html(d: &Diagram, c: &crate::scene::CardEl) -> String {
+    let (Some((_, i)), Some((size, _))) = (&c.decor.icon, c.node_icon(&d.scene)) else {
+        return String::new();
+    };
+    let stroke = crate::geometry::icon_stroke(size);
+    icon_svg("icon", i, &d.scene.images).replacen(
+        "stroke-width=\"2\"",
+        &format!("stroke-width=\"{stroke}\""),
+        1,
+    )
+}
+
 fn card_html(d: &Diagram, node: &skemo_lang::Node, style: &str, body: &mut String) {
     let Some(c) = d.scene.cards.get(&node.id) else {
         return;
@@ -574,6 +609,12 @@ fn card_html(d: &Diagram, node: &skemo_lang::Node, style: &str, body: &mut Strin
     if node.deck.is_some() {
         ccls.push("deck".into());
     }
+    // a node (D-087): its icon, as tall as the content, in a column of its own, which the left
+    // padding makes room for
+    if node.node {
+        ccls.push("node".into());
+        node_style(d, c, &node.id, &mut st);
+    }
     let extra = node
         .tag
         .as_ref()
@@ -593,13 +634,14 @@ fn card_html(d: &Diagram, node: &skemo_lang::Node, style: &str, body: &mut Strin
     if !c.band() {
         // icon before the title when there is no band; link mark after the title
         let decor = crate::scene::Decor {
-            icon: if c.header.is_some() {
+            icon: if c.header.is_some() || c.column {
                 None
             } else {
                 c.decor.icon
             },
             mark: c.decor.mark,
         };
+        body.push_str(&node_icon_html(d, c));
         if let Some((_, k)) = &c.kind {
             let _ = write!(body, "<div class=\"kind\">{}</div>", esc(k));
         }

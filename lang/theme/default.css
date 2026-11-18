@@ -442,3 +442,16 @@ card.text li { color: var(--muted); font-size: calc(12px * var(--font-scale, 1))
 /* HTML: the category takes a row of its own in the band (the engine lays it out the same) */
 card.look-band > .head { flex-wrap: wrap; row-gap: 0; }
 card.look-band > .head .kind { flex: 0 0 100%; }
+
+/* `node` (D-087, FORMAT §3.2.10): a thing drawn as its icon, with its name and lines beside it, no frame.
+   Last in the theme, so that the looks' rules (`.stage.look-eyebrow card`…) do not reach it. */
+.stage card.node { --look: plain; min-width: 0; max-width: 280px; padding: 0; border: 0; border-radius: 0; box-shadow: none;
+       background: transparent; outline: none; --icon-size: 32px; --icon-gap: 12px; }
+.stage card.node.no-type { --icon-color: var(--ink); }
+.stage card.node .title { font-size: calc(14px * var(--font-scale, 1)); font-weight: 700; color: var(--ink); text-align: left; }
+.stage card.node .title::before { content: none; }
+.stage card.node ul { margin-top: 2px; }
+.stage card.node li { color: var(--muted); font-size: calc(12.5px * var(--font-scale, 1)); margin-top: 2px; }
+/* HTML: the icon in its column (the engine sets the card's left padding to the column's width and
+   `--icon-top` to centre the icon in the text's height) */
+card.node > svg.icon { position: absolute; left: 0; top: var(--icon-top, 0); margin: 0; }

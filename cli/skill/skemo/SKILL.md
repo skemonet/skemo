@@ -42,7 +42,7 @@ Warnings (unknown icon, unreachable mindmap card…) do not block; read them and
 
 ## 3. The language in one example
 
-A `.skemo` file is a subset of Pug: a few tags (`diagram`, `title`, `card`, `cards`, `zone`, `stack`, `to`)
+A `.skemo` file is a subset of Pug: a few tags (`diagram`, `title`, `card`, `cards`, `node`, `zone`, `stack`, `to`)
 and lines written `| text` under a card or a zone. The text of lines follows Markdown.
 
 ```pug
@@ -76,6 +76,7 @@ diagram(dir="right" lang="en")
 | Write | Meaning |
 |---|---|
 | `card#id.type Title` | a card; `#id` unique, `.type` = CSS class (several allowed), text = title |
+| `node#id.type(icon="database") Title` | a thing drawn by its icon, name and lines beside it, no frame; mixes with cards whatever their look; no `tag` nor `label` |
 | `cards#id.type(count="4") Title` | (pre-release) a card drawn as a pile, for several instances of one thing; `count` adds a `×4` badge |
 | `\| text` (under a card) | a content line; an IPv4/CIDR at its start is set in monospace; under a zone, a description line under its title |
 | `zone#id.type Title` | a group; cards and zones indented below are inside it |

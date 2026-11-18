@@ -151,10 +151,30 @@ pub fn kind_height(scene: &Scene, kind: Option<&(usize, String)>) -> f64 {
 /// Size of a card. `forced`: imposed width (timeline period: max(bar, natural)), without
 /// `max-width`; the height is then measured at that width.
 pub fn card_size(scene: &Scene, card: &CardEl, forced: Option<f64>) -> Size {
+    // a node (D-087): its icon has a column of its own, and the node is at least as tall as it
+    let icon = card.node_icon(scene).map_or((0.0, 0.0), |(s, c)| (c, s));
+    card_size_at(scene, card, forced, icon).0
+}
+
+/// Height of a node's text (D-087) in a box `w` wide whose icon column is `column` wide: the
+/// text is centred against a taller icon.
+pub fn text_height(scene: &Scene, card: &CardEl, w: f64, column: f64) -> f64 {
+    card_size_at(scene, card, Some(w), (column, 0.0)).1
+}
+
+/// Size of a card whose icon column is `column` wide and holds an icon `icon` tall (a node,
+/// D-087; zeros otherwise), and the height of its text.
+fn card_size_at(
+    scene: &Scene,
+    card: &CardEl,
+    forced: Option<f64>,
+    (column, icon): (f64, f64),
+) -> (Size, f64) {
     let cs = scene.style(card.el);
     let pad = cs.padding();
     let bor = border(cs);
-    let frame_w = pad[1] + pad[3] + bor[1] + bor[3];
+    // a node's icon column (D-087) is part of its frame: the title and the lines start after it
+    let frame_w = pad[1] + pad[3] + bor[1] + bor[3] + column;
     let title = scene.style(card.title);
     let tp = title.padding();
     let title_text = card.title_text.clone();
@@ -167,7 +187,7 @@ pub fn card_size(scene: &Scene, card: &CardEl, forced: Option<f64>) -> Size {
     let (mark_w, _) = scene.mark_trail(&card.decor);
     // icon and link mark in the band, or in the title
     let in_head = card.header.is_some();
-    let title_lead = if in_head { 0.0 } else { icon_w };
+    let title_lead = if in_head || card.column { 0.0 } else { icon_w };
     let title_trail = if card.band() { 0.0 } else { mark_w };
     if let Some(h) = &card.header {
         let w = head_width(scene, h, (icon_w, if h.band { mark_w } else { 0.0 }));
@@ -249,11 +269,15 @@ pub fn card_size(scene: &Scene, card: &CardEl, forced: Option<f64>) -> Size {
     if let Some(u) = card.ul {
         h += list_height(scene, card, u, avail, title.margin()[2]);
     }
-    h += pad[0] + pad[2] + bor[0] + bor[2];
-    Size {
-        w: if forced.is_some() { width } else { ceil(width) },
-        h: ceil(h),
-    }
+    let text_h = h;
+    h = h.max(icon) + pad[0] + pad[2] + bor[0] + bor[2];
+    (
+        Size {
+            w: if forced.is_some() { width } else { ceil(width) },
+            h: ceil(h),
+        },
+        text_h,
+    )
 }
 
 /// Badge drawn on its own line above the title (`card .title::before { display: block }`, used by

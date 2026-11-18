@@ -17,7 +17,7 @@ use crate::tr;
 /// A card or a zone to add.
 #[derive(Debug, Clone, PartialEq)]
 pub struct NewNode {
-    /// `card`, `cards`, `zone` or `stack`.
+    /// `card`, `cards`, `node`, `zone` or `stack`.
     pub tag: String,
     pub id: String,
     pub classes: Vec<String>,
@@ -384,11 +384,11 @@ pub fn add_line(src: &str, id: &str, text: &str) -> Result<String, EditError> {
     check(out)
 }
 
-/// Changes the tag of a node (`zone` to `stack` and back, `card` to `cards`…): only the tag
+/// Changes the tag of a node (`zone` to `stack` and back, `card` to `cards` or `node`…): only the tag
 /// name is rewritten. A stack has no title: a zone's title is kept in the text but ignored, with
 /// the parser's warning.
 pub fn set_tag(src: &str, id: &str, tag: &str) -> Result<String, EditError> {
-    if !matches!(tag, "card" | "cards" | "zone" | "stack") {
+    if !matches!(tag, "card" | "cards" | "node" | "zone" | "stack") {
         return Err(EditError::BadValue(tr!(
             "unknown tag: « {tag} »",
             "balise inconnue : « {tag} »"

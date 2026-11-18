@@ -59,10 +59,10 @@ fn dump(b: &Block, out: &mut String) {
     }
 }
 
-/// A card or a zone: what the engine lays out in writing order.
+/// A card, a node or a zone: what the engine lays out in writing order.
 fn movable(b: &Block) -> bool {
     let t = b.line.trim_start();
-    ["cards", "card", "zone"].iter().any(|k| {
+    ["cards", "card", "node", "zone"].iter().any(|k| {
         t.strip_prefix(k)
             .is_some_and(|r| r.starts_with(['#', '.', '(', ' ']) || r.is_empty())
     })

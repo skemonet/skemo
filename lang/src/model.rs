@@ -136,6 +136,10 @@ pub struct Node {
     /// written, is shown as a `×N` badge. Absent from the JSON for a plain card.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub deck: Option<Deck>,
+    /// `node` (D-087): a card drawn as its icon, with its name and lines beside it and no frame;
+    /// the looks do not apply to it. Absent from the JSON when false.
+    #[serde(default, skip_serializing_if = "is_no")]
+    pub node: bool,
 }
 
 /// A pile of cards (`cards`): how many instances it stands for, if known.

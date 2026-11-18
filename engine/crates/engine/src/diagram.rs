@@ -331,8 +331,9 @@ fn arrange(
     } = placed;
     let soft = timeline.as_ref().map(cost_bands).unwrap_or_default();
     let titles = crate::labels::zone_titles(model, scene, &boxes);
+    let (anchored, obstacles) = crate::route::anchors(model, scene, &boxes, &titles);
     let (mut routes, rw, edge_groups) =
-        route_all(model, &boxes, &elk, &rparams, mode, &soft, &titles);
+        route_all(model, &anchored, &elk, &rparams, mode, &soft, &obstacles);
     warnings.extend(rw);
     if timeline.is_some() {
         routes.extend(crate::timeline::dependency_routes(model, scene, &boxes));

@@ -74,11 +74,12 @@ pub(super) fn icon(ctx: &mut Ctx, b: &geometry::IconBox, (ox, oy): (f64, f64)) {
     }
     let _ = write!(
         ctx.out,
-        "<g class=\"{class}\" transform=\"translate({} {}) scale({})\" fill=\"none\"{} stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" color=\"{}\">{}</g>",
+        "<g class=\"{class}\" transform=\"translate({} {}) scale({})\" fill=\"none\"{} stroke-width=\"{}\" stroke-linecap=\"round\" stroke-linejoin=\"round\" color=\"{}\">{}</g>",
         n(b.x + ox),
         n(b.y + oy),
         n(b.size / 24.0),
         paint("stroke", Some(col)),
+        n(geometry::icon_stroke(b.size)),
         col.to_css(),
         b.icon.markup
     );
@@ -322,6 +323,7 @@ pub(super) fn card(ctx: &mut Ctx, id: &str) {
     link_open(ctx, node.and_then(|n| n.href.as_deref()));
     let cls: Vec<String> = std::iter::once("card".to_string())
         .chain(node.map(|n| n.classes.clone()).unwrap_or_default())
+        .chain(node.filter(|n| n.node).map(|_| "node".to_string()))
         .collect();
     let _ = write!(
         ctx.out,

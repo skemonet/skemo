@@ -159,6 +159,32 @@ pub struct CardEl {
     pub tag_side: i8,
     /// `cards` with a `count`: the `×N` badge (`.count`) and its text.
     pub count: Option<(usize, String)>,
+    /// A `node` (D-087): its icon has a column of its own, left of the title and the lines.
+    pub column: bool,
+}
+
+impl CardEl {
+    /// A node's icon (D-087): `(size, column)`, the theme's `--icon-size` (one size for every
+    /// node, whatever its text) and the width of its column, icon and gap. `None` for a card, or a
+    /// node without an icon.
+    pub fn node_icon(&self, scene: &Scene) -> Option<(f64, f64)> {
+        if !self.column {
+            return None;
+        }
+        Some(scene.icon_lead(&self.decor))
+            .filter(|(c, _)| *c > 0.0)
+            .map(|(c, s)| (s, c))
+    }
+}
+
+/// Classes of a card or zone element: its own, and `node` for a node (D-087), which the theme
+/// draws without a frame and the looks leave alone.
+pub fn element_classes(n: &skemo_lang::Node) -> Vec<&str> {
+    let mut cls: Vec<&str> = n.classes.iter().map(String::as_str).collect();
+    if n.node {
+        cls.push("node");
+    }
+    cls
 }
 
 /// `.tag-left` → -1, `.tag-right` → 1, otherwise 0 (D-050). Read on the element's own classes:
@@ -423,7 +449,7 @@ fn probe_styles(
     let pstage = root(&mut probe, model, theme);
     let mut pidx = BTreeMap::new();
     for n in &model.nodes {
-        let cls: Vec<&str> = n.classes.iter().map(String::as_str).collect();
+        let cls = element_classes(n);
         let tag = if n.kind == Kind::Card { "card" } else { "zone" };
         pidx.insert(
             n.id.clone(),
@@ -462,11 +488,13 @@ fn add_card(
     for (k, v) in extras.inline.get(&n.id).into_iter().flatten() {
         tree.set_inline(el, k, v);
     }
-    // the category (FORMAT §3.2.6): `label=`, else the type's `--label`; `label=""` shows none
+    // the category (FORMAT §3.2.6): `label=`, else the type's `--label`; `label=""` shows none;
+    // a node has none (D-087)
     let type_label = n
         .label
         .clone()
         .unwrap_or_else(|| ps.string("--label").unwrap_or_default());
+    let type_label = if n.node { String::new() } else { type_label };
     let look = ps.string("--look").unwrap_or_default();
     // frieze events: their date becomes the badge when the theme asks for it (`--event-date: on`)
     let date = extras
@@ -475,8 +503,9 @@ fn add_card(
         .and_then(|v| v.iter().find(|(k, _)| k == "--date"))
         .map(|(_, v)| v.clone())
         .filter(|_| n.tag.is_none() && ps.get("--event-date").is_some_and(|v| v.trim() == "on"));
-    // cards of the timeline and frieze modes: never with a header (their classes come from the mode)
-    let mode_card = extras.classes.contains_key(&n.id);
+    // cards of the timeline and frieze modes, and nodes: never with a header (their classes come
+    // from the mode)
+    let mode_card = extras.classes.contains_key(&n.id) || n.node;
     // a card with no accent of its own: the theme draws it light (`.no-type`)
     if ps.get("--c").is_none() {
         tree.add_class(el, "no-type");
@@ -535,6 +564,7 @@ fn add_card(
         after,
         tag_side: tag_side(n),
         count,
+        column: n.node,
     }
 }
 
@@ -1056,7 +1086,7 @@ impl Scene {
         let mut zones = BTreeMap::new();
         let mut warnings = Vec::new();
         for n in &model.nodes {
-            let cls: Vec<&str> = n.classes.iter().map(String::as_str).collect();
+            let cls = element_classes(n);
             if n.kind == Kind::Zone {
                 let ps = &pst[pidx[&n.id]];
                 let z = add_zone(&mut tree, stage, n, ps, (&extras.images, &mut warnings));
