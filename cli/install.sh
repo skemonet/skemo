@@ -1,6 +1,7 @@
 #!/bin/sh
 # Installs the `skemo` binary from a GitHub release (Linux and macOS).
-#   curl -fsSL https://raw.githubusercontent.com/skemonet/skemo/main/cli/install.sh | sh
+#   curl -fsSL https://skemo.net/install.sh | sh
+#   (site/build.py publishes this file there)
 #   SKEMO_VERSION=v0.1.0-rc.8 SKEMO_BIN=~/bin sh install.sh
 # Variables: SKEMO_VERSION (default: latest release, pre-releases included), SKEMO_BIN (default
 # ~/.local/bin), GITHUB_TOKEN (optional: a higher API rate limit).

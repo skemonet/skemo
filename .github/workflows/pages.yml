@@ -5,7 +5,7 @@ name: pages
 on:
   push:
     branches: [main]
-    paths: [site/**, lang/site/**, cli/skill/**, .github/workflows/pages.yml]
+    paths: [site/**, lang/site/**, cli/skill/**, cli/install.sh, .github/workflows/pages.yml]
   workflow_dispatch:
 
 permissions:

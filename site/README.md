@@ -17,8 +17,9 @@ python3 -m http.server -d site/dist 8000
 | `src/style.css`, `src/favicon.svg`, `src/brand/` | the landing page's layout (light and dark), icon, logo |
 | `examples/`, `examples/fr/` | diagrams that only belong to this page (the hero) |
 | `gallery/` | the measured gallery examples |
+| `../cli/install.sh` | the installer, published as `/install.sh` (`curl -fsSL https://skemo.net/install.sh \| sh`) |
 | `tools/measure_tokens.py` | the token measurement behind every figure on the page |
-| `build.py` | renders each diagram with skemo (inline SVG, light and dark), runs the measurement, builds the documentation, writes `sitemap.xml`, `robots.txt`, `llms.txt`, `404.html` and the social card `og.png`, copies the fonts and the agent skill |
+| `build.py` | renders each diagram with skemo (inline SVG, light and dark), runs the measurement, builds the documentation, writes `sitemap.xml`, `robots.txt`, `llms.txt`, `404.html` and the social card `og.png`, copies the fonts, the agent skill and the installer |
 
 Every number on the page comes from `tools/measure_tokens.py`, re-run at each build on `gallery/`: none is typed by hand.
 The site has no script, no tracker and no cookie; the diagram/source tabs are radio buttons and CSS. The agent skill
@@ -30,5 +31,5 @@ and French, an Open Graph card (a PNG of its first diagram) and JSON-LD (`Softwa
 `TechArticle` and `BreadcrumbList` on the documentation); `sitemap.xml` lists every page with its alternates.
 
 **Deployment**: `.github/workflows/pages.yml` builds skemo and the site on every push to `main` that touches `site/`,
-`lang/site/` or the skill (or by hand), and publishes it on GitHub Pages at <https://skemo.net>. It is the repository's
+`lang/site/`, the skill or the installer (or by hand), and publishes it on GitHub Pages at <https://skemo.net>. It is the repository's
 only GitHub workflow.

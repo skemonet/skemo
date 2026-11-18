@@ -24,7 +24,7 @@ description: Keep diagrams as text next to the code: reviewed in pull requests, 
 <pre><code>skemo lint docs/*.skemo --deny-warnings          # exit code 1 on any problem
 skemo render docs/architecture.skemo -o docs/architecture.svg --deny-warnings</code></pre>
 <p>A GitHub Actions step, for instance:</p>
-<pre><code>- run: curl -fsSL https://raw.githubusercontent.com/skemonet/skemo/main/cli/install.sh | sh
+<pre><code>- run: curl -fsSL https://skemo.net/install.sh | sh
 - run: ~/.local/bin/skemo lint docs/*.skemo --deny-warnings</code></pre>
 
 <h2>Outputs</h2>

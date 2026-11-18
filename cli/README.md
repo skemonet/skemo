@@ -41,7 +41,7 @@ Static Linux binary (musl): `sudo apt install musl-tools && rustup target add x8
 ## Quick install (release binary)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/skemonet/skemo/main/cli/install.sh | sh
+curl -fsSL https://skemo.net/install.sh | sh
 ```
 
 Installs the latest release into `~/.local/bin` after checking its SHA-256 (`SKEMO_VERSION`, `SKEMO_BIN`). Linux (x86_64, ARM) and macOS (ARM); on Windows, take `skemo-windows-x86_64.exe` from the releases page. A release is one binary per platform, its SHA-256 in the release's description; `skemo --licences` prints the licences of what it embeds (fonts, icons, Rust crates).

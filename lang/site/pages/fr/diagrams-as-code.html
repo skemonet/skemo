@@ -24,7 +24,7 @@ description: Gardez vos diagrammes en texte à côté du code : relus en pull re
 <pre><code>skemo lint docs/*.skemo --deny-warnings          # code de sortie 1 au moindre problème
 skemo render docs/architecture.skemo -o docs/architecture.svg --deny-warnings</code></pre>
 <p>Une étape GitHub Actions, par exemple :</p>
-<pre><code>- run: curl -fsSL https://raw.githubusercontent.com/skemonet/skemo/main/cli/install.sh | sh
+<pre><code>- run: curl -fsSL https://skemo.net/install.sh | sh
 - run: ~/.local/bin/skemo lint docs/*.skemo --deny-warnings</code></pre>
 
 <h2>Sorties</h2>

@@ -19,7 +19,7 @@ skemo --version
 ```
 
 If it is missing, tell the user and offer the installer (Linux, macOS):
-`curl -fsSL https://raw.githubusercontent.com/skemonet/skemo/main/cli/install.sh | sh` (installs into
+`curl -fsSL https://skemo.net/install.sh | sh` (installs into
 `~/.local/bin`). Do not fall back to hand-drawn SVG without asking.
 
 ## 2. Workflow

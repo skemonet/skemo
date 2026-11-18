@@ -5,6 +5,8 @@ and the project uses [Semantic Versioning](https://semver.org/) (pre-1.0: minor 
 
 ## [Unreleased]
 
+- **Changed**: a short address for the installer on Linux and macOS, `curl -fsSL https://skemo.net/install.sh | sh`:
+  the site publishes `cli/install.sh` there (the GitHub address keeps working).
 - **Changed**: zones stacked one under the other take the width of the widest by default (D-085);
   `diagram(zones="fit")` keeps fitted frames, `zones="stretch"` also evens them along `dir` right or left.
 - **Changed**: in the default look, a card without lines keeps its title on the left, like its neighbours.

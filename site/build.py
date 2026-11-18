@@ -321,6 +321,8 @@ def main() -> None:
     shutil.copytree(SITE / "src" / "brand", dist / "brand")
     for font in FONT_FILES:
         shutil.copy(FONTS / font, dist / "fonts" / font)
+    # the installer, so that `curl -fsSL https://skemo.net/install.sh | sh` is the one way to install
+    shutil.copy(ROOT / "cli/install.sh", dist / "install.sh")
     for skill in (ROOT / "cli/skill").rglob("*.md"):
         target = dist / "skill" / skill.relative_to(ROOT / "cli/skill")
         target.parent.mkdir(parents=True, exist_ok=True)

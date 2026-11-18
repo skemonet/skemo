@@ -38,7 +38,7 @@ One binary per platform: download it, make it executable, run it.
 | Mac with Apple silicon (M1 and later) | \`skemo-macos-arm64\` |
 | Windows, Intel or AMD | \`skemo-windows-x86_64.exe\` |
 
-Linux and macOS in one line: \`curl -fsSL https://raw.githubusercontent.com/$repo/main/cli/install.sh | sh\`
+Linux and macOS in one line: \`curl -fsSL https://skemo.net/install.sh | sh\`
 
 Check it against its line below (\`sha256sum -c\`, or \`shasum -a 256 -c\` on macOS).
 The licences of what it embeds (fonts, icons, Rust crates): \`skemo --licences\`.
