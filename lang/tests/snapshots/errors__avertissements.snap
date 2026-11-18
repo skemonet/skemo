@@ -17,7 +17,7 @@ warning[unknown-tag]: unknown tag « boite »: ignored with its content
   │
 4 │   boite#x Inconnue
   │   ^^^^^
-  = help: known tags: diagram, title, card, cards, zone, stack, to; a line starts with « | »
+  = help: known tags: diagram, title, card, cards, node, zone, stack, to; a line starts with « | »
 warning[draw-on-node]: the « draw » effect only applies to links: « fade » is used
   ┌─ avertissements.skemo:6:3
   │
