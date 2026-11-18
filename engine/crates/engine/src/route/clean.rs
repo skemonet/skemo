@@ -14,11 +14,15 @@ const MICRO_JOG: f64 = 0.75;
 /// touched; the result is the same whether the card is pinned (rounded positions) or not.
 pub(super) fn drop_micro_jogs(mut pts: Points) -> Points {
     let seg = |a: (f64, f64), b: (f64, f64)| (a.0 - b.0).abs().max((a.1 - b.1).abs());
+    let upright = |a: (f64, f64), b: (f64, f64)| (a.0 - b.0).abs() < (a.1 - b.1).abs();
     let mut i = 1;
     while i + 2 < pts.len() {
+        // a jog lies between two parallel segments; between a segment and the next one at a
+        // right angle, a tiny step is a corner, and dropping it would draw a slant
         if seg(pts[i], pts[i + 1]) < MICRO_JOG
             && seg(pts[i - 1], pts[i]) >= 6.0
             && seg(pts[i + 1], pts[i + 2]) >= 6.0
+            && upright(pts[i - 1], pts[i]) == upright(pts[i + 1], pts[i + 2])
         {
             pts.drain(i..i + 2);
         } else {
@@ -37,8 +41,9 @@ type CrossSeg = (String, usize);
 /// between the two cards, so a fork's bar ran 5 px above the frame of the zone holding its
 /// targets, and two arrows leaving one card for two zones bent at two levels. The segments of
 /// one group (a fork's bar) move together; a segment stays when a card stands on its level, when
-/// nothing frames it on one side, when another arrow already runs on the new level, or when the
-/// arrows would cross more lines there than where the router put them. Arrows with waypoints
+/// nothing frames it on one side, when another arrow already runs on the new level, when the
+/// arrow would then run along another one, or when the arrows would cross more lines there than
+/// where the router put them. Arrows with waypoints
 /// (`via=`) are left as routed.
 /// The segments that cross a gap between two runs along the flow, by group (or arrow) and level
 /// (in hundredths of a pixel). An arrow with waypoints (`via=`) keeps the path its author chose.
@@ -118,9 +123,21 @@ pub(super) fn center_in_gaps(
                 }
             }
         }
-        // the middle of the gap, unless the arrows cross more lines there
+        // the middle of the gap, unless the arrows cross more lines there or run along another
         let ids: Vec<&str> = members.iter().map(|(id, _)| id.as_str()).collect();
-        if crossings_with(&moved, &ids, groups) <= crossings_with(routes, &ids, groups) {
+        let mine = || model.edges.iter().filter(|e| ids.contains(&e.id.as_str()));
+        let along = mine().any(|e| runs_on_another(model, &moved, e, &moved[&e.id]));
+        // nor lengthen a segment beside it along a card (the private corpus's `gitops`: a turn
+        // moved down to the middle drew the line leaving it 1 px from the card below)
+        let hugging = |rs: &BTreeMap<String, Points>| {
+            mine()
+                .map(|e| hugs(model, boxes, e, &rs[&e.id]))
+                .sum::<usize>()
+        };
+        if !along
+            && crossings_with(&moved, &ids, groups) <= crossings_with(routes, &ids, groups)
+            && hugging(&moved) <= hugging(routes)
+        {
             *routes = moved;
         }
     }
@@ -232,8 +249,8 @@ const END_MARGIN: f64 = 10.0;
 /// crosses no more lines and its end keeps a port spacing from the others. Never onto another
 /// arrow's line. The arrow's end slides along its card side by the jog,
 /// when it stays clear of the corners, of the other arrows' ends on that card and of other cards;
-/// otherwise its start does (never for a grouped arrow, whose start is a shared trunk, nor for
-/// an arrow with waypoints). A hand
+/// otherwise its start does (an arrow with waypoints never moves; in a group only the end that
+/// is not the shared trunk slides: a fork's arrival, a join's start). A hand
 /// drawing has no such step, and a fork's branch no longer leaves a second junction dot.
 pub(super) fn straighten_jogs(
     model: &Model,
@@ -268,15 +285,31 @@ pub(super) fn straighten_jogs(
                 (p.0, p.1 + d)
             }
         };
-        let mut tries = vec![(e.to.as_str(), (p0, shift(p3, jog)))];
-        if !groups.contains_key(&e.id) {
+        // the shared end of a group (a fork's start, a join's arrival) never slides
+        let group = groups.get(&e.id);
+        let mut tries = Vec::new();
+        if !group.is_some_and(|g| super::groups::turned(g)) {
+            tries.push((e.to.as_str(), (p0, shift(p3, jog))));
+        }
+        if group.is_none_or(|g| super::groups::turned(g)) {
             tries.push((e.from.as_str(), (shift(p0, -jog), p3)));
         }
         let gap = if long { PORT_GAP } else { SMALL_JOG };
         for (card, (a, b)) in tries {
-            let moved = if card == e.to { b } else { a };
+            let (moved, was) = if card == e.to { (b, p3) } else { (a, p0) };
+            // an end alone on its side stays in the middle (D-091), but for a jog of a few
+            // pixels, which would draw a step, and for a fork's branch: its trunk goes on
+            // straight, rather than put a junction just after a bend (the layout has already
+            // centred the child under the trunk where it could, `under_trunk`)
+            let fork_end = group.is_some_and(|g| !super::groups::turned(g));
+            if long
+                && !fork_end
+                && alone_on_side(model, boxes, routes, (&e.id, card), was, vertical)
+            {
+                continue;
+            }
             if end_fits(model, boxes, routes, (&e.id, card, gap), moved, vertical)
-                && clear_of_cards(model, boxes, e, a, b)
+                && clear_of_cards(model, boxes, e, a, b, (true, true))
                 && (!long || crossed(&[a, b]) <= before)
                 && !runs_on_another(model, routes, e, &[a, b])
             {
@@ -315,6 +348,36 @@ fn end_fits(
         .flat_map(|r| [r.first().copied(), r.last().copied()])
         .flatten()
         .all(|q| (q.0 - p.0).abs() + (q.1 - p.1).abs() >= gap)
+}
+
+/// Is end `p` of arrow `id` the only end on its side of `card` (`vertical`: the arrow leaves
+/// by the top or the bottom)?
+fn alone_on_side(
+    model: &Model,
+    boxes: &BTreeMap<String, Box2>,
+    routes: &BTreeMap<String, Points>,
+    (id, card): (&str, &str),
+    p: (f64, f64),
+    vertical: bool,
+) -> bool {
+    let Some(b) = boxes.get(card) else {
+        return false;
+    };
+    let on_side = |q: (f64, f64)| {
+        if vertical {
+            (q.1 - p.1).abs() < 0.5 && q.0 >= b.x - 0.5 && q.0 <= b.right() + 0.5
+        } else {
+            (q.0 - p.0).abs() < 0.5 && q.1 >= b.y - 0.5 && q.1 <= b.bottom() + 0.5
+        }
+    };
+    !model
+        .edges
+        .iter()
+        .filter(|f| f.id != id && (f.from == card || f.to == card))
+        .filter_map(|f| routes.get(&f.id))
+        .flat_map(|r| [r.first().copied(), r.last().copied()])
+        .flatten()
+        .any(on_side)
 }
 
 /// Does the polyline `pts` of arrow `e` run on another arrow's line (the same line within 1.5 px
@@ -389,14 +452,17 @@ pub(super) fn flatten_steps(
         .iter()
         .filter(|e| e.via.is_none() && !groups.contains_key(&e.id))
     {
+        // a route may carry a point in line with an end, a margin away from it: a step is
+        // looked for between real corners, or that point would move and leave the end on a slant
+        let Some(mut pts) = routes.get(&e.id).cloned().map(simplify) else {
+            continue;
+        };
         let mut k = 1;
-        while let Some(pts) = routes.get(&e.id).cloned() {
-            if k + 2 >= pts.len() {
-                break;
-            }
+        while k + 2 < pts.len() {
             match flat_step(model, boxes, titles, routes, e, &pts, k) {
                 Some(better) => {
-                    routes.insert(e.id.clone(), better);
+                    routes.insert(e.id.clone(), better.clone());
+                    pts = better;
                 }
                 None => k += 1,
             }
@@ -462,13 +528,74 @@ fn flat_step(
         .map(|p| drop_micro_jogs(simplify(p)))
         .find(|p| {
             crossed(p) <= before
+                && hugs(model, boxes, e, p) <= hugs(model, boxes, e, pts)
                 && !runs_on_another(model, routes, e, p)
-                && p.windows(2)
-                    .all(|w| clear_of_cards(model, boxes, e, w[0], w[1]))
+                && p.windows(2).enumerate().all(|(i, w)| {
+                    let own = (i == 0, i + 2 == p.len());
+                    clear_of_cards(model, boxes, e, w[0], w[1], own)
+                })
                 && !titles
                     .iter()
                     .any(|(_, t)| p.windows(2).any(|w| through_box(w[0], w[1], t)))
         })
+}
+
+/// The margin a line keeps from a card it runs along (the user's 10 px rule, the `hugging`
+/// property of `quality`), and the shortest stretch that counts.
+const HUG: f64 = 10.0;
+const HUG_LEN: f64 = 20.0;
+
+/// Cards (not the arrow's ends) a route runs along, outside, closer than `HUG` over more than
+/// `HUG_LEN`: a step flattened onto a card's side drew the line right along it (the private
+/// corpus's `gitops`, once its overlay was gone: a line 1 px from a card over its whole height).
+fn hugs(
+    model: &Model,
+    boxes: &BTreeMap<String, Box2>,
+    e: &skemo_lang::Edge,
+    pts: &[(f64, f64)],
+) -> usize {
+    let mut n = 0;
+    for r in model
+        .nodes
+        .iter()
+        .filter(|c| c.kind == Kind::Card && c.id != e.from && c.id != e.to)
+        .filter_map(|c| boxes.get(&c.id))
+    {
+        let hit = pts.windows(2).any(|w| {
+            let (p, q) = (w[0], w[1]);
+            let horizontal = (p.1 - q.1).abs() < 0.5;
+            if horizontal == ((p.0 - q.0).abs() < 0.5) {
+                return false;
+            }
+            let (pos, lo, hi, e0, e1, s0, s1) = if horizontal {
+                (
+                    p.1,
+                    p.0.min(q.0),
+                    p.0.max(q.0),
+                    r.y,
+                    r.bottom(),
+                    r.x,
+                    r.right(),
+                )
+            } else {
+                (
+                    p.0,
+                    p.1.min(q.1),
+                    p.1.max(q.1),
+                    r.x,
+                    r.right(),
+                    r.y,
+                    r.bottom(),
+                )
+            };
+            let outside = pos <= e0 || pos >= e1;
+            hi.min(s1) - lo.max(s0) >= HUG_LEN
+                && outside
+                && (pos - e0).abs().min((pos - e1).abs()) < HUG
+        });
+        n += usize::from(hit);
+    }
+    n
 }
 
 /// The polyline without repeated points nor middle points of straight runs.
@@ -500,19 +627,49 @@ fn through_box(a: (f64, f64), b: (f64, f64), t: &Box2) -> bool {
     x1 > t.x + 2.0 && x0 < t.right() - 2.0 && y1 > t.y + 2.0 && y0 < t.bottom() - 2.0
 }
 
-/// The straight segment `a`–`b` crosses no card but the arrow's own two.
+/// The straight segment `a`–`b` crosses no card. The arrow's own start card is left out for
+/// the segment that leaves it, its end card for the one that enters it (`own`: the segment is
+/// the arrow's first, its last); a segment in the middle runs through neither (a step flattened
+/// along the inside of its own card's side drew the line through it).
 fn clear_of_cards(
     model: &Model,
     boxes: &BTreeMap<String, Box2>,
     e: &skemo_lang::Edge,
     a: (f64, f64),
     b: (f64, f64),
+    (first, last): (bool, bool),
 ) -> bool {
     let (x0, x1, y0, y1) = (a.0.min(b.0), a.0.max(b.0), a.1.min(b.1), a.1.max(b.1));
     model
         .nodes
         .iter()
-        .filter(|n| n.kind == Kind::Card && n.id != e.from && n.id != e.to)
+        .filter(|n| n.kind == Kind::Card && !(first && n.id == e.from) && !(last && n.id == e.to))
         .filter_map(|n| boxes.get(&n.id))
         .all(|r| x1 <= r.x || x0 >= r.right() || y1 <= r.y || y0 >= r.bottom())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::drop_micro_jogs;
+
+    #[test]
+    fn a_tiny_jog_between_parallel_segments_goes() {
+        let r = vec![(0.0, 0.0), (0.0, 50.0), (0.5, 50.0), (0.5, 100.0)];
+        assert_eq!(drop_micro_jogs(r), vec![(0.0, 0.0), (0.5, 100.0)]);
+    }
+
+    /// The private map's `index` under one more pixel of gutter: a stub, a step of half a pixel
+    /// in line with it, then the turn; dropping the step drew the arrow's first segment on a
+    /// slant.
+    #[test]
+    fn a_tiny_step_at_a_corner_stays() {
+        let r = vec![
+            (772.7, 419.0),
+            (772.7, 433.0),
+            (772.7, 433.5),
+            (820.4, 433.5),
+            (820.4, 496.0),
+        ];
+        assert_eq!(drop_micro_jogs(r.clone()), r);
+    }
 }

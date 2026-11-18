@@ -46,7 +46,7 @@ pub fn run(a: &InitArgs) -> Result<(), Fail> {
     }
     if let Some((p, _)) = files.iter().find(|(p, _)| p.exists()) {
         return Err(Fail::usage(tr!(
-            "« {} » already exists: nothing was written",
+            "`{}` already exists: nothing was written",
             "« {} » existe déjà : rien n'a été écrit",
             p.display()
         )));
@@ -57,7 +57,7 @@ pub fn run(a: &InitArgs) -> Result<(), Fail> {
                 .map_err(|e| io(&e))
                 .map_err(|e| {
                     Fail::usage(tr!(
-                        "creating « {} »: {e}",
+                        "creating `{}`: {e}",
                         "création de « {} » : {e}",
                         d.display()
                     ))
@@ -67,7 +67,7 @@ pub fn run(a: &InitArgs) -> Result<(), Fail> {
             .map_err(|e| io(&e))
             .map_err(|e| {
                 Fail::usage(tr!(
-                    "writing « {} »: {e}",
+                    "writing `{}`: {e}",
                     "écriture de « {} » : {e}",
                     p.display()
                 ))

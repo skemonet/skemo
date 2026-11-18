@@ -91,3 +91,76 @@ fn branches_enter_by_the_side_facing_the_trunk_and_split_at_one_point() {
     let split: Vec<f64> = routes.iter().map(|r| r.points[1].1).collect();
     assert!((split[0] - split[1]).abs() < 1e-6, "{split:?}");
 }
+
+/// A source with a card right under it and two targets below that card, side by side: the
+/// branches go round the card together (`late`: `Params::late_split`). Returns the routes.
+fn round_a_card(late: bool) -> Vec<Route> {
+    let obstacles = [
+        Obstacle::shape("src", Rect::new(300.0, 0.0, 200.0, 60.0)),
+        Obstacle::shape("mid", Rect::new(300.0, 120.0, 200.0, 60.0)),
+        Obstacle::shape("a", Rect::new(60.0, 300.0, 200.0, 60.0)),
+        Obstacle::shape("b", Rect::new(300.0, 300.0, 200.0, 60.0)),
+    ];
+    let connectors: Vec<Connector> = ["a", "b"]
+        .iter()
+        .map(|t| {
+            let mut c = Connector::new(format!("src->{t}"), End::shape("src"), End::shape(*t));
+            c.group = Some("src|trunk".to_string());
+            c
+        })
+        .collect();
+    let params = Params {
+        late_split: late,
+        ..Params::default()
+    };
+    let (routes, diags) = route(&obstacles, &connectors, &params);
+    assert!(diags.is_empty(), "{diags:?}");
+    routes
+}
+
+/// The last point of `r` on the polyline `on`, walking from its start: where `r` leaves it.
+fn leaves(r: &Route, on: &Route) -> (f64, f64) {
+    let lies = |p: (f64, f64)| {
+        on.points.windows(2).any(|w| {
+            let (a, b) = (w[0], w[1]);
+            (p.0 - a.0) * (p.0 - b.0) <= 1e-6
+                && (p.1 - a.1) * (p.1 - b.1) <= 1e-6
+                && ((a.0 - b.0).abs() < 1e-6 || (a.1 - b.1).abs() < 1e-6)
+        })
+    };
+    let mut last = r.points[0];
+    for w in r.points.windows(2) {
+        if !lies(w[1]) {
+            // the run from w[0] towards w[1] may still lie on `on` for a while
+            let steps = 64;
+            for k in 1..=steps {
+                let t = k as f64 / steps as f64;
+                let p = (
+                    w[0].0 + (w[1].0 - w[0].0) * t,
+                    w[0].1 + (w[1].1 - w[0].1) * t,
+                );
+                if lies(p) {
+                    last = p;
+                } else {
+                    return last;
+                }
+            }
+        }
+        last = w[1];
+    }
+    last
+}
+
+#[test]
+fn a_branch_leaves_the_trunk_as_late_as_its_way_allows() {
+    let routes = round_a_card(true);
+    let split = leaves(&routes[1], &routes[0]);
+    // the branches part below the card between the source and the targets, not at the source
+    assert!(split.1 > 180.0, "split at {split:?}: {routes:?}");
+    let early = round_a_card(false);
+    let split = leaves(&early[1], &early[0]);
+    assert!(
+        split.1 < 120.0,
+        "without it, at the source: {split:?}: {early:?}"
+    );
+}

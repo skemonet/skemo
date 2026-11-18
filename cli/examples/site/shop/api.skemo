@@ -1,0 +1,25 @@
+//- Components of the API
+diagram(dir="down")
+  title API: components
+
+  card#web.app(icon="monitor" href="containers.skemo#web") Storefront
+    to(routes) JSON
+
+  zone#api.boundary API
+    card#routes.component Routes
+      | Axum handlers
+      to(cart orders)
+    card#cart.component Cart service
+      to(repo)
+    card#orders.component Orders service
+      | Validates, prices, places
+      to(repo)
+      to(events).async
+    card#repo.component Repository
+      | sqlx
+      to(db) SQL
+    card#events.component Event publisher
+      to(queue).async
+
+  card#db.store(icon="database" href="containers.skemo#db") Orders DB
+  card#queue.store(href="containers.skemo#queue") Event bus

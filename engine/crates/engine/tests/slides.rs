@@ -2,7 +2,9 @@
 //! zone, arrows written after their target, `wrap`, `fit`, `--font-scale`, animated chip, steps
 //! and fonts in the SVG.
 
-use skemo_engine::{Options, from_source};
+use skemo_engine::Options;
+mod elk;
+use elk::from_source;
 
 fn build(src: &str) -> skemo_engine::Diagram {
     from_source(src, &Options::default()).unwrap().0
@@ -188,7 +190,7 @@ fn fit_suggests_nothing_when_no_setting_enlarges_the_text() {
     // two stacked cards in a square: side by side would be wider, hence smaller; the diagram
     // is still off the target, which is said (D-045), without a setting to try
     let d = build("diagram(fit=\"1:1\")\ncard#a A\n  to(b)\ncard#b B\n");
-    let fit: Vec<&String> = d.warnings.iter().filter(|w| w.contains("fit=")).collect();
+    let fit: Vec<_> = d.warnings.iter().filter(|w| w.contains("fit=")).collect();
     assert_eq!(fit.len(), 1, "{:?}", d.warnings);
     assert!(!fit[0].contains("--write"), "{fit:?}");
 }

@@ -7,13 +7,18 @@ description: Installez skemo sous Linux, macOS ou Windows, écrivez un premier f
 <p class="lead">Installez l’exécutable <code>skemo</code>, écrivez un fichier, rendez-le. Deux minutes.</p>
 
 <h2>Installer</h2>
-<p>Sous Linux (x86_64, ARM) et macOS (ARM) :</p>
+<p id="install">Sous Linux (x86_64, ARM) et macOS (ARM) :</p>
 <pre><code>curl -fsSL https://skemo.net/install.sh | sh</code></pre>
 <p>Le script télécharge la dernière version, vérifie son SHA-256 et l’installe dans <code>~/.local/bin</code>
   (<code>SKEMO_BIN</code> change le dossier, <code>SKEMO_VERSION</code> choisit une version). Sous Windows, prenez
   <code>skemo-windows-x86_64.exe</code> sur la page des versions. skemo est un seul exécutable : ni Node, ni navigateur, ni
   Graphviz ; les polices et le thème sont intégrés.</p>
 <pre><code>skemo --version</code></pre>
+<p>Chaque version a un binaire par plateforme, toujours sous les mêmes noms, avec un fichier <code>SHA256SUMS</code> à côté :
+  <code>skemo-linux-x86_64</code>, <code>skemo-linux-arm64</code> (statiques), <code>skemo-macos-arm64</code>,
+  <code>skemo-macos-x86_64</code>, <code>skemo-windows-x86_64.exe</code>, à l’adresse
+  <code>https://github.com/skemonet/skemo/releases/download/&lt;version&gt;/&lt;nom&gt;</code>. Cette page est aussi
+  <code>https://skemo.net/install</code>.</p>
 
 <h2>Un premier diagramme</h2>
 <p>Créez <code>hello.skemo</code> :</p>

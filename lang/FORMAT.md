@@ -2,18 +2,20 @@
 
 > This document is the **contract** of the format. Any evolution of the parser must start with an update here.
 > **v0.8** (2026-10-28, agreed with the user in conversation, to be recorded as a decision): content lines are written `|` instead of `li` (§3.2.3), with Markdown inline emphasis (§3.2.4) and Markdown tables (§3.2.5); a card's category `label=` beside its `tag=` (§3.2.6); state classes `.ok` `.warn` `.error` (§3.2.7); legends `card.legend` and plain text `card.text` (§3.2.8); elements docked around the drawing with `at="s"`, `at="ne"`… (§3.2.9); dates: `end` included in every mode, the axis bounds written `start`/`end` (§3.6, §3.7). Clean-up: the v0.7 concepts and the `shape`/`symbol` looks are set aside (`proposals/concepts-v0.7.md`); the prototype's `engine`, `router` and `elk` attributes are removed; its old spellings are only read for compatibility (§7). The language is not public yet: these changes break nothing outside the project.
+> **`node`** (D-087, 2026-11-18, agreed with the user): an eighth tag, for a thing drawn as an icon with its name and lines beside it, without a frame (§3.2.10).
 > v0.6 (icons, links: §3.2.1) is implemented, awaiting the user's validation.
 > Points marked **[Rust]** are not yet in the prototype and are to be implemented in the Rust version. *v0.8* marks what is new in v0.8 and not implemented yet.
 
 ## 1. Principle
 
-A diagram is a **valid Pug** file, restricted to a subset: **7 tags**, and **lines** written with Pug's text marker `|`. Meaning comes from classes, styled in CSS; the text inside lines follows Markdown (emphasis, tables).
+A diagram is a **valid Pug** file, restricted to a subset: **8 tags**, and **lines** written with Pug's text marker `|`. Meaning comes from classes, styled in CSS; the text inside lines follows Markdown (emphasis, tables).
 
 | Tag | Role | Content |
 |---|---|---|
 | `diagram(...)` | optional root, global options | everything else, indented below |
 | `title` *(preview, D-050)* | the diagram's title, written under `diagram` | text = title · `\|` lines = subtitle lines · `\|.pill` = pills beside it |
 | `card#id.type` | a card | text = title · `\|` lines = content lines or table rows · `to(...)` = outgoing arrows |
+| `node#id.type` *(D-087)* | a thing: an icon, its name beside it and lines under the name, no frame | as `card`, without `tag=` and `label=` |
 | `cards#id.type` *(preview, D-062)* | a card drawn as a pile: several instances of one thing | as `card`; `count="N"` adds a `×N` badge |
 | `zone#id.type` | a group | text = title · `\|` lines = description lines under the title · indented cards or zones |
 | `stack` *(preview, D-050)* | an invisible group that lays its children one after the other | indented cards or zones |
@@ -72,7 +74,7 @@ Rules:
 | Attribute | Values | Default | Effect |
 |---|---|---|---|
 | `dir` | `down` `right` `up` `left` | `down` | main direction of the automatic layout |
-| `layout` | `graph` (default) · `timeline` · `frieze` · `mindmap` | — | layout mode (§3.6, §3.7, §3.9) |
+| `layout` | `slide` (default) · `graph` · `grid` · `timeline` · `frieze` · `mindmap` | — | layout mode (§3.6, §3.7, §3.9). `slide`: one model solved at once, the groups tiled like a slide on a lattice of 10 px; a diagram it does not read yet (nested zones, a pinned card, an empty zone, a zone placed or sized by hand, `wrap`, `stack`, `.wide`, an arrow to a zone) is drawn by `graph` (ELK). `graph`: ELK's layered graph. `grid`: the grid engine (experimental) |
 | `look` | `band` `header` `classic` `eyebrow` | `band` | look of the cards of the diagram (§4.5) |
 | `zones` *(D-045, D-085)* | `stretch` · `fit` | — | sibling zones stacked one under the other (`dir` down or up) take the width of the widest, like layers drawn by hand: **by default**. `stretch` does it in every direction (with right or left, the height of the tallest) and for undrawn groups too; `fit` keeps each frame fitted to its content. Only the frames grow; no card moves. Zones side by side and pinned zones (`at` + `size`) are left alone |
 | `css` *(D-082)* | file names, separated by spaces | — | stylesheets of the diagram, applied after the theme and in this order: paths relative to the `.skemo` file, inside its folder (no `..`, no absolute path). The CLI reads them (and `--css` after them) and embeds them in what it renders; the libraries leave the option to their caller |
@@ -93,11 +95,11 @@ Rules:
 | `tag="Owner"` (`card`; `zone` *preview, D-050*) | the card's **chip** (an owner, a module, a port), beside its category (§3.2.6); on a zone, a pill after its title (`zone#pods(tag="172.30.0.0/16") Pods`). *(preview, D-041)* `@` markers at the end of the value animate the chip alone: `tag="8080 @1"` (not in the HTML `classic` look, where the chip is a pseudo-element) |
 | `wrap="N"` (`zone`, *preview, D-041*) | (D-056: when an arrow from outside enters a card beyond the first row, the rows are spread like the diagram's, the rows of sibling `wrap` zones too, and the zone keeps a corridor that other arrows may cross) at most N children per row (per column with `dir` right or left), on a grid, in writing order; the cards of one column of the grid take the width of the widest and are left-aligned, so that a stack reads as a clean column (D-045). A warning names the cards that end up behind others as seen from the node they are linked to (second column with `dir="right"`): their arrows can only go round them (D-044); not with `wrap="1"`, a single file of cards that arrows enter by their free sides (a server and its stack, D-045). *(preview, 2026-10-28, to validate)* A zone without `wrap` that holds only cards, at least four, none with an arrow (an inventory: monitors, secrets, registries) is laid as a grid of ⌈√n⌉ columns rather than one long row; write `wrap=` to choose |
 | `at="x,y"` | **pinned position**, top-left corner in px, in the file's frame |
-| `at="s"` (`n` `s` `e` `w` `ne` `nw` `se` `sw`; top-level `card`, `cards`, `zone`) | *v0.8* **docked**: the element leaves the drawing and goes on that side of it, or in that corner (§3.2.9) |
+| `at="s"` (`n` `s` `e` `w` `ne` `nw` `se` `sw`; top-level `card`, `cards`, `node`, `zone`) | *v0.8* **docked**: the element leaves the drawing and goes on that side of it, or in that corner (§3.2.9) |
 | `size="w,h"` | a zone (with `at="x,y"`): **imposed** size, otherwise the zone encloses its children. A card (*preview, editor*): **minimum** size, it takes at least that room and its text may make it larger; written by the editor when a card is resized |
 | `@…` at the end of the line | **animation markers** (§3.8) |
 
-A zone contains lines, then cards, zones and stacks. A card contains lines and `to`.
+A zone contains lines, then cards, nodes, zones and stacks. A card or a node contains lines and `to`.
 
 **`cards`** *(preview, D-062)* is a card in every respect (`#id`, classes, `label`, `tag`, `icon`, lines, `to`, markers) drawn as a **pile**: up to two cards show behind it, 5 px right and down each, like a pile of playing cards, for several instances of one thing (the tasks of a service, the machines of a group). `count="N"` (a whole number ≥ 1, `cards` only, otherwise the warning `bad-count`) says how many: `min(N, 3)` cards are drawn, three when there is no count, and `N > 1` adds a `×N` badge (`card .count` in the theme) whose right edge is the pile's, centred on the top card's bottom edge, the same place in every look. The cards behind are part of the card's box: arrows end on them, gaps and routes keep clear of them, and the top card keeps its siblings' width. Graph layout only; in timeline, frieze and mind map modes a pile is laid out like a card.
 
@@ -127,9 +129,9 @@ diagram(dir="down")
       to(cp w1)
 ```
 
-**`title`** is written once, directly under `diagram`: its text is drawn above the drawing, on the left. *v0.8* Each line `|` is a **subtitle line** under it (smaller, muted: the account, the source, the date; its classes reach its style, `|.warn text` as in a card); each `|.pill` line is a **pill** on the right of the title row (a namespace, a version, an owner). A second `title`, or one written elsewhere, is a warning and is ignored. The title widens the image if it is wider than the drawing; it never moves a card. Selectors: `.diagram-title > .text`, `.diagram-title > .sub`, `.diagram-title li.pill`.
+**`title`** is written once, directly under `diagram`: its text is drawn above the drawing, on the left. *v0.8* Each line `|` is a **subtitle line** under it (smaller, muted: the account, the source, the date; its classes reach its style, `|.warn text` as in a card); each `|.pill` line is a **pill** on the right of the title row (a namespace, a version, an owner). *(preview)* A pill's other classes reach its style: a class that sets `--c` tints it (`|.pill.t2 prod`), one that sets `--icon` puts that icon before its text. A pill whose whole text is a Markdown link, `|.pill [How HyperShift works](../how/hypershift.skemo)`, is a **link to another document**, drawn with its link mark (the magnifier for another diagram, D-097); the target follows the rules of `href=` (`unsafe-href`), and `skemo site` turns it into a link between its pages. Links to related documents belong there: they are about the diagram, not part of its drawing. A second `title`, or one written elsewhere, is a warning and is ignored. The title widens the image if it is wider than the drawing; it never moves a card. Selectors: `.diagram-title > .text`, `.diagram-title > .sub`, `.diagram-title li.pill`.
 
-**`stack`** is a group without frame nor title (an `#id` is allowed, a text is ignored with a warning): its children, cards or zones, are laid one after the other **in writing order along `dir`** (the first at the top with `dir="down"`, at the bottom with `up`, on the left with `right`), 48 px apart, centred across, whatever the arrows between them. The arrows between two children of a stack still align the cards they link (a service under its pods), but never change the stack's order: one going against the order leaves by the side facing back and enters by the side facing forward, straight or as a fork, and is not a back edge. Children linked by arrows keep that alignment and are centred together; the others are centred on their own; a `.wide` child takes the whole width. The zones of a stack take one width, like `zones="stretch"` (D-056): a stack is a pile of layers. A stack can sit in a zone or in another stack. A card can belong to one group only: zones and stacks form a tree. A `.bare` zone without a title groups cards without drawing anything (no frame, no caption).
+**`stack`** is a group without frame nor title (an `#id` is allowed, a text is ignored with a warning): its children, cards or zones, are laid one after the other **in writing order along `dir`** (the first at the top with `dir="down"`, at the bottom with `up`, on the left with `right`), 48 px apart, centred across, whatever the arrows between them. The arrows between two children of a stack still align the cards they link (a service under its pods), but never change the stack's order: one going against the order leaves by the side facing back and enters by the side facing forward, straight or as a fork, and is not a back edge. Children linked by arrows keep that alignment and are centred together; the others are centred on their own; a `.wide` child takes the whole width. The zones of a stack take one width, like `zones="stretch"` (D-056): a stack is a pile of layers. Cards standing on a stretched card (the next layer's cards on a `.wide` one) split its width evenly, each centred in its share *(D-092)*. A stack can sit in a zone or in another stack. A card can belong to one group only: zones and stacks form a tree. A `.bare` zone without a title groups cards without drawing anything (no frame, no caption).
 
 #### 3.2.1 Icons and links (v0.6)
 
@@ -151,10 +153,13 @@ zone#lan(href="#core") LAN
 | `classic` | before the badge, on the title line | 16 px | accent |
 | `.note`, `.chip`, `.info`, timeline and frieze cards | before the title | 14 px | accent |
 | zone | before the zone title | 16 px | the zone title ink |
+| `node` (D-087) | in a column of its own, left of the name and the lines, centred on their height (§3.2.10) | 32 px | accent |
 
 Arrows and lines have no icon. Contrast of an icon: 3:1 minimum (non-text graphic).
 
 **Links.** Accepted values: `http:`, `https:`, `mailto:`, a relative path (`docs/fw.md`), a fragment (`#id`). Any other scheme (`javascript:`, `data:`, `vbscript:`, `file:`…) is the blocking error `unsafe-href` (§3.5); so is an empty value. SVG: the element is wrapped in `<a href>`. HTML: `<a class="href" href rel="noopener">`, external links open in a new tab. PNG, GIF, APNG, WebP: not clickable. A linked card or zone shows a small `external-link` glyph (12 px) after its name, which **reserves its width in every output** so the layout never depends on the format; `--link-mark: none` hides it and frees the space. Arrows get no glyph.
+
+**Links between diagrams** *(preview, D-097)*: a relative link to another `.skemo` file (`href="shop/api.skemo"`, `href="../context.skemo#web"`) is a way down into the view that details the element. Its glyph is a magnifier (`zoom-in`) instead of the external-link one, of the same size, so the layout does not change. `skemo site` turns a folder of such diagrams into a website where these links open the other diagram's page (the fragment centres and flashes that element); elsewhere the link stays as written.
 
 **Stability** (D-031): adding or removing an icon, a link or a glyph changes the size of that card only; only its arrows may move.
 
@@ -264,7 +269,7 @@ Information is never carried by colour alone (§4.6): the mark carries it on car
 
 **`card.legend`** is a legend. Its title names it ("Flows", "Terraform modules"); each line `|.class text` shows a **sample** of the class it names, then the text:
 - an arrow class (one used on an arrow, or styling `.edge`): a short arrow with that class's colour, stroke and heads;
-- a card type (a class with `--c`): a small chip filled with the type's accent;
+- a card type (a class with `--c`): a small chip filled with the type's accent; a secondary card (`.note`, `.chip`, `.info`): that card in small, tinted and edged as it is drawn (a note's dashes);
 - a zone type (a class some zone carries and no card does): a small frame, tinted and edged like the zone;
 - a class that sets an icon (`--icon`): that icon, in the class's accent;
 - a state class (`.ok`, `.warn`, `.error`): its mark;
@@ -272,7 +277,7 @@ Information is never carried by colour alone (§4.6): the mark carries it on car
 
 A legend with no lines is **automatic**: one line per class used in the diagram that has a `--label` (arrow classes first, then card types, in order of first use), the text being the `--label`; arrow classes may therefore carry a `--label` too (`.edge.events { --label: "events / queues"; }`). A legend is a card: left in the drawing, it is placed like any card with no arrow; docked (§3.2.9), it never moves a card.
 
-**`card.text`** is plain text: no frame, no background, no badge; its title, if any, in bold; its lines muted. A footnote of the diagram is `card.text.wide(at="s")`.
+**`card.text`** is plain text: no frame, no background, no badge; its title, if any, in bold; its lines muted, wrapped at a reading measure (440 px in the default theme). A footnote of the diagram is `card.text.wide(at="s")`.
 
 ```pug
 card#flows.legend(at="ne") Flows
@@ -301,7 +306,7 @@ card.text.wide(at="s")
 └──────────────────────────────────────┘
 ```
 
-- **Who**: a top-level `card`, `cards` or `zone`. Elsewhere, the warning `bad-at`, and the value is ignored.
+- **Who**: a top-level `card`, `cards`, `node` or `zone`. Elsewhere, the warning `bad-at`, and the value is ignored.
 - **Only what is docked moves**: the drawing is laid out and routed as if docked elements did not exist; they never move a card of it. Without any compass `at=`, the image is the same as before.
 - **Bands** `n` and `s` span the whole width (side columns included); their elements go side by side in writing order, a new row when a row would pass one and a half times that width; a `.wide` element takes a row of its own.
 - **Side columns** hold, beside the drawing, `nw` (or `ne`) at the top, then `w` (or `e`), and `sw` (or `se`) at the bottom, each one under the other in writing order; a column is as wide as its widest element. A legend at `at="ne"` thus stands at the top right, beside the drawing.
@@ -310,6 +315,33 @@ card.text.wide(at="s")
 - **Arrows** between a docked element and anything outside it give the warning `docked-arrow` and are not drawn.
 - **Modes**: docking works in every layout mode (graph, timeline, frieze, mind map): it happens around the drawing.
 - **Editor**: dragging a docked element writes `at="x,y"`, which brings it back into the drawing.
+
+#### 3.2.10 Nodes: `node` *(D-087)*
+
+A **node** is a thing shown by its icon rather than by a box: the icon on the left, the name beside it, the lines under the name and aligned with it; no frame, no background, no band. Nodes and cards mix in one diagram: the diagram's look (`look="header"`) and a type's `--look` do not apply to a node, which is always drawn the same way.
+
+```pug
+diagram(dir="right" look="header")
+  node#user.person(icon="user") Customer
+    | web and mobile
+    to(api) HTTPS
+  card#api.service(tag="ECS") API
+    | 3 tasks
+    to(db)
+  node#db.rds(icon="database") Orders
+    | PostgreSQL 16
+    | Multi-AZ, encrypted
+```
+
+- **Like a card**: `#id`, classes, `icon=`, `href=`, lines (emphasis, tables, pills), arrows both ways (`to` is written inside the node it leaves), `at=` pinned or docked, `size=`, animation markers; in a zone or a stack. A node is laid out and edited like a card.
+- **Arrows** end at the height of the icon's middle, or above and below it. With `dir` down or up, an arrow from above or below ends on the icon, and the text beside it is an obstacle the arrows go round. With `dir` right or left, an arrow on the icon's side ends on the icon, one on the text's side starts or ends after the text, level with the icon's middle. A node without an icon takes its arrows on its box, like a card.
+- **Not taken**: `tag=` and `label=` (a node has no chip nor category) give the warning `unknown-attribute` and are ignored; `count=` stays for `cards` (`bad-count`).
+- **Icon**: `icon=`, or the type's `--icon`. One size for every node, whatever its text: 32 px by default (`--icon-size` on `card.node` in the theme), 12 px from the text (`--icon-gap`), drawn with a 2.5 px line; in the type's accent (`--c`), in the ink colour for a node without a type; an image file keeps its own colours. The icon has a column of its own: the name and the lines start to its right. The icon is centred on the height of the text (from the top of the name to the bottom of the last line); a text shorter than the icon is centred on the icon. A node without an icon is its name and its lines.
+- **Text**: the name in bold, in the ink colour; the lines muted, as in `card.text`.
+- **States** (§3.2.7): the mark takes the icon's place when the node has no icon of its own; there is no ring, a node having no frame.
+- **Modes**: in the timeline, frieze and mind map modes a node is laid out like a card and drawn as a node.
+- **Position of the icon**: on the left for now. Other positions (on the right; above, with the text centred under it) are reserved for a later version.
+- **Rendered structure** (§4.2): `card.node`, with a card's parts (`.title`, `ul > li`, `.icon`). The class `node` is set by the engine: written on an element of your own, it gives the warning `part-class`.
 
 ### 3.3 `to` (arrow)
 
@@ -345,22 +377,25 @@ Implicit identifier of an arrow: `start->end`. **[Rust]**: in case of a duplicat
   - rows inside a zone are as far apart as outside, except in a `wrap` grid;
   - a card is centred on its own children (at least two, on the next row, with no other parent), otherwise on the child in its column;
   - arrows leave in the drawing's direction and enter by the side facing it, unless another side is clearly shorter;
-  - **forks**: the plain arrows of a card to two or more cards of the next row (no label, `side`, `via` or `join`, same classes) share one trunk that splits at one point, like `join="trunk"`;
-  - **buses**: cards of one row that each fork to the same cards of the next row (every one to every one) share one bar half-way between the rows instead of crossing;
-  - junctions of a trunk or a bus are sharp, with a dot; ports spread over a roomy side; two arrows never leave and arrive on one line.
+  - **forks**: the arrows of a card to two or more cards of the next row (no `side`, `via` or `join`, same classes, no label or the same label) share one trunk that splits at one point, like `join="trunk"`, when the side is crowded (more than four arrows) or the arrows would cross a row of cards; a tree keeps its forks *(D-093)*. A label shared by the arrows of a group is written once, on the part they share;
+  - **buses**: cards of one row that each fork to the same cards of the next row (every one to every one), with the same classes and label, share one bar half-way between the rows instead of crossing;
+  - junctions of a trunk or a bus are rounded bends into the trunk, without a dot *(D-093)*; a line lands in the middle of its side, and the ports of a side spread evenly over its middle half, wider only when they do not fit *(D-092, D-093)*; two arrows never leave and arrive on one line;
+  - **crossings** *(D-093)*: where a horizontal line crosses a vertical one, the horizontal one is cut a few pixels on each side (a gap, no bridge); arrows never shown at the same step do not cross.
 - **Hand-drawn rules** *(preview, D-048)*, in graph mode:
   - **ranks from the sources**: siblings share a row; a leaf is no longer pushed to the last row;
   - **rhythm**: rows 48 px apart, more when an arrow label must fit between two rows; arrow labels do not take a row of their own; with `dir` right or left, a label too wide to sit on a short arrow goes over it *(D-049)*;
   - **centred on parents too**: a card fed only by two or more cards of one row (each of them feeding only it) sits in the middle of them; the children a card is the only parent of are shifted under it; a one-to-one link is straight, across zones if the zone frames stay clear of their neighbours;
   - **forks on a subset**: a card's plain arrows fork even when it also has a labelled arrow, which keeps its own port;
   - **back edges** (target before the source in the drawing's direction) loop around the row: out and in by the bottom with `dir="right"`, by the right with `dir="down"`; the loop runs 24 px beyond the frames of the zones holding either card *(D-049)*;
-  - **notes**: a `.note` card whose only arrow is a `.link` does not shape the layout; it stands beside its card, above it with `dir` right or left, on its right with down or up, if the place is free;
+  - **notes**: a `.note` card whose only arrow is a `.link` does not shape the layout; it stands beside its card, 24 px away, above it with `dir` right or left, on its right with down or up (else on the other side), if the place is free; with down or up and no free side, the row opens after its card to make room for it *(D-104)*; it follows its card wherever the layout then moves it;
   - **cross targets**: a card that only has `constraint="false"` arrows stands beside the drawing just before the cards that use it; their arrows enter it by the side facing them, and go around a card that stands in the way;
   - **cards with no arrow** at the top level are lined up in writing order (with `dir` right or left, under the rest);
   - **widths**: cards are as wide as their text (theme minimum 96 px); siblings (same container, same parents) share the widest width, chips included *(D-049)*;
-  - a `.bare` zone keeps the room of its caption below its cards; its caption widens no card.
+  - a `.bare` zone keeps the room of its caption below its cards; its caption widens no card;
+  - **zone titles** *(D-099)*: a card of a zone's first row linked from above keeps the middle of its top clear of the zone's title, the router's margin (14 px) away (D-064). A title in that way wraps between its words first, never narrower than its longest word; only what still does not fit widens the zone to the left, and the zone then widens as much to the right, so that its cards stay in its middle. The sibling zones of its row keep the same room under their titles. A title with a `tag=` pill or a link stays on one line. The title no longer widens the zone's first card;
+  - **triangles** *(D-099)*: `a → b`, `a → c` and `b → c` laid in one column (`b` linked to `a` and `c` only, `c` entered by `a` and `b` only) are drawn with `a → c` straight, and `b` beside it (the router's margin away): `a → b` steps aside and `b → c` steps back by as much, mirror images around the column's middle; not when the step would exceed 48 px, nor for pinned cards or grids.
 - **Arrow labels and links** *(preview, D-049)*: a label is a pill tinted with its arrow's colour (in the outputs it sits inside its arrow, so `.edge.ok { color: … }` reaches it); a `.link` is a dotted line, in the note's colour when it leaves a `.note`; arrow heads are 8 px.
-- **Routing details** *(preview, D-049)*, in graph mode: a segment crossing the gap between two rows runs half-way through the free space (between what stands above it and the first card, zone frame or zone title below); an arrow that steps aside by at most 8 px is straightened by sliding one of its ends; arrows with `via=` keep their route; the arrows of a group draw their shared trunk and its dots once.
+- **Routing details** *(preview, D-049)*, in graph mode: a segment crossing the gap between two rows runs half-way through the free space (between what stands above it and the first card, zone frame or zone title below); arrows with `via=` keep their route; the arrows of a group draw their shared trunk once. *(D-093: a small step aside is no longer straightened by sliding an end, which would take it off the middle of its side.)*
 - **Zones of one row** (D-045): sibling zones placed side by side start on the same line (same top with `dir` down).
 - **Zones above their targets** (D-043): a top-level zone alone on its row is centred, across the direction, on the nodes it is linked to.
 - **Overlaps** (D-033): a card placed on another (`at=`) is never moved; the engine emits a warning that names both cards.
@@ -376,7 +411,7 @@ Implicit identifier of an arrow: `start->end`. **[Rust]**: in case of a duplicat
 - malformed `at`, `size` or `via` (numbers expected) **[Rust]**;
 - `href` with a scheme outside the whitelist, or empty (`unsafe-href`, v0.6).
 
-Warnings (never block): `unknown-icon`, `icon-ignored` (v0.6); *v0.8* `bad-table` (§3.2.5), `bad-at` (a compass `at=` on an element that is not top-level, or an unknown compass point), `docked-arrow` (an arrow between a docked element and the rest, not drawn), `unknown-attribute` (an attribute the element does not take, among them the prototype's `engine`, `router` and `elk`, no longer read: §7).
+Warnings (never block): `unknown-icon`, `icon-ignored` (v0.6); *v0.8* `bad-table` (§3.2.5), `bad-at` (a compass `at=` on an element that is not top-level, or an unknown compass point), `docked-arrow` (an arrow between a docked element and the rest, not drawn), `unknown-attribute` (an attribute the element does not take, among them the prototype's `engine`, `router` and `elk`, no longer read: §7); `empty-diagram` (no card, zone or line: an empty or blank file, a bare `diagram`; still rendered, D-094).
 
 ### 3.6 Timeline mode *(post-v1 extension; prototyped in the POC)*
 
@@ -491,7 +526,7 @@ Markers are placed **at the end of the line**, preceded by at least one space, o
 ```
 marker := "@" start ["-" end] [":" effect]        (several markers possible, separated by spaces)
 start, end := number > 0, integer or decimal (2, 2.5); start may be 0 in a range (@0-3)
-effect := fade | up | zoom | draw | focus
+effect := fade | up | zoom | draw | focus | halo | chase | magnify
 ```
 
 | Writing | Meaning |
@@ -504,6 +539,7 @@ effect := fade | up | zoom | draw | focus
 **Lines that replace each other** *(preview, D-045)*: consecutive lines of a card whose ranges, as written, never overlap share **one place**: `| NodePort @0-2` then `| ClusterIP @3` is one line that changes at step 3, and the card is as tall as one line (as wide as the wider). The card's size does not change from one step to the next (stability).
 | `@4:focus` | **highlighted** at step 4; does not handle appearance |
 | `@4-6:focus` | highlighted from 4 to 6 |
+| `@3-4:halo`, `@5:chase`, `@6:magnify` *(D-090)* | **highlight** effects, played by the integration that shows the SVG (glitu): a halo, a light running along the outline, an enlargement. They do not handle appearance; several per element, in writing order (`@1:up @3-4:halo @6:magnify`) |
 
 ```pug
 card#seg.segment(tag="DHCP") seg-k8s-01   @1:up @4-6:focus
@@ -514,7 +550,8 @@ card#ports.note Segment ports          @2.5:up
 ```
 
 Writing rules:
-- **at most one appearance marker** per node (otherwise an error), and as many `:focus` as wanted;
+- **at most one appearance marker** per node (otherwise an error), and as many `:focus` and highlights as wanted;
+- a highlight starts at a step after 0 (`@0-2:halo` is an error);
 - only the **final** tokens of the line are read as markers: they are read from the end, stopping at the first token that is not one. `meet @3 tomorrow` therefore stays text;
 - markers are **removed** from the displayed text (title, line, label), as well as the spaces that precede them;
 - `\@` writes a literal `@`, which is never read as a marker (`see \@2`);
@@ -534,8 +571,8 @@ Notation: `appearance(n)` = effective appearance step, `end(n)` = last visibilit
 2. **Child** (card in a zone, line in a card, zone in a zone): `appearance = max(appearance(parent), its own)` and `end = min(end(parent), its own)`. A child does not appear before its parent, and does not outlive it.
 3. **`to()` link without marker**: `appearance = max(appearance(start), appearance(end))`, `end = min(end(start), end(end))`, `draw` effect. A link with a marker follows the same bounds rule (rules 2 and 4).
 4. **Marker earlier than what inheritance imposes** (or end later): **warning** on stderr, and the inherited value is kept.
-5. **Focus**: it only has an effect while the node is visible. A focus range outside the visibility is reported by a warning.
-6. **Steps of the diagram** = the sorted set of written values (starts, range ends, focus), preceded by the initial state 0 if it contains at least one visible element. A node `@a-b` is visible for every step `s` such that `a ≤ s ≤ b`, and hidden from the first step defined **after** `b`. If none exists, the disappearance is never visible: **warning** ("`@1-3`: no step after 3").
+5. **Focus**: it only has an effect while the node is visible. A focus range outside the visibility is reported by a warning. Same for a highlight (`highlight-outside`); a highlight is never inherited by the children.
+6. **Steps of the diagram** = the sorted set of written values (starts, range ends, focus, highlights), preceded by the initial state 0 if it contains at least one visible element. A node `@a-b` is visible for every step `s` such that `a ≤ s ≤ b`, and hidden from the first step defined **after** `b`. If none exists, the disappearance is never visible: **warning** ("`@1-3`: no step after 3"). *(D-094)* Every whole click `k` from 1 to the last step needs a step `s` with `k ≤ s < k + 1`, otherwise **warning** `step-gap` on the marker that writes the first step after the gap ("clicks 3 to 8 change nothing: the next step after 2 is 9 (`@9:halo`)"): an integration that maps a step to a click shows empty clicks there. `@2.5` between 2 and 3 is no gap.
 7. **Still image** *(D-069)*: a PNG or WebP rendered without `--step` shows the **last step** (what `--step` with that step shows). The SVG keeps every element, marked (§4.4); HTML plays the steps.
 
 ## 4. Style (CSS)
@@ -592,6 +629,7 @@ The default theme is overridden by a custom CSS, with the normal cascade.
   card.legend li > .sample                 a legend's sample (v0.8, §3.2.8)
   zone > .sub                              a zone's description lines (v0.8)
   .dock.dock-<point>                       a docked element's cell, e.g. .dock-s, .dock-ne (v0.8, §3.2.9)
+  card.node > .icon, .title, ul            a node (D-087, §3.2.10): the icon in a column of its own
   card > .icon (svg, v0.6)                 icon; a.href wraps a linked card, zone or arrow; .link-mark = glyph
   card.look-header > .head > span.type + span.tag ; > .title ; > ul   (header style)
   svg.edges > g.edge.classes.from-<type>.to-<type>[data-id]    arrow
@@ -623,7 +661,7 @@ The default theme is overridden by a custom CSS, with the normal cascade.
 
 Heads use `currentColor`: an arrow's colour is set with `color`.
 
-These part names (`.head`, `.title`, `.tag`, `.type`, `.kind`, `.count`, `.sub`, `.mono`, `.swatch`, `.sample`, `.pill`, `.icon`, `.state-mark`, `.link-mark`, `.label`, `.line`, `.tail`, `.origin`, `.edge-label`) are not for a card, zone or arrow's own class: a rule on `.head` would style the head of every card and arrow too. Such a class gives the warning `part-class`.
+These part names (`.head`, `.title`, `.tag`, `.type`, `.kind`, `.count`, `.sub`, `.mono`, `.swatch`, `.sample`, `.pill`, `.icon`, `.state-mark`, `.link-mark`, `.label`, `.line`, `.tail`, `.origin`, `.edge-label`) are not for a card, zone or arrow's own class: a rule on `.head` would style the head of every card and arrow too. Such a class gives the warning `part-class`. So does `.stage`, the class of the whole drawing: the theme's rules on `.stage` (background, colours, light or dark) would apply to the element too.
 
 ### 4.3 Provided arrow styles (combinable)
 
@@ -643,6 +681,8 @@ Where it plays: the HTML always (stopped for a reader who asks for less motion, 
 
 ### 4.4 Animation: what the engine writes
 
+What an integration may rely on in the SVG, versioned, is listed in [`engine/SVG.md`](../engine/SVG.md) (the SVG conventions).
+
 The engine **marks** the elements; it animates nothing itself in SVG, except the arrows in motion when asked (`--motion`, §4.3).
 
 **SVG output**:
@@ -656,6 +696,7 @@ The engine **marks** the elements; it animates nothing itself in SVG, except the
 | `data-fx` | same | `fade`, `up`, `zoom` or `draw` (default: `fade`; `draw` for links) |
 | `data-until` | if `@N-M` | `M` |
 | `data-focus` | if `:focus` | space-separated list: `4` or `4-6` (e.g. `data-focus="4 7-8"`) |
+| `data-highlight` *(D-090)* | if a highlight | `effect:range` in writing order, space-separated (`data-highlight="halo:3-4 magnify:6"`); `data-fx` stays the appearance effect only |
 | `data-from`, `data-to` | link | ids of the endpoints |
 
 Rules:
@@ -672,7 +713,7 @@ Rules:
 
 **HTML output**: the same `data-*` attributes on the same elements; the standalone HTML also embeds its small step reader and the effects' CSS, which is its reason for being.
 
-**PNG and GIF**: the engine **computes** the states itself (§3.8, rule 6). See the specification of the engine and the CLI: `--animated` for PNG (one file per state, without effects), `.gif` (effects included).
+**PNG and GIF**: the engine **computes** the states itself (§3.8, rule 6). Highlights are not drawn in the formats without clicks (PNG, GIF, APNG, WebP) nor played by the standalone HTML's reader: they are written for an integration (`data-highlight`), and their steps count as states. See the specification of the engine and the CLI: `--animated` for PNG (one file per state, without effects), `.gif` (effects included).
 
 ### 4.5 Card looks (`--look`): `band` (default), `header`, `classic`, `eyebrow`
 
@@ -692,7 +733,7 @@ A card **without a type** (no `--c`) is drawn light in every look: surface backg
 
 **Timeline look** *(D-048)*: a period is a thin bar under its label (the label may run past the bar's end), a milestone is one diamond with its name (the type's badge and the axis diamond are hidden), dependencies are thin dashed lines. **Mind map look** *(D-048)*: a dark root pill, tinted branch pills, plain-text leaves, curved branches without heads, one colour per branch.
 
-`.note`, `.chip`, `.info`, `.legend` and `.text` always stay in plain style, and so do the cards of the timeline and frieze modes. A long name in the band is not wrapped: the card widens to hold it.
+`.note`, `.chip`, `.info`, `.legend` and `.text` always stay in plain style, and so do the cards of the timeline and frieze modes; a `node` has a drawing of its own (§3.2.10). A long name in the band is not wrapped: the card widens to hold it.
 
 #### Header look (`--look: header`)
 

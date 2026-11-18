@@ -87,3 +87,26 @@ fn a_named_join_shared_by_arrows_to_one_card_holds() {
             .all(|e| e.join.as_deref() == Some("http"))
     );
 }
+
+/// A pill keeps its classes (a colour, an icon in CSS) and, written as a Markdown link, its target.
+#[test]
+fn a_pill_keeps_its_classes_and_its_markdown_link() {
+    let src = "diagram\n  title Hosted control planes\n    |.pill.t2 [How HyperShift works](../how/hypershift.skemo)\n    |.pill level 2\n    |.pill [bad](javascript:alert(1))\n  card#a A\n";
+    let doc = skemo_lang::parse(src);
+    let t = doc.model.title.as_ref().unwrap();
+    assert_eq!(t.lines, vec!["How HyperShift works", "level 2", "bad"]);
+    assert_eq!(t.pill_classes, vec![vec!["t2".to_string()], vec![], vec![]]);
+    assert_eq!(
+        t.pill_hrefs,
+        vec![Some("../how/hypershift.skemo".to_string()), None, None]
+    );
+    let unsafe_link: Vec<_> = doc
+        .diagnostics
+        .iter()
+        .filter(|d| d.code == "unsafe-href")
+        .collect();
+    assert_eq!(unsafe_link.len(), 1, "{:?}", doc.diagnostics);
+    // a plain pill adds nothing to the JSON
+    let json = serde_json::to_string(&skemo_lang::parse(SRC).model).unwrap();
+    assert!(!json.contains("pill_"), "{json}");
+}

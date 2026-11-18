@@ -26,6 +26,10 @@ pub(super) fn edge_sides(
     if let Some(b) = buses.get(&e.id) {
         (s1, s2) = (Some(b.sides.0), Some(b.sides.1));
     }
+    if mode == Mode::Grid {
+        // the grid has no flow: the router takes the cheapest sides
+        return (s1, s2, false, None);
+    }
     let back = mode == Mode::Graph && is_back_edge(model, boxes, e);
     if mode == Mode::Graph {
         (s1, s2) = graph_sides(model, boxes, e, back, (s1, s2));
@@ -68,6 +72,35 @@ fn graph_sides(
     } else if back {
         let s = back_side(model);
         (s1, s2) = (Some(s), Some(s));
+        // no loop round the row (D-103: it would be a detour, or something stands on its run):
+        // the arrow enters by the side of its target facing its source across the flow (the back
+        // side when they stand in line). Entering by the back side, a line from a card on the left
+        // ran under its target and across every arrow leaving it (the private map's
+        // `hive/installation`: 20 crossings under ClusterDeployment). Its start keeps the back
+        // side: leaving by the side facing the target too sent `cp-hcp`'s "au démarrage" round
+        // the whole drawing
+        if back_channel(model, boxes, e).is_none()
+            && let (Some(a), Some(b)) = (boxes.get(&e.from), boxes.get(&e.to))
+        {
+            let across = matches!(model.option("dir").unwrap_or("down"), "right" | "left");
+            let mid = |r: &Box2| {
+                if across {
+                    r.y + r.h / 2.0
+                } else {
+                    r.x + r.w / 2.0
+                }
+            };
+            let (lo, hi) = if across {
+                (Side::Top, Side::Bottom)
+            } else {
+                (Side::Left, Side::Right)
+            };
+            let d = mid(b) - mid(a);
+            if d.abs() > a.w.min(b.w).min(a.h.max(b.h)) / 4.0 {
+                let toward = |positive: bool| if positive { hi } else { lo };
+                s2 = Some(toward(d < 0.0));
+            }
+        }
     }
     if e.side.is_none() && e.via.is_none() && against_stack(model, boxes, e) {
         let after = after_side(model);
@@ -398,10 +431,15 @@ fn cross_link_sides(
 /// Gap between a back edge's run and what it goes around (px).
 const BACK_GAP: f64 = 24.0;
 
+/// A back edge's loop longer than `DETOUR_K` times the direct distance plus `DETOUR_PX` is a detour
+/// (the `detour` property of `quality`).
+const DETOUR_K: f64 = 2.0;
+const DETOUR_PX: f64 = 200.0;
+
 /// The point a back edge runs through (D-049): beyond its two cards and the frames of the zones
 /// holding either of them, mid-way between the cards. A hand drawing loops under the whole row,
 /// zone frame included, instead of running along the frame's inner edge. `None` (the router's
-/// choice) when a card or another zone stands on that run.
+/// choice) when a card or another zone stands on that run, or when the loop would be a detour.
 pub(super) fn back_channel(
     model: &Model,
     boxes: &BTreeMap<String, Box2>,
@@ -462,8 +500,14 @@ pub(super) fn back_channel(
                     && bottom > level - BACK_GAP / 2.0
             })
     });
+    // a loop round a zone frame far beyond the cards (a wide zone, its cards on the other side) is
+    // a detour (bug 21 of the private corpus: 3.5 times the distance, a free corridor left between
+    // the columns): the router chooses then. A detour as the `detour` property counts it.
+    let direct = (beyond(a) - beyond(b)).abs() + (c1 - c0);
+    let lap = (level - beyond(a)) + (level - beyond(b)) + (c1 - c0);
+    let far = lap > DETOUR_K * direct + DETOUR_PX;
     let mid = f64::midpoint(c0, c1);
-    (!blocked).then_some(if across { (mid, level) } else { (level, mid) })
+    (!blocked && !far).then_some(if across { (mid, level) } else { (level, mid) })
 }
 
 /// The side a back edge leaves and enters by: across the flow, below or on the right.

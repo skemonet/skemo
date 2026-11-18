@@ -140,21 +140,44 @@ pub fn parse(src: &str) -> Document {
             let mut d = Diagnostic::error(
                 "unknown-target",
                 *span,
-                tr!("unknown target « {target} »", "cible « {target} » inconnue"),
+                tr!("unknown target `{target}`", "cible « {target} » inconnue"),
             );
             if let Some(s) = suggest(target, cards.iter().copied()) {
-                d = d.with_help(tr!("did you mean « {s} »?", "vouliez-vous « {s} » ?"));
+                d = d.with_help(tr!("did you mean `{s}`?", "vouliez-vous « {s} » ?"));
             }
             cx.diags.push(d);
         }
     }
     validate_modes(&mut cx);
+    warn_empty(&mut cx, src);
     cx.diags.sort_by_key(|d| (d.span.start, d.span.end));
     Document {
         model: cx.model,
         diagnostics: cx.diags,
         map: cx.map,
     }
+}
+
+/// An empty diagram (no card, zone or line) is almost always a mistake: an empty block, an
+/// import that produced nothing. Still rendered, so that a file being started renders.
+fn warn_empty(cx: &mut Ctx, src: &str) {
+    if !cx.model.nodes.is_empty() || cx.diags.iter().any(Diagnostic::is_error) {
+        return;
+    }
+    let start = if src.trim().is_empty() {
+        0
+    } else {
+        src.len() - src.trim_start().len()
+    };
+    let end = src[start..].find('\n').map_or(src.len(), |e| start + e);
+    cx.diags.push(Diagnostic::warning(
+        "empty-diagram",
+        Span::new(start, end.max(start)),
+        tr!(
+            "the diagram has no card, zone or line",
+            "le diagramme n'a ni carte, ni zone, ni ligne"
+        ),
+    ));
 }
 
 fn attr<'a>(t: &'a Tag, name: &str) -> Option<&'a Attr> {
@@ -195,7 +218,7 @@ fn point_attr(cx: &mut Ctx, t: &Tag, name: &str, what: &str) -> Option<[f64; 2]>
                 "bad-number",
                 a.span,
                 tr!(
-                    "« {name} » is malformed: {what} expected",
+                    "`{name}` is malformed: {what} expected",
                     "« {name} » mal formé : {what} attendu"
                 ),
             )
@@ -249,7 +272,7 @@ fn legacy_anim(cx: &mut Ctx, t: &Tag, anim: Option<Anim>, is_link: bool) -> Opti
                     "legacy-and-marker",
                     sp,
                     tr!(
-                        "« step=/fx= » and an « @ » marker on the same element",
+                        "`step=/fx=` and an `@` marker on the same element",
                         "« step=/fx= » et un marqueur « @ » sur le même élément"
                     ),
                 )
@@ -260,7 +283,7 @@ fn legacy_anim(cx: &mut Ctx, t: &Tag, anim: Option<Anim>, is_link: bool) -> Opti
             );
         } else {
             let sp = step.or(fx).map_or(t.line, |a| a.span);
-            cx.diags.push(Diagnostic::warning("legacy-step", sp, tr!("old « step=/fx= » notation: prefer the « @N:effect » marker at the end of the line", "ancienne notation « step=/fx= » : préférer le marqueur « @N:effet » en fin de ligne")));
+            cx.diags.push(Diagnostic::warning("legacy-step", sp, tr!("old `step=/fx=` notation: prefer the `@N:effect` marker at the end of the line", "ancienne notation « step=/fx= » : préférer le marqueur « @N:effet » en fin de ligne")));
             let a = anim.get_or_insert_with(Anim::default);
             if let Some(s) = step.and_then(|s| s.value.as_deref()) {
                 match s.parse::<f64>() {
@@ -274,7 +297,7 @@ fn legacy_anim(cx: &mut Ctx, t: &Tag, anim: Option<Anim>, is_link: bool) -> Opti
                         "bad-number",
                         step.map_or(t.line, |s| s.span),
                         tr!(
-                            "« step » is malformed: a number is expected",
+                            "`step` is malformed: a number is expected",
                             "« step » mal formé : nombre attendu"
                         ),
                     )),
@@ -293,7 +316,7 @@ fn legacy_anim(cx: &mut Ctx, t: &Tag, anim: Option<Anim>, is_link: bool) -> Opti
             "draw-on-node",
             t.line,
             tr!(
-                "the « draw » effect only applies to links: « fade » is used",
+                "the `draw` effect only applies to links: `fade` is used",
                 "l'effet « draw » ne s'applique qu'aux liens : « fade » est utilisé"
             ),
         ));
@@ -317,7 +340,7 @@ fn declare_id(cx: &mut Ctx, id: &str, span: Span) -> bool {
                 "duplicate-id",
                 span,
                 tr!(
-                    "identifier « {id} » is already used",
+                    "identifier `{id}` is already used",
                     "identifiant « {id} » déjà utilisé"
                 ),
             )
@@ -346,12 +369,12 @@ fn walk(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
                 }
             }
         }
-        "card" | "cards" | "zone" | "stack" => node(cx, t, parent),
+        "card" | "cards" | "node" | "zone" | "stack" => node(cx, t, parent),
         "title" => cx.diags.push(Diagnostic::warning(
             "title-misplaced",
             t.name_span,
             tr!(
-                "« title » is written directly under « diagram »: ignored",
+                "`title` is written directly under `diagram`: ignored",
                 "« title » s'écrit directement sous « diagram » : ignoré"
             ),
         )),
@@ -362,7 +385,7 @@ fn walk(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
                     "to-outside-card",
                     t.name_span,
                     tr!(
-                        "« to » must be written inside its source card",
+                        "`to` must be written inside its source card",
                         "« to » doit être écrit dans sa carte de départ"
                     ),
                 )
@@ -385,20 +408,20 @@ fn walk(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
                 "unknown-tag",
                 t.name_span,
                 tr!(
-                    "unknown tag « {other} »: ignored with its content",
+                    "unknown tag `{other}`: ignored with its content",
                     "balise « {other} » inconnue : ignorée avec son contenu"
                 ),
             )
             .with_help(tr!(
-                "known tags: diagram, title, card, cards, zone, stack, to; a line starts with « | »",
-                "balises reconnues : diagram, title, card, cards, zone, stack, to ; une ligne commence par « | »"
+                "known tags: diagram, title, card, cards, node, zone, stack, to; a line starts with `|`",
+                "balises reconnues : diagram, title, card, cards, node, zone, stack, to ; une ligne commence par « | »"
             )),
         ),
     }
 }
 
 fn node(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
-    let kind = if t.name == "card" || t.name == "cards" {
+    let kind = if matches!(t.name.as_str(), "card" | "cards" | "node") {
         Kind::Card
     } else {
         Kind::Zone
@@ -410,7 +433,7 @@ fn node(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
             "nested-in-card",
             t.name_span,
             tr!(
-                "a card can only contain lines « | » and « to »: « {} » is ignored",
+                "a card can only contain lines `|` and `to`: `{}` is ignored",
                 "une carte ne peut contenir que des lignes « | » et des « to » : « {} » est ignoré",
                 t.name
             ),
@@ -439,7 +462,7 @@ fn node(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
             "stack-text",
             text_span.unwrap_or(t.name_span),
             tr!(
-                "a « stack » has no title: « {title} » is ignored",
+                "a `stack` has no title: `{title}` is ignored",
                 "un « stack » n'a pas de titre : « {title} » est ignoré"
             ),
         ));
@@ -447,10 +470,10 @@ fn node(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
     }
     let anim = legacy_anim(cx, t, anim, false);
     let (at, dock) = at_attr(cx, t, parent);
-    let size = point_attr(cx, t, "size", "« largeur,hauteur »");
+    let size = point_attr(cx, t, "size", &tr!("`width,height`", "« largeur,hauteur »"));
     let (step, fx) = compat_step(&anim);
     let href = attr(t, "href").and_then(|a| parse_href(cx, a));
-    let (tag, tag_anim) = tag_of(cx, t);
+    let (tag, tag_anim, label) = chip_of(cx, t);
     let wrap = attr(t, "wrap").and_then(|a| parse_wrap(cx, a, kind));
     let deck = deck_of(cx, t);
     warn_part_classes(cx, t);
@@ -465,7 +488,7 @@ fn node(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
         classes: classes(t),
         title,
         tag,
-        label: value(t, "label").map(|v| v.trim().to_string()),
+        label,
         dock,
         tag_anim,
         items: Vec::new(),
@@ -483,6 +506,7 @@ fn node(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
         wrap,
         stack,
         deck,
+        node: t.name == "node",
     });
     for c in &t.children {
         if matches!(c.name.as_str(), "li" | "|") && !stack {
@@ -492,6 +516,30 @@ fn node(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
         }
     }
     check_tables(cx, idx, &id);
+}
+
+/// `tag=` (with its markers) and `label=`; a `node` has neither (D-087): warning, ignored.
+fn chip_of(cx: &mut Ctx, t: &Tag) -> (Option<String>, Option<Anim>, Option<String>) {
+    if t.name != "node" {
+        let (tag, anim) = tag_of(cx, t);
+        return (tag, anim, value(t, "label").map(|v| v.trim().to_string()));
+    }
+    for a in t
+        .attrs
+        .iter()
+        .filter(|a| matches!(a.name.as_str(), "tag" | "label"))
+    {
+        cx.diags.push(Diagnostic::warning(
+            "unknown-attribute",
+            a.span,
+            tr!(
+                "`{}` is not read on `node` (no chip nor category): ignored",
+                "« {} » ne se lit pas sur « node » (ni pastille ni catégorie) : ignoré",
+                a.name
+            ),
+        ));
+    }
+    (None, None, None)
 }
 
 /// A line of card or zone `id` (index `idx` in the model): `| …`, or the old `li …` (§7).
@@ -589,7 +637,7 @@ fn check_tables(cx: &mut Ctx, idx: usize, id: &str) {
                         cx,
                         at,
                         tr!(
-                            "a separator row « |---| » only counts right after the first row of a table: ignored",
+                            "a separator row `|---|` only counts right after the first row of a table: ignored",
                             "une ligne de séparation « |---| » ne compte que juste après la première rangée d'un tableau : ignorée"
                         ),
                     );
@@ -612,7 +660,7 @@ fn check_tables(cx: &mut Ctx, idx: usize, id: &str) {
                     cx,
                     at,
                     tr!(
-                        "« ^^ » in the first row of a table: there is no cell above",
+                        "`^^` in the first row of a table: there is no cell above",
                         "« ^^ » dans la première rangée d'un tableau : aucune cellule au-dessus"
                     ),
                 );
@@ -622,7 +670,7 @@ fn check_tables(cx: &mut Ctx, idx: usize, id: &str) {
                     cx,
                     at,
                     tr!(
-                        "a row starts with « || »: there is no cell on the left to join",
+                        "a row starts with `||`: there is no cell on the left to join",
                         "une rangée commence par « || » : aucune cellule à gauche à joindre"
                     ),
                 );
@@ -635,7 +683,7 @@ fn check_tables(cx: &mut Ctx, idx: usize, id: &str) {
                 cx,
                 k,
                 tr!(
-                    "a table of one cell between lines of text: if this line only ends with « | », write « \\| »",
+                    "a table of one cell between lines of text: if this line only ends with `|`, write `\\|`",
                     "un tableau d'une seule cellule entre des lignes de texte : si cette ligne finit seulement par « | », écrire « \\| »"
                 ),
             );
@@ -657,7 +705,7 @@ fn diagram_options(cx: &mut Ctx, t: &Tag) {
                 "unknown-attribute",
                 a.span,
                 tr!(
-                    "« {} » is no longer read: ignored",
+                    "`{}` is no longer read: ignored",
                     "« {} » n'est plus lu : ignoré",
                     a.name
                 ),
@@ -681,17 +729,17 @@ fn at_attr(cx: &mut Ctx, t: &Tag, parent: Option<&str>) -> (Option<[f64; 2]>, Op
     };
     let v = a.value.clone().unwrap_or_default();
     if v.chars().any(|c| c.is_ascii_digit()) {
-        return (point_attr(cx, t, "at", "« x,y »"), None);
+        return (point_attr(cx, t, "at", &tr!("`x,y`", "« x,y »")), None);
     }
     let p = v.trim().to_ascii_lowercase();
     let msg = if !COMPASS.contains(&p.as_str()) {
         tr!(
-            "« at=\"{v}\" »: coordinates « x,y » or a compass point (n s e w ne nw se sw) expected; ignored",
+            "`at=\"{v}\"`: coordinates `x,y` or a compass point (n s e w ne nw se sw) expected; ignored",
             "« at=\"{v}\" » : coordonnées « x,y » ou point cardinal (n s e w ne nw se sw) attendu ; ignoré"
         )
     } else if parent.is_some() {
         tr!(
-            "« at=\"{p}\" » docks only a top-level element: ignored",
+            "`at=\"{p}\"` docks only a top-level element: ignored",
             "« at=\"{p}\" » n'ancre qu'un élément de premier niveau : ignoré"
         )
     } else {
@@ -734,7 +782,7 @@ fn docked_arrows(cx: &mut Ctx) {
             "docked-arrow",
             span,
             tr!(
-                "arrow « {} »: a docked element (at=\"s\"…) and the rest of the drawing are not linked; not drawn",
+                "arrow `{}`: a docked element (at=\"s\"…) and the rest of the drawing are not linked; not drawn",
                 "flèche « {} » : un élément ancré (at=\"s\"…) et le reste du dessin ne sont pas reliés ; non dessinée",
                 e.id
             ),
@@ -750,7 +798,7 @@ fn title(cx: &mut Ctx, t: &Tag) {
             "title-twice",
             t.name_span,
             tr!(
-                "a second « title »: ignored",
+                "a second `title`: ignored",
                 "un deuxième « title » : ignoré"
             ),
         ));
@@ -758,15 +806,29 @@ fn title(cx: &mut Ctx, t: &Tag) {
     }
     let (text, _, _, _) = text_of(cx, t);
     let mut lines = Vec::new();
+    let mut pill_classes = Vec::new();
+    let mut pill_hrefs = Vec::new();
     let mut sub = Vec::new();
     let mut sub_classes = Vec::new();
     for c in &t.children {
         if c.name == "li" {
             lines.push(text_of(cx, c).0);
+            pill_classes.push(Vec::new());
+            pill_hrefs.push(None);
         } else if c.name == "|" {
-            let (li, _) = read_line(cx, c);
+            let (li, loc) = read_line(cx, c);
             if li.classes.iter().any(|k| k == "pill") {
-                lines.push(li.text);
+                // a pill written as a Markdown link points to another document
+                let (text, href) = match markdown_link(&li.text) {
+                    Some((text, href)) => (
+                        text.to_string(),
+                        checked_href(cx, href, loc.text.unwrap_or(c.name_span)),
+                    ),
+                    None => (li.text, None),
+                };
+                lines.push(text);
+                pill_classes.push(li.classes.into_iter().filter(|k| k != "pill").collect());
+                pill_hrefs.push(href);
             } else {
                 sub.push(li.text);
                 sub_classes.push(li.classes);
@@ -776,7 +838,7 @@ fn title(cx: &mut Ctx, t: &Tag) {
                 "title-content",
                 c.name_span,
                 tr!(
-                    "a « title » only contains lines « | »: « {} » is ignored",
+                    "a `title` only contains lines `|`: `{}` is ignored",
                     "un « title » ne contient que des lignes « | » : « {} » est ignoré",
                     c.name
                 ),
@@ -786,12 +848,32 @@ fn title(cx: &mut Ctx, t: &Tag) {
     if sub_classes.iter().all(Vec::is_empty) {
         sub_classes.clear();
     }
+    if pill_classes.iter().all(Vec::is_empty) {
+        pill_classes.clear();
+    }
+    if pill_hrefs.iter().all(Option::is_none) {
+        pill_hrefs.clear();
+    }
     cx.model.title = Some(Title {
         text,
         lines,
+        pill_classes,
+        pill_hrefs,
         sub,
         sub_classes,
     });
+}
+
+/// A text that is a whole Markdown link, `[text](href)`: its text and its target.
+///
+/// ```text
+/// [How HyperShift works](../how/hypershift.skemo) → ("How HyperShift works", "../how/hypershift.skemo")
+/// ```
+fn markdown_link(s: &str) -> Option<(&str, &str)> {
+    let rest = s.trim().strip_prefix('[')?;
+    let (text, rest) = rest.split_once("](")?;
+    let href = rest.strip_suffix(')')?;
+    (!text.trim().is_empty() && !text.contains(']')).then(|| (text.trim(), href.trim()))
 }
 
 fn icon_attr(t: &Tag) -> Option<String> {
@@ -803,8 +885,9 @@ fn icon_attr(t: &Tag) -> Option<String> {
 
 /// Classes the engine gives the parts it draws inside cards, zones and arrows (FORMAT §4.2): a
 /// card or an arrow with one of them as its class makes `.head { … }` style the head of every
-/// card and arrow too. `.text` and `.pulse` are provided classes of their own and stay out.
-const PART_CLASSES: [&str; 19] = [
+/// card and arrow too. `node` is the class the engine gives a node (D-087). `.text` and `.pulse`
+/// are provided classes of their own and stay out.
+const PART_CLASSES: [&str; 20] = [
     "head",
     "title",
     "tag",
@@ -824,6 +907,7 @@ const PART_CLASSES: [&str; 19] = [
     "tail",
     "origin",
     "edge-label",
+    "node",
 ];
 
 /// Warning `part-class` for each class of `t` named like a rendered part (`PART_CLASSES`).
@@ -837,25 +921,46 @@ fn warn_part_classes(cx: &mut Ctx, t: &Tag) {
         }),
     );
     let found: Vec<(String, Span)> = written
-        .filter(|(c, _)| PART_CLASSES.contains(c))
+        .filter(|(c, _)| PART_CLASSES.contains(c) || *c == "stage")
         .map(|(c, sp)| (c.to_string(), sp))
         .collect();
     for (c, span) in found {
+        if c == "stage" {
+            cx.diags.push(stage_class(span));
+            continue;
+        }
         cx.diags.push(
             Diagnostic::warning(
                 "part-class",
                 span,
                 tr!(
-                    "« .{c} » is also the class of a part the engine draws: a rule on « .{c} » styles that part everywhere in the drawing",
+                    "`.{c}` is also the class of a part the engine draws: a rule on `.{c}` styles that part everywhere in the drawing",
                     "« .{c} » est aussi la classe d'une partie que le moteur dessine : une règle sur « .{c} » style cette partie partout dans le dessin"
                 ),
             )
             .with_help(tr!(
-                "name the class after what it means (« .manager », « .team »)",
+                "name the class after what it means (`.manager`, `.team`)",
                 "nommez la classe d'après ce qu'elle signifie (« .manager », « .team »)"
             )),
         );
     }
+}
+
+/// `.stage` is the class of the whole drawing: the theme's rules on it (its background, its
+/// colours, light or dark) would apply to the element too.
+fn stage_class(span: Span) -> Diagnostic {
+    Diagnostic::warning(
+        "part-class",
+        span,
+        tr!(
+            "`.stage` is the class of the whole drawing: the theme's rules on `.stage` apply to this element too (it stays light in the dark theme)",
+            "« .stage » est la classe du dessin entier : les règles du thème sur « .stage » s'appliquent aussi à cet élément (il reste clair dans le thème sombre)"
+        ),
+    )
+    .with_help(tr!(
+        "name the class after what it means (`.step`, `.pipeline`)",
+        "nommez la classe d'après ce qu'elle signifie (« .step », « .pipeline »)"
+    ))
 }
 
 fn warn_icon_ignored(cx: &mut Ctx, a: &Attr) {
@@ -863,7 +968,7 @@ fn warn_icon_ignored(cx: &mut Ctx, a: &Attr) {
         "icon-ignored",
         a.span,
         tr!(
-            "« icon » has no effect here: only cards and zones have an icon",
+            "`icon` has no effect here: only cards and zones have an icon",
             "« icon » est sans effet ici : seules les cartes et les zones ont une icône"
         ),
     ));
@@ -889,18 +994,19 @@ pub(crate) fn href_is_safe(v: &str) -> bool {
 
 /// `href="…"`: refuses (error `unsafe-href`) a scheme outside the allow-list or an empty value.
 fn parse_href(cx: &mut Ctx, a: &Attr) -> Option<String> {
-    let v = a.value.as_deref().unwrap_or_default();
+    checked_href(cx, a.value.as_deref().unwrap_or_default(), a.span)
+}
+
+/// A link written at `span`, if it is safe; otherwise the error `unsafe-href` and `None`.
+fn checked_href(cx: &mut Ctx, v: &str, span: Span) -> Option<String> {
     if href_is_safe(v) {
         return Some(v.trim_start().to_string());
     }
     cx.diags.push(
         Diagnostic::error(
             "unsafe-href",
-            a.span,
-            tr!(
-                "unsafe or empty link « {v} »",
-                "lien non sûr ou vide « {v} »"
-            ),
+            span,
+            tr!("unsafe or empty link `{v}`", "lien non sûr ou vide « {v} »"),
         )
         .with_help(tr!(
             "allowed: http:, https:, mailto:, a relative path or #id",
@@ -922,7 +1028,7 @@ fn parse_via(cx: &mut Ctx, a: &Attr) -> Option<Vec<[f64; 2]>> {
                     "bad-number",
                     a.span,
                     tr!(
-                        "« via » is malformed: a list of points « x,y x,y » is expected",
+                        "`via` is malformed: a list of points `x,y x,y` is expected",
                         "« via » mal formé : liste de points « x,y x,y » attendue"
                     ),
                 )
@@ -950,7 +1056,7 @@ fn parse_side(cx: &mut Ctx, a: &Attr) -> Option<String> {
         "bad-side",
         a.span,
         tr!(
-            "« side=\"{v}\" »: expected sides are top, bottom, left, right (e.g. \"left-top\", \"-top\"); ignored",
+            "`side=\"{v}\"`: expected sides are top, bottom, left, right (e.g. \"left-top\", \"-top\"); ignored",
             "« side=\"{v}\" » : côtés attendus top, bottom, left, right (ex. \"left-top\", \"-top\") ; ignoré"
         ),
     ));
@@ -965,7 +1071,7 @@ fn parse_wrap(cx: &mut Ctx, a: &Attr, kind: Kind) -> Option<u32> {
             "bad-wrap",
             a.span,
             tr!(
-                "« wrap » has no effect on a card: only a zone lays out its children in rows",
+                "`wrap` has no effect on a card: only a zone lays out its children in rows",
                 "« wrap » est sans effet sur une carte : seule une zone range ses enfants en rangées"
             ),
         ));
@@ -978,7 +1084,7 @@ fn parse_wrap(cx: &mut Ctx, a: &Attr, kind: Kind) -> Option<u32> {
                 "bad-wrap",
                 a.span,
                 tr!(
-                    "« wrap=\"{v}\" »: a whole number ≥ 1 is expected (children per row); ignored",
+                    "`wrap=\"{v}\"`: a whole number ≥ 1 is expected (children per row); ignored",
                     "« wrap=\"{v}\" » : nombre entier ≥ 1 attendu (enfants par rangée) ; ignoré"
                 ),
             ));
@@ -998,7 +1104,7 @@ fn deck_of(cx: &mut Ctx, t: &Tag) -> Option<Deck> {
             warn(
                 cx,
                 tr!(
-                    "« count » is read on « cards » only (a pile of cards); ignored",
+                    "`count` is read on `cards` only (a pile of cards); ignored",
                     "« count » ne se lit que sur « cards » (un paquet de cartes) ; ignoré"
                 ),
             );
@@ -1010,7 +1116,7 @@ fn deck_of(cx: &mut Ctx, t: &Tag) -> Option<Deck> {
                 warn(
                     cx,
                     tr!(
-                        "« count=\"{v}\" »: a whole number ≥ 1 is expected; ignored",
+                        "`count=\"{v}\"`: a whole number ≥ 1 is expected; ignored",
                         "« count=\"{v}\" » : nombre entier ≥ 1 attendu ; ignoré"
                     ),
                 );
@@ -1033,7 +1139,7 @@ fn parse_join(cx: &mut Ctx, a: &Attr) -> Option<String> {
         "bad-join",
         a.span,
         tr!(
-            "« join=\"\" »: a name is expected (\"trunk\", or one shared by arrows to one card); ignored",
+            "`join=\"\"`: a name is expected (\"trunk\", or one shared by arrows to one card); ignored",
             "« join=\"\" » : un nom est attendu (\"trunk\", ou un nom partagé par des flèches vers une même carte) ; ignoré"
         ),
     ));
@@ -1071,7 +1177,7 @@ fn lonely_joins(cx: &mut Ctx) {
                     "bad-join",
                     span,
                     tr!(
-                        "« join=\"{j}\" »: no other arrow to « {to} » carries it; ignored",
+                        "`join=\"{j}\"`: no other arrow to `{to}` carries it; ignored",
                         "« join=\"{j}\" » : aucune autre flèche vers « {to} » ne le porte ; ignoré"
                     ),
                 )
@@ -1096,7 +1202,7 @@ fn parse_constraint(cx: &mut Ctx, a: &Attr) -> bool {
         "bad-constraint",
         a.span,
         tr!(
-            "« constraint=\"{v}\" »: \"false\" or \"true\" expected; ignored",
+            "`constraint=\"{v}\"`: \"false\" or \"true\" expected; ignored",
             "« constraint=\"{v}\" » : \"false\" ou \"true\" attendu ; ignoré"
         ),
     ));
@@ -1179,7 +1285,7 @@ fn edges(cx: &mut Ctx, t: &Tag, from: &str) {
             "ignored-child",
             c.name_span,
             tr!(
-                "content indented under « to »: ignored",
+                "content indented under `to`: ignored",
                 "contenu indenté sous « to » : ignoré"
             ),
         ));
@@ -1251,7 +1357,7 @@ fn validate_mindmap(cx: &mut Ctx) {
             "bad-root",
             span,
             tr!(
-                "« root=\"{root}\" »: no card with this identifier",
+                "`root=\"{root}\"`: no card with this identifier",
                 "« root=\"{root}\" » : aucune carte de cet identifiant"
             ),
         ));
@@ -1272,7 +1378,7 @@ fn validate_mindmap(cx: &mut Ctx) {
                     "zone-in-mindmap",
                     span_of("id"),
                     tr!(
-                        "zone « {} »: zones are not supported in mindmap mode",
+                        "zone `{}`: zones are not supported in mindmap mode",
                         "zone « {} » : les zones ne sont pas gérées en mode mindmap",
                         n.id
                     ),
@@ -1287,7 +1393,7 @@ fn validate_mindmap(cx: &mut Ctx) {
                 "at-ignored",
                 span_of("at"),
                 tr!(
-                    "« at » has no effect in mindmap mode: the position comes from the structure",
+                    "`at` has no effect in mindmap mode: the position comes from the structure",
                     "« at » est sans effet en mode mindmap : la position vient de la structure"
                 ),
             ));
@@ -1316,7 +1422,7 @@ fn validate_diagram_dates(cx: &mut Ctx, mode: DateMode) {
             cx.diags.push(Diagnostic::error(
                 "bad-date",
                 span,
-                tr!("« {opt} »: {m}", "« {opt} » : {m}"),
+                tr!("`{opt}`: {m}", "« {opt} » : {m}"),
             ));
         }
     }
@@ -1340,7 +1446,7 @@ fn validate_node_dates(cx: &mut Ctx, mode: DateMode, n: &Node) {
                     "zone-in-frise",
                     span_of("id"),
                     tr!(
-                        "zone « {} »: a zone inside a zone is not supported in frieze mode",
+                        "zone `{}`: a zone inside a zone is not supported in frieze mode",
                         "zone « {} » : une zone dans une zone n'est pas gérée en mode frise",
                         n.id
                     ),
@@ -1359,7 +1465,7 @@ fn validate_node_dates(cx: &mut Ctx, mode: DateMode, n: &Node) {
                 "missing-date",
                 span_of("id"),
                 tr!(
-                    "card « {} » has neither date= nor start= ({} mode)",
+                    "card `{}` has neither date= nor start= ({} mode)",
                     "carte « {} » sans date= ni start= (mode {})",
                     n.id,
                     mode.name()
@@ -1388,7 +1494,7 @@ fn validate_node_dates(cx: &mut Ctx, mode: DateMode, n: &Node) {
                     "end-before-start",
                     span_of("end"),
                     tr!(
-                        "card « {} »: end is before start",
+                        "card `{}`: end is before start",
                         "carte « {} » : end antérieur à start",
                         n.id
                     ),
@@ -1398,7 +1504,7 @@ fn validate_node_dates(cx: &mut Ctx, mode: DateMode, n: &Node) {
             Err(m) => cx.diags.push(Diagnostic::error(
                 "bad-date",
                 span_of(name),
-                tr!("« {name} »: {m}", "« {name} » : {m}"),
+                tr!("`{name}`: {m}", "« {name} » : {m}"),
             )),
         }
     }
@@ -1407,7 +1513,7 @@ fn validate_node_dates(cx: &mut Ctx, mode: DateMode, n: &Node) {
             "at-ignored",
             span_of("at"),
             tr!(
-                "« at » has no effect in {} mode: the position comes from the date",
+                "`at` has no effect in {} mode: the position comes from the date",
                 "« at » est sans effet en mode {} : la position vient de la date",
                 mode.name()
             ),
@@ -1444,6 +1550,22 @@ mod href_tests {
             "java\tscript:x",
         ] {
             assert!(!href_is_safe(bad), "{bad:?}");
+        }
+    }
+}
+
+#[cfg(test)]
+mod class_tests {
+    #[test]
+    fn a_stage_class_is_reported_and_an_empty_diagram_too() {
+        let d = super::parse("diagram\n  zone#build.stage Build\n    card#a A\n");
+        let w: Vec<_> = d.warnings().map(|w| w.code).collect();
+        assert_eq!(w, ["part-class"]);
+        let d = super::parse("diagram\n  card#a.stagey A\n");
+        assert_eq!(d.warnings().count(), 0);
+        for src in ["", "\n \n", "diagram\n"] {
+            let w: Vec<_> = super::parse(src).warnings().map(|w| w.code).collect();
+            assert_eq!(w, ["empty-diagram"], "{src:?}");
         }
     }
 }

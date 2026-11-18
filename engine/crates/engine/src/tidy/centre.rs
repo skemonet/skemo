@@ -11,8 +11,9 @@ use skemo_lang::{Edge, Kind, Model};
 /// A top-level zone alone on its row is centred, across the direction, on the span of
 /// the nodes it is linked to (its own arrows and those of what it contains). ELK's hierarchical
 /// placement leaves such a zone against one side of its targets ("Services" above two workers).
-/// Alone on its row, it can move across without touching anything. Two passes, so that a node
-/// linked to a moved one follows it.
+/// It moves only if the place is free (`fits`): alone on its row as ELK placed it, a zone may
+/// still meet a card an earlier pass moved beside it (bug 8: a leaf lifted next to it). Two
+/// passes, so that a node linked to a moved one follows it.
 pub fn center_lonely(model: &Model, boxes: &mut Boxes) {
     let ax = Axes::of(model);
     let tops: Vec<&str> = model.children(None).map(|n| n.id.as_str()).collect();
@@ -37,7 +38,13 @@ pub fn center_lonely(model: &Model, boxes: &mut Boxes) {
                 continue;
             }
             let d = (lo + hi) / 2.0 - ax.mid(b);
-            if d.abs() > 0.5 {
+            let inside: Vec<&str> = model
+                .nodes
+                .iter()
+                .filter(|n| within(model, &n.id, id))
+                .map(|n| n.id.as_str())
+                .collect();
+            if d.abs() > 0.5 && fits(model, id, &ax.moved(b, d), &inside, boxes) {
                 ax.shift_across(model, id, d, boxes);
             }
         }
@@ -85,8 +92,14 @@ pub fn center_parents(model: &Model, boxes: &mut Boxes, titles: &[(String, Box2)
 /// a subnet), centred on it again once the zones have made room for their titles (D-064): before,
 /// the straight arrow would have crossed a title (`clear_of_titles`), and the card stayed where ELK
 /// put it, the arrow bending. `titles`: the zone titles on the widened frames. The card moves
-/// only if the place is free.
-pub fn spines_into_zones(model: &Model, boxes: &mut Boxes, titles: &[(String, Box2)]) {
+/// only if the place is free and `framed` accepts it (its zones, framed by their own rule, come
+/// no nearer their neighbours).
+pub fn spines_into_zones(
+    model: &Model,
+    boxes: &mut Boxes,
+    titles: &[(String, Box2)],
+    framed: &dyn Fn(&str, &Box2, &Boxes) -> bool,
+) {
     let ax = Axes::of(model);
     let edges = constrained(model);
     let zones_of = |id: &str| {
@@ -101,7 +114,7 @@ pub fn spines_into_zones(model: &Model, boxes: &mut Boxes, titles: &[(String, Bo
     for p in model
         .nodes
         .iter()
-        .filter(|n| n.kind == Kind::Card && n.at.is_none() && !in_grid(model, &n.id))
+        .filter(|n| n.kind == Kind::Card && !in_grid(model, &n.id))
     {
         let out: Vec<&&Edge> = edges.iter().filter(|e| e.from == p.id).collect();
         let [e] = out[..] else { continue };
@@ -120,7 +133,10 @@ pub fn spines_into_zones(model: &Model, boxes: &mut Boxes, titles: &[(String, Bo
         };
         let d = m - ax.mid(&pb);
         let moved = ax.moved(&pb, d);
-        if d.abs() >= 0.5 && fits(model, &p.id, &moved, &[p.id.as_str()], boxes) {
+        if d.abs() >= 0.5
+            && fits(model, &p.id, &moved, &[p.id.as_str()], boxes)
+            && framed(&p.id, &moved, boxes)
+        {
             boxes.insert(p.id.clone(), moved);
         }
     }
@@ -156,13 +172,32 @@ fn parent_target(
         let m = clear_of_titles(model, titles, ax, (p, &linked_id(model, edges, p)), &b)?;
         return Some((m, m));
     }
-    // otherwise the child in its column (the straight arrow of a hand drawing)
-    let overlap = |b: &Box2| ax.span(b).1.min(ax.span(pb).1) - ax.span(b).0.max(ax.span(pb).0);
-    linked
+    // otherwise the child in its column (the straight arrow of a hand drawing); not a child
+    // another of its parents on this card's row stands in front of too: that child is centred on
+    // its parents (`center_children`), and one parent moving alone would break the even spacing
+    // of the row
+    let cross =
+        |a: &Box2, b: &Box2| ax.span(a).1.min(ax.span(b).1) - ax.span(a).0.max(ax.span(b).0);
+    let overlap = |b: &Box2| cross(b, pb);
+    let row_mates = |child: &str| {
+        let Some(cb) = boxes.get(child) else {
+            return false;
+        };
+        edges.iter().any(|e| {
+            e.to == child
+                && e.from != p
+                && boxes
+                    .get(&e.from)
+                    .is_some_and(|q| ax.same_row(q, pb) && cross(q, cb) > 0.0)
+        })
+    };
+    edges
         .iter()
-        .filter(|(b, _)| overlap(b) > 0.0)
-        .max_by(|a, b| overlap(&a.0).total_cmp(&overlap(&b.0)))
-        .map(|(b, _)| ax.span(b))
+        .filter(|e| e.from == p && is_card(model, &e.to) && !row_mates(&e.to))
+        .filter_map(|e| boxes.get(&e.to))
+        .filter(|b| ax.beyond(pb, b) && overlap(b) > 0.0)
+        .max_by(|a, b| overlap(a).total_cmp(&overlap(b)))
+        .map(|b| ax.span(b))
 }
 
 /// The only constrained child of `p` (the one-to-one case of `center_parents`).
@@ -223,6 +258,7 @@ pub fn center_children(model: &Model, boxes: &mut Boxes) {
             center_under_parents(model, &edges, ax, id, boxes);
         }
         for id in &cards {
+            under_trunk(model, &edges, ax, id, boxes);
             center_own_children(model, &edges, ax, id, boxes);
         }
         if *boxes == round {
@@ -269,6 +305,43 @@ fn row_neighbours(
         .iter()
         .all(|(_, k)| ax.same_row(k, &first))
         .then_some(found)
+}
+
+/// The child of a fork that its parent's trunk falls on (D-091): the middle of three children,
+/// a child standing almost under its parent. It moves across so that the trunk runs straight into
+/// its middle, as a hand drawing does: one junction on the bar, and its arrow enters the middle
+/// of its side. Only a child this card is the only parent of, if the place is free.
+fn under_trunk(model: &Model, edges: &[&Edge], ax: Axes, id: &str, boxes: &mut Boxes) {
+    let Some(kids) = row_neighbours(model, edges, ax, (id, true), boxes) else {
+        return;
+    };
+    if kids.len() < 2 {
+        return;
+    }
+    let trunk = ax.mid(&boxes[id]);
+    for (c, cb) in kids {
+        let (lo, hi) = ax.span(&cb);
+        if in_grid(model, &c) || !only_parent(edges, id, &c) || trunk <= lo || trunk >= hi {
+            continue;
+        }
+        let d = trunk - ax.mid(&cb);
+        // its own children follow it, so that its fork stays centred; the move is made only if
+        // they all find room
+        let own = row_neighbours(model, edges, ax, (&c, true), boxes).unwrap_or_default();
+        if d.abs() < 0.5 || own.iter().any(|(k, _)| !only_parent(edges, &c, k)) {
+            continue;
+        }
+        let moving: Vec<(String, Box2)> = std::iter::once((c.clone(), cb)).chain(own).collect();
+        let ids: Vec<&str> = moving.iter().map(|(k, _)| k.as_str()).collect();
+        if moving
+            .iter()
+            .all(|(k, b)| fits(model, k, &ax.moved(b, d), &ids, boxes))
+        {
+            for (k, b) in &moving {
+                boxes.insert(k.clone(), ax.moved(b, d));
+            }
+        }
+    }
 }
 
 /// A card fed by two or more parents of one row, each with no other child, moves to the middle
@@ -320,6 +393,119 @@ fn center_own_children(model: &Model, edges: &[&Edge], ax: Axes, id: &str, boxes
     if free {
         for (k, b) in &kids {
             boxes.insert(k.clone(), ax.moved(b, d));
+        }
+    }
+}
+
+/// Largest hook of the triangle rule (`triangle_hooks`): beyond it, a long name would push the
+/// middle card far aside, and the layout stays as the other passes left it.
+const HOOK_MAX: f64 = 48.0;
+
+/// D-099 (the user's choice 4b, 2026-11-09): a triangle `a → b`, `a → c`, `b → c`, laid in one
+/// column (`b` after `a`, `c` after `b`), is drawn with its long arrow straight and two equal
+/// hooks on the way through `b`. Both lines leave `a` from its middle half, mirror images around
+/// its middle (D-092), and both enter `c` the same way: `c` stands so that `a → c` runs straight
+/// from port to port, and `b` stands beside that line, the router's margin away, as close to its
+/// own port as the line allows. Then `a → b` steps aside by some amount and `b → c` steps back by
+/// as much: the steps mirror each other around the column's middle. When `b` is narrow enough to
+/// stand under its port, both lines through it are straight. Only for that pattern: `b` linked
+/// to `a` and `c` only, `c` entered by `a` and `b` only, `a` leaving forward to `b` and `c` only;
+/// no grid; each move only if the place is free (`fits`), and never a hook
+/// longer than `HOOK_MAX`.
+pub fn triangle_hooks(model: &Model, boxes: &mut Boxes) {
+    let ax = Axes::of(model);
+    let edges = constrained(model);
+    let p = crate::route::graph_params(model);
+    // the gap between the two ports of a side (the router's `even_targets` on a free middle half)
+    let spread = |w: f64| {
+        (w / 2.0)
+            .min(p.port_spread)
+            .max(p.ideal_nudging.max(p.port_spacing))
+    };
+    let free = |id: &str, boxes: &Boxes| {
+        model.node(id).is_some_and(|n| n.kind == Kind::Card)
+            && !in_grid(model, id)
+            && boxes.contains_key(id)
+    };
+    let into = |id: &str| -> Vec<&str> {
+        edges
+            .iter()
+            .filter(|e| e.to == id)
+            .map(|e| e.from.as_str())
+            .collect()
+    };
+    let from = |id: &str| -> Vec<&str> {
+        edges
+            .iter()
+            .filter(|e| e.from == id)
+            .map(|e| e.to.as_str())
+            .collect()
+    };
+    let same = |mut v: Vec<&str>, w: &[&str]| {
+        v.sort_unstable();
+        let mut w = w.to_vec();
+        w.sort_unstable();
+        v == w
+    };
+    for n in &model.nodes {
+        let a = n.id.as_str();
+        if !boxes.contains_key(a) || n.kind != Kind::Card {
+            continue;
+        }
+        let ab = boxes[a];
+        let ahead: Vec<&str> = from(a)
+            .into_iter()
+            .filter(|t| boxes.get(*t).is_some_and(|tb| ax.beyond(&ab, tb)))
+            .collect();
+        if ahead.len() != 2 {
+            continue;
+        }
+        for (b, c) in [(ahead[0], ahead[1]), (ahead[1], ahead[0])] {
+            if !free(b, boxes) || !free(c, boxes) {
+                continue;
+            }
+            if !same(into(b), &[a]) || !same(from(b), &[c]) || !same(into(c), &[a, b]) {
+                continue;
+            }
+            let (bb, cb) = (boxes[b], boxes[c]);
+            let overlap = |x: &Box2, y: &Box2| {
+                let (x, y) = (ax.span(x), ax.span(y));
+                x.0 < y.1 && y.0 < x.1
+            };
+            if !ax.beyond(&bb, &cb)
+                || !overlap(&ab, &bb)
+                || !overlap(&bb, &cb)
+                || !overlap(&ab, &cb)
+            {
+                continue;
+            }
+            let (sa, sc) = (spread(ax.span_len(&ab)), spread(ax.span_len(&cb)));
+            // `b` keeps the side it is on; the straight line `a → c` runs on the other one
+            let s = if ax.mid(&bb) <= ax.mid(&cb) {
+                1.0
+            } else {
+                -1.0
+            };
+            let line = ax.mid(&ab) + s * sa / 2.0;
+            let port_b = ax.mid(&ab) - s * sa / 2.0;
+            let mut hook = ax.span_len(&bb) / 2.0 + p.shape_buffer - sa;
+            if hook <= 0.0 {
+                hook = 0.0;
+            } else {
+                hook = hook.max(p.min_jog);
+            }
+            if hook > HOOK_MAX {
+                continue;
+            }
+            let db = port_b - s * hook - ax.mid(&bb);
+            let dc = line - s * sc / 2.0 - ax.mid(&cb);
+            let (nb, nc) = (ax.moved(&bb, db), ax.moved(&cb, dc));
+            let group = [b, c];
+            if fits(model, b, &nb, &group, boxes) && fits(model, c, &nc, &group, boxes) {
+                boxes.insert(b.to_string(), nb);
+                boxes.insert(c.to_string(), nc);
+                break;
+            }
         }
     }
 }

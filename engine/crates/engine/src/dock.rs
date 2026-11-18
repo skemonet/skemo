@@ -38,6 +38,40 @@ fn top<'a>(model: &'a Model, id: &str) -> Option<&'a skemo_lang::Node> {
     Some(n)
 }
 
+/// Cards outside the flow dock themselves (D-105, the grid engine): a top-level legend with no arrow and no `at=`
+/// stands at the top right (`at="ne"`), a top-level paragraph (`card.text`) with no arrow below the
+/// drawing across its width (`card.text.wide(at="s")`), a link to another view (a `card.chip` with
+/// an `href=` and no arrow) at the top left (`at="nw"`), as FORMAT and the skill write them. Left in the drawing, they went to its last row after everything written before them, a
+/// legend as tall as its lines and a paragraph as wide as its sentence (50 of the 81 views of the
+/// user's site grew by a third or more). A card written with `at=` keeps it.
+pub fn dock_defaults(mut model: Model) -> Model {
+    let linked: Vec<String> = model
+        .edges
+        .iter()
+        .flat_map(|e| [e.from.clone(), e.to.clone()])
+        .collect();
+    for n in model.nodes.iter_mut().filter(|n| {
+        n.kind == skemo_lang::Kind::Card
+            && n.parent.is_none()
+            && n.dock.is_none()
+            && n.at.is_none()
+            && !linked.contains(&n.id)
+    }) {
+        let has = |c: &str| n.classes.iter().any(|x| x == c);
+        if has("legend") {
+            n.dock = Some("ne".into());
+        } else if has("text") {
+            n.dock = Some("s".into());
+            if !has("wide") {
+                n.classes.push("wide".into());
+            }
+        } else if has("chip") && n.href.is_some() {
+            n.dock = Some("nw".into());
+        }
+    }
+    model
+}
+
 /// The docked element holding `id`, if any.
 fn dock_of(model: &Model, id: &str) -> Option<String> {
     top(model, id)
@@ -102,6 +136,18 @@ pub fn split(model: &Model) -> Option<Split> {
     Some(Split { main, parts })
 }
 
+/// A docked element's model with its pinned cards (`at=`, in the drawing's frame) moved by `d`
+/// into the frame of its own arrangement, which is then moved back by `-d` (D-031).
+pub(crate) fn pins_by(model: &Model, (dx, dy): (f64, f64)) -> Model {
+    let mut m = model.clone();
+    for n in &mut m.nodes {
+        if let Some([x, y]) = n.at.filter(|_| n.kind == skemo_lang::Kind::Card) {
+            n.at = Some([x + dx, y + dy]);
+        }
+    }
+    m
+}
+
 /// What an arrangement covers: boxes, routes and labels (with their measured sizes).
 fn extent(a: &Arranged, sizes: &Sizes) -> Box2 {
     let mut framed = a.boxes.clone();
@@ -114,6 +160,26 @@ fn extent(a: &Arranged, sizes: &Sizes) -> Box2 {
         w: f.w - 2.0 * pad,
         h: f.h - 2.0 * pad,
     }
+}
+
+/// Width of the bands above and below the drawing (`n`, `s`): the drawing's, and the side columns'
+/// (`nw`, `w`, `sw` and `ne`, `e`, `se`) with their gaps, as `offsets` sets them.
+pub(crate) fn band_width(
+    main: &Arranged,
+    parts: &[(Part, Arranged)],
+    sizes: &Sizes,
+    gap: f64,
+) -> f64 {
+    let side = |ps: [&str; 3]| {
+        parts
+            .iter()
+            .filter(|(p, _)| ps.contains(&p.point.as_str()))
+            .map(|(_, a)| extent(a, sizes).w)
+            .fold(0.0, f64::max)
+    };
+    let (west, east) = (side(["nw", "w", "sw"]), side(["ne", "e", "se"]));
+    let gaps = [west, east].iter().filter(|w| **w > 0.0).count() as f64 * gap;
+    extent(main, sizes).w + west + east + gaps
 }
 
 /// Moves an arrangement by `(dx, dy)`.
@@ -170,17 +236,16 @@ fn column(items: &[Item], gap: f64) -> (f64, f64) {
     (w, h)
 }
 
-/// Sets the docked elements around the drawing and merges everything into one arrangement.
-/// Like Java's `BorderLayout`: the `n` and `s` bands span the whole width; the side columns hold
-/// `w` and `e`, with the corners at their top (`nw`, `ne`) or bottom (`sw`, `se`), beside the
-/// drawing.
-pub(crate) fn compose(
-    mut main: Arranged,
-    parts: Vec<(Part, Arranged)>,
+/// Where each docked element goes around the drawing: the move of its own arrangement. Like
+/// Java's `BorderLayout`: the `n` and `s` bands span the whole width; the side columns hold `w`
+/// and `e`, with the corners at their top (`nw`, `ne`) or bottom (`sw`, `se`), beside the drawing.
+pub(crate) fn offsets(
+    main: &Arranged,
+    parts: &[(Part, Arranged)],
     sizes: &Sizes,
     gap: f64,
-) -> Arranged {
-    let m = extent(&main, sizes);
+) -> Vec<(f64, f64)> {
+    let m = extent(main, sizes);
     let mut by: BTreeMap<&str, Vec<Item>> = BTreeMap::new();
     let exts: Vec<Box2> = parts.iter().map(|(_, a)| extent(a, sizes)).collect();
     for (k, (p, _)) in parts.iter().enumerate() {
@@ -263,11 +328,24 @@ pub(crate) fn compose(
     };
     column_at(["nw", "w", "sw"], m.x - gap - west_w);
     column_at(["ne", "e", "se"], m.x + m.w + gap);
-    for (k, (_, mut a)) in parts.into_iter().enumerate() {
-        shift(&mut a, (at[k].0 - exts[k].x, at[k].1 - exts[k].y));
+    at.iter()
+        .zip(&exts)
+        .map(|(a, e)| (a.0 - e.x, a.1 - e.y))
+        .collect()
+}
+
+/// The docked elements moved by `offsets` and merged with the drawing into one arrangement.
+pub(crate) fn merge(
+    mut main: Arranged,
+    parts: Vec<(Part, Arranged)>,
+    offsets: &[(f64, f64)],
+) -> Arranged {
+    for ((_, mut a), d) in parts.into_iter().zip(offsets) {
+        shift(&mut a, *d);
         main.boxes.extend(a.boxes);
         main.routes.extend(a.routes);
         main.labels.extend(a.labels);
+        main.label_lines.extend(a.label_lines);
         main.edge_groups.extend(a.edge_groups);
     }
     main

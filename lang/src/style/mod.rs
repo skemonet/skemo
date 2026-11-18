@@ -4,6 +4,7 @@
 //! (`FORMAT.md` §4.2), then asks for each one's computed style ([`Styler::compute`]).
 
 pub mod cascade;
+pub mod check;
 pub mod css;
 pub mod select;
 pub mod values;

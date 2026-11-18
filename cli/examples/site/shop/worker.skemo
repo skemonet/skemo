@@ -1,0 +1,19 @@
+//- Components of the worker
+diagram(dir="down")
+  title Worker: components
+
+  card#queue.store(href="containers.skemo#queue") Event bus
+    to(consumer).async
+
+  zone#worker.boundary Worker
+    card#consumer.component Consumer
+      to(mailer settle)
+    card#mailer.component Mailer
+      | Templates, retries
+      to(mail)
+    card#settle.component Settlement
+      | Idempotent, at least once
+      to(pay)
+
+  card#mail.external(icon="mail" href="https://example.com/mail-api") E-mail service
+  card#pay.external(icon="credit-card") Payment provider

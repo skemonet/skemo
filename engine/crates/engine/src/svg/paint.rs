@@ -39,13 +39,24 @@ pub(super) fn background(c: &Computed) -> Option<Rgba> {
 pub(super) fn radius(c: &Computed, w: f64, h: f64) -> f64 {
     let r = c
         .get("border-radius")
-        .and_then(|v| {
-            v.split_whitespace()
-                .next()
-                .and_then(|t| parse_length(t, c.font_size(), Some(w)))
-        })
+        .and_then(|v| parse_length(first_term(v), c.font_size(), Some(w)))
         .unwrap_or(0.0);
     r.min(w / 2.0).min(h / 2.0).max(0.0)
+}
+
+/// The first term of a value with several (`10px 4px`), a `calc(…)` kept whole.
+fn first_term(v: &str) -> &str {
+    let v = v.trim();
+    let mut depth = 0i32;
+    for (i, ch) in v.char_indices() {
+        match ch {
+            '(' => depth += 1,
+            ')' => depth -= 1,
+            c if c.is_whitespace() && depth == 0 => return &v[..i],
+            _ => {}
+        }
+    }
+    v
 }
 
 /// Rectangle arrondi (rayons haut et bas distincts) en chemin.
@@ -135,20 +146,10 @@ fn bridges(d: &mut String, p: (f64, f64), q: (f64, f64), hops: &[(f64, f64)]) {
         .map(|h| h.0)
         .collect();
     on.sort_by(|a, b| (a * dir).total_cmp(&(b * dir)));
-    let r = crate::arrow::HOP;
-    // the arc goes over the crossing: clockwise from left to right, the other way back
-    let sweep = u8::from(dir > 0.0);
+    // the line runs on straight through the crossing: the gap that shows it passes under is
+    // cut by a mask (`arrow::gap_mask`), so that its dashes and its length run on unbroken
     for x in on {
-        let _ = write!(
-            d,
-            " L{},{} A{},{} 0 0 {sweep} {},{}",
-            n(x - dir * r),
-            n(p.1),
-            n(r),
-            n(r),
-            n(x + dir * r),
-            n(p.1)
-        );
+        let _ = write!(d, " L{},{}", n(x), n(p.1));
     }
 }
 

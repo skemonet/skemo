@@ -2,7 +2,7 @@
 source: tests/errors.rs
 expression: out
 ---
-error[duplicate-id]: identifier « a » is already used
+error[duplicate-id]: identifier `a` is already used
   ┌─ id-duplique.skemo:2:6
   │
 2 │ card#a Deux

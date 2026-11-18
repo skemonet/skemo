@@ -55,6 +55,21 @@ pub(crate) fn valid_hint(
     if pts.windows(2).any(|w| scene.blocked(w[0], w[1], active)) {
         return None;
     }
+    // nor within the margin of a shape it does not end on: ELK keeps its own spacing round the
+    // cards, but knows nothing of a zone's title, and a hint ran 4 px under one
+    let ends: Vec<usize> = [&c.from, &c.to]
+        .iter()
+        .filter_map(|e| match e {
+            End::Shape { id, .. } => by_id.get(id.as_str()).copied(),
+            End::Point { .. } => None,
+        })
+        .collect();
+    if pts
+        .windows(2)
+        .any(|w| scene.in_margin(w[0], w[1], active, &ends))
+    {
+        return None;
+    }
     Some(pts)
 }
 
@@ -70,7 +85,7 @@ fn straighten_near_orthogonal(pts: &mut [Point]) {
     }
 }
 
-fn is_orthogonal(pts: &[Point]) -> bool {
+pub(crate) fn is_orthogonal(pts: &[Point]) -> bool {
     pts.windows(2)
         .all(|w| (w[0].0 - w[1].0).abs() < 1e-6 || (w[0].1 - w[1].1).abs() < 1e-6)
 }

@@ -8,9 +8,16 @@ use skemo_engine::animated::{GifOptions, apng, gif, state_png, states_png};
 use skemo_engine::html::HtmlOptions;
 use skemo_engine::source::Bundle;
 use skemo_lang::tr;
+use std::io::IsTerminal;
 use std::path::Path;
 
 pub fn run(out: &Out, a: &RenderArgs) -> Result<(), Fail> {
+    if a.file == "-" && std::io::stdin().is_terminal() {
+        return Err(Fail::usage(tr!(
+            "-: the standard input is a terminal; give the source through a pipe or a file",
+            "- : l'entrée standard est un terminal ; donner la source par un tube ou un fichier"
+        )));
+    }
     let fmt = match a.format {
         Some(f) => f,
         None => format_of(&a.output)?,
@@ -21,12 +28,13 @@ pub fn run(out: &Out, a: &RenderArgs) -> Result<(), Fail> {
         .high_contrast(a.contrast == ContrastArg::High)
         .transparent(a.transparent)
         .font_scale(a.font_scale)
-        .fonts(&a.fonts.font);
+        .fonts(&a.fonts.font)
+        .root(a.tool.root.as_deref());
     let (d, warnings, bundle) = prepare(out, inputs)?;
     let src = (!a.no_source).then_some(&bundle);
     if a.theme == Some(ThemeArg::Auto) && fmt != Format::Html {
         out.warn(&tr!(
-            "theme « auto »: rendered with the light theme outside HTML",
+            "theme `auto`: rendered with the light theme outside HTML",
             "thème « auto » : rendu en thème clair hors HTML"
         ));
     }
@@ -87,7 +95,7 @@ fn format_of(output: &str) -> Result<Format, Fail> {
         Some("apng") => Ok(Format::Apng),
         Some("webp") => Ok(Format::Webp),
         _ => Err(Fail::usage(tr!(
-            "unknown format for « {output} »: use .html, .svg, .png, .gif, .apng or .webp, or --format",
+            "unknown format for `{output}`: use .html, .svg, .png, .gif, .apng or .webp, or --format",
             "format de « {output} » inconnu : utiliser .html, .svg, .png, .gif, .apng ou .webp, ou --format"
         ))),
     }

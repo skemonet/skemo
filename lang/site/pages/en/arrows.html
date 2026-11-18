@@ -50,9 +50,11 @@ card#queue Queue</code></pre>
 <skemo name="trunk"></skemo>
 <p>With <code>join="trunk"</code>, the arrows of one <code>to(…)</code> leave the same point and share a trunk before branching, the
   way organisation charts are drawn. Each target still has its own arrow, with its own id and animation marker.</p>
-<p><em>(preview)</em> Plain arrows from one card to several cards of the next row are drawn this way without asking (a
-  <em>fork</em>). When several cards each link to the same cards of the next row, every one to every one, their arrows share one
-  bar between the rows (a <em>bus</em>) instead of crossing. Junctions are marked with a dot.</p>
+<p><em>(preview)</em> Arrows from one card to several cards of the next row, alike (same classes, no label or the same label),
+  are drawn this way without asking when the side is crowded or they would cross a row of cards (a <em>fork</em>); a shared label
+  is written once. When several cards each link to the same cards of the next row, every one to every one, their arrows share one
+  bar between the rows (a <em>bus</em>) instead of crossing. Junctions are rounded bends into the trunk. Where two lines still
+  cross, the horizontal one is cut on each side of the other.</p>
 <p><em>(preview)</em> Any other name joins arrows <em>into</em> one card: arrows to the same card that carry the same
   <code>join="http"</code>, written under different cards, meet before it and end on one line with a single head (the HTTP
   calls of two frontends to one backend, in the Kubernetes example of <a href="layout.html">Layout</a>). A name that no other

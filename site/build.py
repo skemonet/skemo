@@ -270,6 +270,15 @@ def llms(pages: list[dict], version: str) -> str:
     return "\n".join(lines)
 
 
+# skemo.net/install: a stable address tools print (glitu), kept on the install section of the docs
+INSTALL = """<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Install skemo</title>
+<link rel="canonical" href="https://skemo.net/docs/getting-started/#install">
+<meta http-equiv="refresh" content="0; url=/docs/getting-started/#install"></head>
+<body><p><a href="/docs/getting-started/#install">Install skemo</a></p></body></html>
+"""
+
 NOT_FOUND = """<!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -314,6 +323,8 @@ def main() -> None:
     (dist / "robots.txt").write_text(f"User-agent: *\nAllow: /\n\nSitemap: {ORIGIN}/sitemap.xml\n")
     (dist / "llms.txt").write_text(llms(pages, version))
     (dist / "404.html").write_text(NOT_FOUND)
+    (dist / "install").mkdir()
+    (dist / "install" / "index.html").write_text(INSTALL)
 
     for asset in ("brand.css", "style.css", "favicon.svg"):
         shutil.copy(SITE / "src" / asset, dist / asset)

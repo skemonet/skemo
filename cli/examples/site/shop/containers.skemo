@@ -1,0 +1,26 @@
+//- Containers of the web shop
+diagram(dir="down")
+  title Web shop: containers
+
+  card#shopper.person(icon="user" href="../index.skemo") Shopper
+    to(web) HTTPS
+
+  zone#shop.boundary Web shop
+    card#web.app(icon="monitor") Storefront
+      | React, served by the CDN
+      to(api) JSON
+    card#api.app(icon="server" href="api.skemo") API
+      | Rust, 3 instances
+      to(db) SQL
+      to(queue).async order placed
+    card#worker.app(icon="cog" href="worker.skemo") Worker
+      | Sends e-mails, settles payments
+      to(pay) settles
+      to(mail) sends
+    card#db.store(icon="database") Orders DB
+      | PostgreSQL
+    card#queue.store Event bus
+      to(worker).async
+
+  card#pay.external(icon="credit-card") Payment provider
+  card#mail.external(icon="mail") E-mail service

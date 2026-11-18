@@ -1,7 +1,9 @@
 //! Hyperedges (`join="trunk"`, D-034): the arrows of one `to(a b c …)` leave from the same point and
 //! follow a common trunk before splitting.
 
-use skemo_engine::{Options, from_source};
+use skemo_engine::Options;
+mod elk;
+use elk::from_source;
 
 const SRC: &str = include_str!("data/hyperedge.skemo");
 

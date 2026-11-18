@@ -19,6 +19,8 @@ description: Faites se déployer un diagramme étape par étape avec des marqueu
   <tr><td><code>@2-4</code></td><td>visible de l’étape 2 à l’étape 4 incluse, puis masqué</td></tr>
   <tr><td><code>@0-2</code> <em>(préversion)</em></td><td>visible dès le début jusqu’à l’étape 2 incluse, puis masqué</td></tr>
   <tr><td><code>@4:focus</code>, <code>@4-6:focus</code></td><td>mis en avant à l’étape 4 (ou de 4 à 6) : le reste est estompé</td></tr>
+  <tr><td><code>@3-4:halo</code>, <code>@5:chase</code>, <code>@6:magnify</code></td><td>une mise en évidence jouée par l’outil
+    qui affiche le SVG (glitu) : écrite dans <code>data-highlight</code>, non dessinée en PNG, GIF ou WebP</td></tr>
 </table>
 <p>Les marqueurs se placent en fin de ligne <code>card</code>, <code>zone</code>, <code>|</code> ou <code>to(…)</code>, après au moins
   une espace, et sont retirés du texte affiché. Les étapes sont des valeurs ordonnées, pas un compte : <code>@2.5</code> s’insère
@@ -38,7 +40,7 @@ description: Faites se déployer un diagramme étape par étape avec des marqueu
 
 <h2>Règles</h2>
 <ul>
-  <li>Au plus un marqueur d’apparition par élément ; autant de <code>:focus</code> que vous voulez.</li>
+  <li>Au plus un marqueur d’apparition par élément ; autant de <code>:focus</code> et de mises en évidence que vous voulez.</li>
   <li>Un enfant n’apparaît jamais avant son parent et ne lui survit pas (une carte dans une zone, une ligne dans une carte).</li>
   <li>Une flèche sans marqueur apparaît avec la plus tardive de ses deux extrémités, tracée progressivement.</li>
   <li>Seuls les derniers mots d’une ligne sont des marqueurs : <code>réunion @3 demain</code> reste du texte. <code>\@2</code> écrit
@@ -58,7 +60,7 @@ description: Faites se déployer un diagramme étape par étape avec des marqueu
   <tr><td><code>--board -o planche.png</code></td><td>une planche de tous les états</td></tr>
 </table>
 <p>En SVG, skemo n’anime rien lui-même : il marque les éléments avec <code>data-step</code>, <code>data-fx</code>,
-  <code>data-until</code> et <code>data-focus</code>, pour votre propre lecteur. Le <code>&lt;svg&gt;</code> racine liste les étapes
+  <code>data-until</code>, <code>data-focus</code> et <code>data-highlight</code>, pour votre propre lecteur. Le <code>&lt;svg&gt;</code> racine liste les étapes
   dans l’ordre dans <code>data-states</code> (<code>["1","2","2.5","3"]</code>) : un lecteur qui ne compte que des étapes entières,
   comme les fragments de reveal.js, peut ramener <code>2.5</code> à son propre indice.</p>
 

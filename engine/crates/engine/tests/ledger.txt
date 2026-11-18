@@ -1,0 +1,86 @@
+cli/examples/site/index.skemo: move-moves=2
+cli/examples/site/shop/api.skemo: move-moves=1 port-jog=2 row-top=2 uneven-gaps=1
+cli/examples/site/shop/containers.skemo: move-moves=4 port-jog=1 row-top=1
+cli/examples/site/shop/worker.skemo: clean
+engine/crates/engine/tests/data/hyperedge.skemo: move-moves=1 uneven-gaps=1
+engine/crates/engine/tests/data/icons.skemo: row-top=1 sprawl=5 uneven-gaps=1
+engine/crates/engine/tests/data/ingress-rows.skemo: move-moves=19 port-jog=2 row-top=2 uneven-gaps=2
+engine/crates/engine/tests/data/ingress.skemo: long-line=1 move-moves=23 port-jog=2 row-top=2 uneven-gaps=1
+engine/crates/engine/tests/data/links.skemo: sprawl=1
+engine/crates/engine/tests/data/mindmap.skemo: clean
+engine/crates/engine/tests/data/readme-example.skemo: move-moves=1 port-jog=2 uneven-gaps=1
+engine/crates/engine/tests/data/service-types.skemo: move-moves=22 uneven-gaps=2
+engine/crates/engine/tests/data/step-ports.skemo: end-crossing=1 long-line=1 move-moves=20 port-jog=3 row-top=2 sibling-crossing=3 uneven-gaps=1
+engine/crates/engine/tests/data/terraform-import.skemo: end-crossing=1 hugging=1 move-moves=60 port-jog=6 row-top=6 short-tail=3 sibling-crossing=3 staircase=1 uneven-gaps=6 writing-order=2
+engine/crates/engine/tests/data/terraform-shop.skemo: end-crossing=3 hugging=1 label-on-frame=1 move-moves=98 port-jog=4 row-top=6 short-tail=6 sibling-crossing=7 staircase=5 uneven-gaps=6 writing-order=3
+engine/crates/engine/tests/data/v08-shop.skemo: move-moves=30 row-top=1
+engine/crates/engine/tests/data/workstation-cluster.skemo: move-moves=13 staircase=1 uneven-gaps=1
+engine/fixtures/animation.pug: hugging=1 move-moves=7 port-jog=3 row-top=2 uneven-gaps=1
+engine/fixtures/design.pug: end-crossing=1 hugging=1 move-moves=14 row-top=3 uneven-gaps=1
+engine/fixtures/frise.pug: clean
+engine/fixtures/process.pug: move-moves=2 uneven-gaps=1
+engine/fixtures/reseau-2pins.pug: move-moves=9 sparse=1 staircase=1 uneven-gaps=1
+engine/fixtures/reseau-conflit.pug: card-overlap=5 hugging=1 move-moves=9 short-tail=1 through-zone=5 uneven-gaps=1 zone-overlap=1
+engine/fixtures/reseau-entete.pug: port-jog=1 uneven-gaps=2
+engine/fixtures/reseau-manuel-via.pug: port-jog=2 staircase=1
+engine/fixtures/reseau-manuel.pug: hugging=1 port-jog=1 staircase=1
+engine/fixtures/reseau.pug: uneven-gaps=1
+engine/fixtures/timeline.pug: clean
+lang/site/examples/agent-loop.skemo: uneven-gaps=1
+lang/site/examples/animation.skemo: clean
+lang/site/examples/architecture.skemo: move-moves=5 uneven-gaps=1
+lang/site/examples/arrows.skemo: clean
+lang/site/examples/cards.skemo: clean
+lang/site/examples/cloud.skemo: move-moves=4 sparse=1
+lang/site/examples/constraint.skemo: move-moves=4 uneven-gaps=1 writing-order=1
+lang/site/examples/dir-down.skemo: clean
+lang/site/examples/dir-right.skemo: port-jog=2
+lang/site/examples/docking.skemo: move-moves=19
+lang/site/examples/docs-as-code.skemo: uneven-gaps=1
+lang/site/examples/edge-classes.skemo: move-moves=1 port-jog=2
+lang/site/examples/first.skemo: clean
+lang/site/examples/frieze-small.skemo: clean
+lang/site/examples/frieze-zone.skemo: clean
+lang/site/examples/frieze.skemo: clean
+lang/site/examples/hyperedge.skemo: move-moves=1 uneven-gaps=1
+lang/site/examples/icons.skemo: clean
+lang/site/examples/intro.skemo: clean
+lang/site/examples/kubernetes.skemo: move-moves=39 uneven-gaps=2
+lang/site/examples/legend.skemo: sprawl=2 uneven-gaps=1
+lang/site/examples/look-band.skemo: clean
+lang/site/examples/look-classic.skemo: clean
+lang/site/examples/look-eyebrow.skemo: clean
+lang/site/examples/look-header.skemo: clean
+lang/site/examples/mindmap.skemo: clean
+lang/site/examples/motion.skemo: port-jog=2
+lang/site/examples/multi.skemo: move-moves=4
+lang/site/examples/nodes.skemo: port-jog=1
+lang/site/examples/org-chart.skemo: uneven-gaps=2
+lang/site/examples/piles.skemo: move-moves=1 row-top=1
+lang/site/examples/pinned.skemo: short-tail=1 sparse=1 staircase=1
+lang/site/examples/pipeline.skemo: move-moves=2 port-jog=4 uneven-gaps=1
+lang/site/examples/replace-line.skemo: clean
+lang/site/examples/rich-card.skemo: clean
+lang/site/examples/secondary.skemo: port-jog=2
+lang/site/examples/stack.skemo: clean
+lang/site/examples/stretch.skemo: move-moves=12
+lang/site/examples/syntax.skemo: clean
+lang/site/examples/table.skemo: clean
+lang/site/examples/tag-step.skemo: clean
+lang/site/examples/themes.skemo: uneven-gaps=1
+lang/site/examples/timeline-small.skemo: clean
+lang/site/examples/timeline.skemo: clean
+lang/site/examples/trunk.skemo: clean
+lang/site/examples/types.skemo: move-moves=1 uneven-gaps=1
+lang/site/examples/wrap.skemo: clean
+lang/site/examples/zones.skemo: sparse=1
+site/examples/hero.skemo: uneven-gaps=1
+site/gallery/frieze.skemo: clean
+site/gallery/header.skemo: end-crossing=1 move-moves=15 row-top=3 uneven-gaps=1
+site/gallery/hyperedge.skemo: move-moves=1 uneven-gaps=1
+site/gallery/mindmap.skemo: clean
+site/gallery/network.skemo: uneven-gaps=1
+site/gallery/pinned.skemo: port-jog=1 staircase=1
+site/gallery/process.skemo: move-moves=2 uneven-gaps=1
+site/gallery/timeline.skemo: clean
+# total: end-off-card=0 zone-overlap=1 card-outside-zone=0 card-overlap=5 zone-title-overflow=0 text-overflow=0 missing-glyph=0 wide-docked-narrow=0 through-card=0 through-title=0 label-overlap=0 label-on-frame=1 through-label=0 pin-moves=0 move-moves=446 slant=0 overlay=0 close-lines=0 end-crossing=7 sibling-crossing=13 through-zone=5 detour=0 hugging=6 staircase=12 short-tail=11 port-jog=43 row-top=32 writing-order=6 zone-order=0 note-far=0 sprawl=8 sparse=4 uneven-gaps=49 label-markup=0 needless-wrap=0 long-line=2

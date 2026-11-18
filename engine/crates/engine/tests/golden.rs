@@ -6,7 +6,9 @@
 //! `UPDATE_GOLDEN=1 cargo test --release --test golden`, then read the diff of `golden.txt` (which
 //! outputs moved) before committing it.
 
-use skemo_engine::{Options, from_source, html, png, svg};
+use skemo_engine::{Options, html, png, svg};
+mod elk;
+use elk::from_source;
 use skemo_lang::style::Theme;
 use std::collections::BTreeMap;
 use std::fmt::Write as _;

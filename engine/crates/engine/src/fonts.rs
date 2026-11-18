@@ -99,6 +99,15 @@ pub fn registered() -> Vec<&'static Font> {
     user_fonts().lock().map(|v| v.clone()).unwrap_or_default()
 }
 
+/// Every font file the engine draws with, embedded then registered: (file name, bytes).
+pub fn files() -> Vec<(&'static str, &'static [u8])> {
+    FILES
+        .iter()
+        .chain(registered().iter().map(|f| f.file))
+        .map(|f| (f.file, f.data))
+        .collect()
+}
+
 /// Registers a font file (TrueType or OpenType): its family, weight and style are read from the
 /// file. A file registered twice is kept once. Returns the family name.
 pub fn register(data: &[u8]) -> Result<String, String> {
@@ -118,7 +127,7 @@ pub fn register(data: &[u8]) -> Result<String, String> {
     let data: &'static [u8] = Box::leak(data.to_vec().into_boxed_slice());
     let face = harfrust::Font::new(data, 0).ok_or_else(|| {
         skemo_lang::tr!(
-            "font « {family} »: the file cannot be shaped",
+            "font `{family}`: the file cannot be shaped",
             "police « {family} » : le fichier ne peut pas être mis en forme"
         )
     })?;
@@ -316,6 +325,19 @@ impl TextStyle {
             .sum();
         let chars = text.chars().count() as f64;
         adv as f64 * self.size / upem + self.letter_spacing * chars
+    }
+
+    /// Does this style's font draw `c` (a glyph other than the missing-glyph box)?
+    pub fn draws(&self, c: char) -> bool {
+        let font = self.font();
+        let mut buf = harfrust::Buffer::new();
+        buf.push_str(c.encode_utf8(&mut [0; 4]));
+        buf.guess_segment_properties();
+        let shaper = harfrust::ShaperFont::new(&font.face);
+        if harfrust::shape(&shaper, &mut buf, harfrust::ShapeOptions::new()).is_err() {
+            return false;
+        }
+        buf.glyph_infos().iter().all(|g| g.glyph_id != 0)
     }
 
     /// Ascendante et descendante (px, positives), comme Chromium (valeurs arrondies).

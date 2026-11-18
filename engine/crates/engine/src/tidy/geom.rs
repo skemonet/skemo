@@ -220,7 +220,7 @@ pub fn side_by_side(col: &[&str], boxes: &Boxes) -> bool {
 }
 
 /// Are `a` and `b` closer than `GAP`?
-fn near(a: &Box2, b: &Box2) -> bool {
+pub(super) fn near(a: &Box2, b: &Box2) -> bool {
     a.x < b.right() + GAP
         && b.x < a.right() + GAP
         && a.y < b.bottom() + GAP

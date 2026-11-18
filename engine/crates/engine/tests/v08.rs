@@ -218,6 +218,21 @@ fn legend_samples_follow_the_kind_of_class() {
     assert!(page.contains("swatch zone-sample lan") && page.contains("icon sample-icon pod"));
 }
 
+/// A note's sample is the note in small, tinted and dashed as the note is drawn, not a grey chip.
+#[test]
+fn a_note_sample_looks_like_a_note() {
+    let d = build(
+        "diagram\n  card#a A\n  card#n.note N\n    to(a).link\n  card#k.legend Key\n    |.note a note\n",
+    );
+    let svg = svg::render(&d);
+    let sample = svg
+        .split("<rect")
+        .find(|r| r.contains("width=\"21\" height=\"11\""))
+        .expect(&svg);
+    assert!(sample.contains("stroke-dasharray"), "{sample}");
+    assert!(!sample.contains("#5B616D"), "{sample}");
+}
+
 /// Frieze: below the axis, a zone's title and description lines end before the stem of one of its
 /// events: the zone widens to the left.
 #[test]
@@ -228,4 +243,16 @@ fn a_stem_does_not_cross_its_zone_title() {
     let stem = card.x + card.w / 2.0;
     // the title alone is wider than 150 px at the default size
     assert!(z.x + 16.0 + 150.0 < stem, "zone {z:?}, stem at {stem}");
+}
+
+/// A paragraph in a text card wraps at a reading measure instead of running across the image (the
+/// user's "Comment marche ACM": 1 002 px on one line).
+#[test]
+fn a_paragraph_wraps_at_a_reading_measure() {
+    let long = "a long explanation ".repeat(12);
+    let d = build(&format!(
+        "diagram\n  card#a A\n    to(b)\n  card#b B\n  card#t.text(at=\"0,300\") Note\n    | {long}\n"
+    ));
+    let t = d.boxes["t"];
+    assert!(t.w <= 440.5 && t.h > 40.0, "{t:?}");
 }

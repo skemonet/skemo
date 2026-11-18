@@ -128,7 +128,8 @@ pub fn inventory_grids(model: &mut Model) {
             let inventory = kids.len() >= INVENTORY
                 && kids
                     .iter()
-                    .all(|k| k.kind == Kind::Card && k.at.is_none() && !linked(&k.id));
+                    // a pinned card counts like the others: the layout ignores `at=` (D-031)
+                    .all(|k| k.kind == Kind::Card && !linked(&k.id));
             // the side of the square the cards make
             let side = (kids.len() as f64).sqrt().ceil() as u32;
             inventory.then(|| (z.id.clone(), side))

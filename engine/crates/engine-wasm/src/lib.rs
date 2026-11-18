@@ -5,7 +5,7 @@
 //! import init, { render } from './engine_wasm.js';
 //! await init();
 //! const r = JSON.parse(render(source, css, JSON.stringify({ theme: 'dark' })));
-//! // r.html, r.svg, r.layout, r.diagnostics, r.warnings
+//! // r.html, r.svg, r.layout, r.diagnostics, r.warnings (texts), r.engine_warnings ({code, element, message})
 //! ```
 //!
 //! A ready-made element (F-WASM-3, F-ANIM-9): `demo/skemo-view.js` defines
@@ -75,7 +75,8 @@ pub fn render_json(source: &str, css: &str, options: &str) -> Value {
             "svg": skemo_engine::svg::render(&d),
             "layout": d.layout_json(),
             "diagnostics": warnings.iter().map(|w| diag_json(source, w)).collect::<Vec<_>>(),
-            "warnings": d.warnings,
+            "warnings": d.warnings.iter().map(|w| &w.message).collect::<Vec<_>>(),
+            "engine_warnings": d.warnings,
         }),
         Err(skemo_engine::Error::Source(errs)) => json!({
             "ok": false,
@@ -137,7 +138,7 @@ pub fn edit_json(source: &str, op: &str) -> Value {
         "set_attr" => edit::set_attr(source, &target(), &s("name"), &s("value")),
         "remove_attr" => edit::remove_attr(source, &target(), &s("name")),
         other => {
-            return json!({ "ok": false, "error": skemo_lang::tr!("unknown operation « {other} »", "opération « {other} » inconnue") });
+            return json!({ "ok": false, "error": skemo_lang::tr!("unknown operation `{other}`", "opération « {other} » inconnue") });
         }
     };
     match r {

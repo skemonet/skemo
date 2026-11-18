@@ -22,6 +22,11 @@ pub struct Session {
     sides: BTreeMap<String, String>,
 }
 
+/// The routing mode of a session's diagram (no session on a timeline nor a frieze).
+fn mode(d: &Diagram) -> Mode {
+    if d.grid { Mode::Grid } else { Mode::Graph }
+}
+
 impl Session {
     /// Opens a session on a source (graph mode only: in timeline and frieze, the position comes from
     /// the dates).
@@ -35,13 +40,15 @@ impl Session {
         }
         let p = if d.model.option("layout") == Some("mindmap") {
             params()
+        } else if d.grid {
+            crate::grid::params(&d.model)
         } else {
             crate::route::graph_params(&d.model)
         };
         let mut router = skemo_router::Router::new(p);
         let titles = crate::labels::zone_titles(&d.model, &d.scene, &d.boxes);
-        let (obstacles, conns) =
-            router_scene(&d.model, &d.boxes, &d.elk, Mode::Graph, &[], &titles);
+        let (anchored, titles) = crate::route::anchors(&d.model, &d.scene, &d.boxes, &titles);
+        let (obstacles, conns) = router_scene(&d.model, &anchored, &d.elk, mode(&d), &[], &titles);
         for o in obstacles {
             router.set_obstacle(o);
         }
@@ -70,11 +77,11 @@ impl Session {
     pub fn drag(&mut self, id: &str, x: f64, y: f64) -> Result<Vec<String>, String> {
         let d = &mut self.diagram;
         if d.model.node(id).filter(|n| n.kind == Kind::Card).is_none() {
-            return Err(tr!("unknown card « {id} »", "carte « {id} » inconnue"));
+            return Err(tr!("unknown card `{id}`", "carte « {id} » inconnue"));
         }
         if !d.boxes.contains_key(id) {
             return Err(tr!(
-                "card « {id} » is not placed",
+                "card `{id}` is not placed",
                 "carte « {id} » non placée"
             ));
         }
@@ -85,7 +92,20 @@ impl Session {
         }
         self.moved.insert(id.to_string(), (x, y));
         let (pad, head) = d.scene.zone_pad_head();
+        // a docked element is a drawing of its own set around this one (`dock`): it stays where
+        // it is, unless the card dragged is its own
+        let docked: Vec<(String, crate::layout::Box2)> = crate::dock::split(&d.model)
+            .iter()
+            .flat_map(|s| &s.parts)
+            .filter(|p| p.model.node(id).is_none())
+            .flat_map(|p| &p.model.nodes)
+            .filter_map(|n| d.boxes.get(&n.id).map(|b| (n.id.clone(), *b)))
+            .collect();
         d.boxes = crate::layout::final_boxes(&d.model, &d.sizes, &d.elk, pad, head);
+        if d.grid {
+            crate::grid::frames(&d.model, &d.sizes, &d.elk, &mut d.boxes, (pad, head));
+        }
+        d.boxes.extend(docked);
         Ok(self.reroute())
     }
 
@@ -94,8 +114,9 @@ impl Session {
     fn reroute(&mut self) -> Vec<String> {
         let d = &mut self.diagram;
         let titles = crate::labels::zone_titles(&d.model, &d.scene, &d.boxes);
-        let (obstacles, conns) =
-            router_scene(&d.model, &d.boxes, &d.elk, Mode::Graph, &[], &titles);
+        let mode = mode(d);
+        let (anchored, titles) = crate::route::anchors(&d.model, &d.scene, &d.boxes, &titles);
+        let (obstacles, conns) = router_scene(&d.model, &anchored, &d.elk, mode, &[], &titles);
         let groups = groups_of(&conns);
         for o in obstacles {
             self.router.set_obstacle(o);
@@ -108,14 +129,22 @@ impl Session {
         }
         // the finishing passes look at neighbouring arrows: an arrow the router left alone may
         // still change, so the arrows re-traced are those whose drawing changed
-        let routes = finish(&d.model, &d.boxes, &titles, &groups, &self.raw, Mode::Graph);
+        let routes = finish(&d.model, &anchored, &titles, &groups, &self.raw, mode);
         let ids: Vec<String> = routes
             .iter()
             .filter(|(id, p)| d.routes.get(*id) != Some(*p))
             .map(|(id, _)| id.clone())
             .collect();
         d.routes = routes;
-        d.labels = crate::labels::place(&d.model, &d.scene, &d.boxes, &d.routes, &d.sizes);
+        d.labels = crate::diagram::label_all(
+            &d.model,
+            &d.scene,
+            &d.boxes,
+            &mut d.routes,
+            &d.sizes,
+            &d.edge_groups,
+            d.grid,
+        );
         d.title_box = crate::diagram::title_box(&d.model, &d.scene, &d.boxes, &d.routes);
         let mut framed = d.boxes.clone();
         if let Some(b) = d.title_box {
@@ -157,7 +186,7 @@ impl Session {
             .edges
             .iter_mut()
             .find(|e| e.id == id)
-            .ok_or_else(|| tr!("unknown arrow « {id} »", "flèche « {id} » inconnue"))
+            .ok_or_else(|| tr!("unknown arrow `{id}`", "flèche « {id} » inconnue"))
     }
 
     /// Writes the positions of the moved cards into the source (`at="x,y"`, integers) and computes the
@@ -190,7 +219,8 @@ impl Session {
 mod tests {
     use super::*;
 
-    const TWO: &str = "diagram(dir=\"right\")\n  card#a A\n    to(b)\n    to(c)\n  card#b B\n  card#c C\n  card#d D\n    to(e)\n  card#e E\n";
+    // ELK's drawing: the slide engine does not take waypoints and sides yet
+    const TWO: &str = "diagram(layout=\"graph\" dir=\"right\")\n  card#a A\n    to(b)\n    to(c)\n  card#b B\n  card#c C\n  card#d D\n    to(e)\n  card#e E\n";
 
     #[test]
     fn via_and_side_touch_one_arrow_and_survive_commit() {

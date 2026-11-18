@@ -17,7 +17,7 @@ use crate::tr;
 /// A card or a zone to add.
 #[derive(Debug, Clone, PartialEq)]
 pub struct NewNode {
-    /// `card`, `cards`, `zone` or `stack`.
+    /// `card`, `cards`, `node`, `zone` or `stack`.
     pub tag: String,
     pub id: String,
     pub classes: Vec<String>,
@@ -189,14 +189,14 @@ fn check(out: String) -> Result<String, EditError> {
 pub fn add_node(src: &str, parent: Option<&str>, node: &NewNode) -> Result<String, EditError> {
     if !valid_id(&node.id) {
         return Err(EditError::BadValue(tr!(
-            "invalid id: « {} »",
+            "invalid id: `{}`",
             "identifiant invalide : « {} »",
             node.id
         )));
     }
     if parse(src).model.node(&node.id).is_some() {
         return Err(EditError::BadValue(tr!(
-            "the id « {} » is taken",
+            "the id `{}` is taken",
             "l'identifiant « {} » est déjà pris",
             node.id
         )));
@@ -384,13 +384,13 @@ pub fn add_line(src: &str, id: &str, text: &str) -> Result<String, EditError> {
     check(out)
 }
 
-/// Changes the tag of a node (`zone` to `stack` and back, `card` to `cards`…): only the tag
+/// Changes the tag of a node (`zone` to `stack` and back, `card` to `cards` or `node`…): only the tag
 /// name is rewritten. A stack has no title: a zone's title is kept in the text but ignored, with
 /// the parser's warning.
 pub fn set_tag(src: &str, id: &str, tag: &str) -> Result<String, EditError> {
-    if !matches!(tag, "card" | "cards" | "zone" | "stack") {
+    if !matches!(tag, "card" | "cards" | "node" | "zone" | "stack") {
         return Err(EditError::BadValue(tr!(
-            "unknown tag: « {tag} »",
+            "unknown tag: `{tag}`",
             "balise inconnue : « {tag} »"
         )));
     }
@@ -409,7 +409,7 @@ pub fn move_into(src: &str, id: &str, parent: Option<&str>) -> Result<String, Ed
         .any(|n| n == id);
         if inside {
             return Err(EditError::BadValue(tr!(
-                "« {id} » cannot go into itself",
+                "`{id}` cannot go into itself",
                 "« {id} » ne peut pas entrer en lui-même"
             )));
         }

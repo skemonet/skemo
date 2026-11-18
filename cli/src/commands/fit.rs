@@ -12,7 +12,7 @@ use std::io::Write as _;
 /// `target`: the box given to `--fit`, empty for the diagram's own `diagram(fit=…)`.
 pub fn run(out: &Out, a: &LintArgs, file: &str, target: &str) -> Result<(), Fail> {
     let inputs = Inputs::new(file, &a.css, a.base_theme.as_ref()).font_scale(a.font_scale);
-    let loaded = load(&inputs)?;
+    let loaded = load(out, &inputs)?;
     let (src, opts) = (loaded.src, loaded.options);
     let raw = Some(target.to_string())
         .filter(|t| !t.is_empty())
@@ -30,7 +30,7 @@ pub fn run(out: &Out, a: &LintArgs, file: &str, target: &str) -> Result<(), Fail
         })?;
     let target = fit::parse_target(&raw).ok_or_else(|| {
         Fail::usage(tr!(
-            "--fit « {raw} »: a ratio like 16:9 or a box like 1280x720 is expected",
+            "--fit `{raw}`: a ratio like 16:9 or a box like 1280x720 is expected",
             "--fit « {raw} » : un rapport comme 16:9 ou une boîte comme 1280x720 est attendu"
         ))
     })?;

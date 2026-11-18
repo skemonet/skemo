@@ -38,8 +38,16 @@ pub struct Placement {
     pub captions_below: std::collections::BTreeSet<String>,
     /// Right end of each zone's title from its left edge (`Sizes::title_ends`, D-064).
     pub title_ends: BTreeMap<String, f64>,
+    /// Frame width each zone needs for its title (`Sizes::title_widths`, bug 3).
+    pub title_widths: BTreeMap<String, f64>,
     /// Room of a zone's description lines under its title (`Sizes::zone_heads`, v0.8).
     pub zone_heads: BTreeMap<String, f64>,
+    /// A zone's margin and title room `(pad, head)` while the tidy passes run (`tidy::after_elk`),
+    /// so that a zone whose cards a pass moved gets its frame again; `None` otherwise.
+    pub frame: Option<(f64, f64)>,
+    /// The zones that may stretch (`Sizes::stretched`, set for the final frames only); `None`: any
+    /// column that covers nothing.
+    pub stretched: Option<std::collections::BTreeSet<String>>,
 }
 
 /// Error of the placement engine (graph refused by ELK).
@@ -66,7 +74,6 @@ fn root_options(model: &Model) -> serde_json::Map<String, Value> {
         ("elk.edgeRouting", "ORTHOGONAL"),
         ("elk.hierarchyHandling", "INCLUDE_CHILDREN"),
         // D-048 (R4): the rhythm of a hand drawing, rows 48 px apart (the prototype: 36 and 64)
-        ("elk.spacing.nodeNode", "28"),
         ("elk.layered.spacing.nodeNodeBetweenLayers", "48"),
         ("elk.spacing.edgeNode", "22"),
         ("elk.spacing.edgeEdge", "14"),
@@ -90,10 +97,21 @@ fn root_options(model: &Model) -> serde_json::Map<String, Value> {
     ] {
         o.insert(k.into(), Value::String(v.into()));
     }
-    if let Some(Value::Object(extra)) = model
-        .option("elk")
-        .and_then(|s| serde_json::from_str::<Value>(s).ok())
+    o.insert(
+        "elk.spacing.nodeNode".into(),
+        Value::String(fmt_num(NODE_GAP)),
+    );
+    // `SKEMO_ELK='{"elk.…": "…"}'`: ELK options tried over the corpus (the layout method's
+    // experiments), after the diagram's own
+    let tried = std::env::var("SKEMO_ELK").ok();
+    for extra in [model.option("elk"), tried.as_deref()]
+        .into_iter()
+        .flatten()
+        .filter_map(|s| serde_json::from_str::<Value>(s).ok())
     {
+        let Value::Object(extra) = extra else {
+            continue;
+        };
         for (k, v) in extra {
             if !k.starts_with("skemo.") {
                 o.insert(k, v);
@@ -118,7 +136,7 @@ fn elk_labels(model: &Model) -> bool {
 /// Space between rows: 48 px (D-048, a hand drawing's rhythm), more when an arrow label must fit
 /// between two rows: its height plus 14 px on each side across rows, its width plus 8 px on each
 /// side across columns, where a label too wide to sit on a short arrow goes over it (D-049).
-fn layer_spacing(model: &Model, sizes: &Sizes) -> f64 {
+pub(crate) fn layer_spacing(model: &Model, sizes: &Sizes) -> f64 {
     let across = matches!(model.option("dir"), Some("right" | "left"));
     sizes
         .labels
@@ -136,6 +154,10 @@ pub fn invisible(n: &skemo_lang::Node) -> bool {
 /// Room between the rows of a `wrap` zone, and between it and its sibling zones, when an arrow
 /// must reach in (px): the router's margin on each side and a visible line (D-056).
 const CORRIDOR: f64 = 48.0;
+
+/// The gap ELK leaves between two nodes side by side (D-048, R4: the rhythm of a hand drawing);
+/// the tidy passes keep it when they make room (`tidy::make_room`).
+pub const NODE_GAP: f64 = 28.0;
 
 /// Does an arrow from outside `wrap` zone `id` enter a card beyond its first row? The arrow then
 /// needs a corridor between the rows (and beside the zone): the zone's rows are spread like the
@@ -431,8 +453,28 @@ pub fn elk_layout(
     p.boxes.retain(|k, _| model.node(k).is_some());
     p.captions_below.clone_from(&sizes.captions_below);
     p.title_ends.clone_from(&sizes.title_ends);
+    p.title_widths.clone_from(&sizes.title_widths);
     p.zone_heads.clone_from(&sizes.zone_heads);
     Ok(p)
+}
+
+/// The model the automatic placement sees (D-031): the same, with no card pinned. ELK and the tidy
+/// passes lay a pinned card out like any other; [`final_boxes`] then sets it where `at=` says. A
+/// pass that skipped pinned cards placed the others around a card frozen at ELK's spot, and
+/// pinning a card where it stood moved its neighbours.
+pub fn unpinned(model: &Model) -> std::borrow::Cow<'_, Model> {
+    if !model
+        .nodes
+        .iter()
+        .any(|n| n.kind == Kind::Card && n.at.is_some())
+    {
+        return std::borrow::Cow::Borrowed(model);
+    }
+    let mut free = model.clone();
+    for n in free.nodes.iter_mut().filter(|n| n.kind == Kind::Card) {
+        n.at = None;
+    }
+    std::borrow::Cow::Owned(free)
 }
 
 /// Final boxes: ELK, then pinned positions and overlap removal. A single chain, with or without
@@ -519,20 +561,32 @@ pub fn zone_frames(
                 let extra = base.zone_heads.get(id).copied().unwrap_or(0.0);
                 (head + extra + pad * 0.6, pad, pad)
             };
-            let x1 = kids.iter().map(|b| b.x).fold(f64::INFINITY, f64::min) - pad;
-            let x1 = base
+            let x1_cards = kids.iter().map(|b| b.x).fold(f64::INFINITY, f64::min) - pad;
+            let mut x1 = base
                 .title_ends
                 .get(id)
                 .filter(|_| !caption_below)
-                .map_or(x1, |end| {
-                    x1.min((title_clear_left(model, id, boxes) - end).floor())
+                .map_or(x1_cards, |end| {
+                    x1_cards.min((title_clear_left(model, id, boxes) - end).floor())
                 });
             let y1 = kids.iter().map(|b| b.y).fold(f64::INFINITY, f64::min) - above;
-            let x2 = kids
+            let mut x2 = kids
                 .iter()
                 .map(Box2::right)
                 .fold(f64::NEG_INFINITY, f64::max)
-                + pad;
+                + pad
+                // D-099: widened to the left for its title (D-064), as much to the right, so that
+                // its cards stay in its middle
+                + (x1_cards - x1);
+            // bug 3: the frame holds its title (wrapped first, D-099): a word or a pill wider
+            // than the zone widens it on both sides, its cards in its middle
+            if let Some(&need) = base.title_widths.get(id).filter(|_| !caption_below) {
+                let short = ((need - (x2 - x1)) / 2.0).ceil();
+                if short > 0.0 {
+                    x1 -= short;
+                    x2 += short;
+                }
+            }
             let y2 = kids
                 .iter()
                 .map(Box2::bottom)
@@ -552,12 +606,16 @@ pub fn zone_frames(
     for z in model.nodes.iter().filter(|n| n.kind == Kind::Zone) {
         frame(model, &z.id, (boxes, base, (pad, head)), &mut out, 0);
     }
-    crate::tidy::stretch_zones(model, &mut out, boxes);
+    crate::tidy::stretch_zones(model, &mut out, boxes, base.stretched.as_ref());
     out
 }
 
-/// Room between a line and a zone's title.
-const TITLE_MARGIN: f64 = 10.0;
+/// Room between a line and a zone's title: the router's own margin around a title (D-099), so
+/// that the port it gives the line lies where the layout kept the line (with 10 px here and 14 in
+/// the router, a line under a long zone title stepped by 4 px).
+fn title_margin() -> f64 {
+    crate::route::params().shape_buffer
+}
 /// D-064 (the user's choice B): a card of a zone's first row linked to something above it keeps
 /// the middle of its top clear of the zone's title, so that its arrow (or the trunk of its fork)
 /// comes straight in (titles are walls for the lines). The zone's left edge must then be at
@@ -589,8 +647,196 @@ pub(crate) fn title_clear_left(model: &Model, id: &str, boxes: &BTreeMap<String,
         .iter()
         .filter(|(c, b)| b.y < top + 1.0 && above(c, b))
         // its middle: where a straight line or a fork's trunk leaves
-        .map(|(_, b)| b.x + b.w / 2.0 - TITLE_MARGIN)
+        .map(|(_, b)| b.x + b.w / 2.0 - title_margin())
         .fold(f64::INFINITY, f64::min)
+}
+
+/// D-099 (the user's choice, 2026-11-09): a zone's title wraps between its words rather than
+/// leave its frame (bug 3) or, for a plain title, make D-064 push its zone out to the left (an
+/// arrow comes into its first row from above, where the title stands): it ends before that
+/// arrow, and inside the frame `boxes` gives (laid out without the room of `Sizes::title_widths`),
+/// where the HTML would wrap it. Never narrower than its longest word; the zone
+/// keeps its width (the title adapts to the zone, never the other way round) unless a word or the
+/// pill is wider than it (`zone_frames`). The pill of `tag=` and the link mark follow the last
+/// line; the pill takes a line of its own (the title then ends with `\n`) when it does not fit
+/// there. A title with a pill or a link keeps D-064's wider zone rather than wrap for it (a pill
+/// alone on its line weighs more than the room it saves). Returns the wrapped titles, `\n`
+/// between their lines; the layout runs again with their room. A `.tag-right` title stays on one
+/// line.
+pub(crate) fn title_wraps(
+    model: &Model,
+    scene: &crate::scene::Scene,
+    sizes: &Sizes,
+    boxes: &BTreeMap<String, Box2>,
+    pad: f64,
+) -> BTreeMap<String, String> {
+    title_wraps_on(model, scene, sizes, (boxes, false), pad)
+}
+
+/// `title_wraps`; `frame_left`: the zones' frames in `boxes` hold no room for their titles (D-064,
+/// bug 3), so a plain title's room starts at the frame's edge rather than its cards' (a zone as
+/// wide as its stack has room left of its cards: bug 20 of the private corpus).
+pub(crate) fn title_wraps_on(
+    model: &Model,
+    scene: &crate::scene::Scene,
+    sizes: &Sizes,
+    (boxes, frame_left): (&BTreeMap<String, Box2>, bool),
+    pad: f64,
+) -> BTreeMap<String, String> {
+    let mut out = BTreeMap::new();
+    for (id, &end) in &sizes.title_ends {
+        let (Some(n), Some(z), Some(frame)) = (model.node(id), scene.zones.get(id), boxes.get(id))
+        else {
+            continue;
+        };
+        let plain = n.tag.is_none() && n.href.is_none();
+        if z.tag_right || invisible(n) || (plain && !n.title.contains(' ')) {
+            continue;
+        }
+        // the end of a title, its pill included (not its description lines: `sub_wraps`)
+        let title = |t: &str, tag: Option<&str>| {
+            crate::geometry::zone_title(scene, z, (t, tag), 4000.0, 400.0)
+        };
+        let end_of = |t: &str, tag: Option<&str>| {
+            let t = title(t, tag);
+            t.tag.map_or(t.span.1, |p| t.span.1.max(p.x + p.w)) + 2.0
+        };
+        let room = wrap_room(model, (id, plain), frame, boxes, (pad, frame_left));
+        if !room.is_finite() || end.min(end_of(&n.title, n.tag.as_deref())) <= room + 0.5 {
+            continue;
+        }
+        let mut lines: Vec<String> = Vec::new();
+        for w in n.title.split_whitespace() {
+            match lines.last_mut() {
+                Some(l) if end_of(&format!("{l} {w}"), None) <= room => {
+                    l.push(' ');
+                    l.push_str(w);
+                }
+                _ => lines.push(w.to_string()),
+            }
+        }
+        let mut text = lines.join("\n");
+        if n.tag.is_some() && end_of(&text, n.tag.as_deref()) > room + 0.5 {
+            text.push('\n');
+        }
+        if text != n.title {
+            out.insert(id.clone(), text);
+        }
+    }
+    out
+}
+
+/// The room a zone's title and description lines have from its left edge (D-099, D-101): its
+/// frame, and for a plain title (no pill, no link) up to an arrow that comes into its first row
+/// from above (D-064). A title that fits keeps its line; its frame then widens for the margin on
+/// its right (`Sizes::title_widths`, bug 23) rather than wrap a short title for a few pixels.
+fn wrap_room(
+    model: &Model,
+    (id, plain): (&str, bool),
+    frame: &Box2,
+    boxes: &BTreeMap<String, Box2>,
+    (pad, frame_left): (f64, bool),
+) -> f64 {
+    let mut room = frame.w;
+    if plain {
+        let mut left = model
+            .children(Some(id))
+            .filter_map(|c| boxes.get(&c.id))
+            .map(|b| b.x)
+            .fold(f64::INFINITY, f64::min)
+            - pad;
+        if frame_left {
+            left = left.min(frame.x);
+        }
+        room = room.min(title_clear_left(model, id, boxes) - left);
+    }
+    room
+}
+
+/// D-101: a zone's description lines (`|` under its title, bug 16) wrap between their words like
+/// its title, in the same room (`wrap_room`): they are walls for the lines too (an arrow coming
+/// down onto a card of the zone went round them, bug 12). Never narrower than a word; a word wider
+/// than the zone widens it (`Sizes::title_widths`). Returns, for each zone where one wraps, the
+/// text of all its description lines, `\n` between the lines of each.
+pub(crate) fn sub_wraps(
+    model: &Model,
+    scene: &crate::scene::Scene,
+    sizes: &Sizes,
+    boxes: &BTreeMap<String, Box2>,
+    pad: f64,
+) -> BTreeMap<String, Vec<String>> {
+    let mut out = BTreeMap::new();
+    for id in sizes.title_ends.keys() {
+        let (Some(n), Some(z), Some(frame)) = (model.node(id), scene.zones.get(id), boxes.get(id))
+        else {
+            continue;
+        };
+        if z.subs.is_empty() || z.tag_right || invisible(n) {
+            continue;
+        }
+        // before an arrow from above even under a title with a pill: a sentence is no pill
+        let room = wrap_room(model, (id, true), frame, boxes, (pad, false));
+        if !room.is_finite() {
+            continue;
+        }
+        // the lines start where the title does
+        let x = crate::geometry::zone_title(scene, z, (&n.title, None), 4000.0, 400.0)
+            .span
+            .0;
+        let texts: Vec<String> = z
+            .subs
+            .iter()
+            .map(|(el, t)| {
+                let c = scene.style(*el);
+                // as far from the frame's right edge as they start from its left (bug 23)
+                let fits = |s: &str| x + crate::measure::tw(c, s) + x.max(2.0) <= room;
+                if fits(t) {
+                    return t.clone();
+                }
+                let mut lines: Vec<String> = Vec::new();
+                for w in t.split_whitespace() {
+                    match lines.last_mut() {
+                        Some(l) if fits(&format!("{l} {w}")) => {
+                            l.push(' ');
+                            l.push_str(w);
+                        }
+                        _ => lines.push(w.to_string()),
+                    }
+                }
+                lines.join("\n")
+            })
+            .collect();
+        if texts.iter().zip(&z.subs).any(|(a, (_, b))| a != b) {
+            out.insert(id.clone(), texts);
+        }
+    }
+    out
+}
+
+/// D-099: the lines of room under each zone's title once `wraps` are drawn: a wrapped title's
+/// extra lines, and as many under the sibling zones whose top is level with it (its row), so
+/// that their titles and first cards stay level.
+pub(crate) fn head_lines(
+    model: &Model,
+    wraps: &BTreeMap<String, String>,
+    boxes: &BTreeMap<String, Box2>,
+) -> BTreeMap<String, usize> {
+    let mut out: BTreeMap<String, usize> = BTreeMap::new();
+    for (id, t) in wraps {
+        let n = t.matches('\n').count();
+        let (Some(z), Some(b)) = (model.node(id), boxes.get(id)) else {
+            continue;
+        };
+        let level = model
+            .children(z.parent.as_deref())
+            .filter(|s| s.kind == Kind::Zone)
+            .filter(|s| boxes.get(&s.id).is_some_and(|o| (o.y - b.y).abs() < 1.0));
+        for s in level {
+            let e = out.entry(s.id.clone()).or_default();
+            *e = (*e).max(n);
+        }
+    }
+    out
 }
 
 /// Minimal gap left between a card pushed aside and the one it overlapped.
@@ -821,11 +1067,18 @@ pub fn final_boxes_report(
             .copied()
             .unwrap_or(crate::measure::Size { w: 170.0, h: 48.0 });
         let b = match n.at {
-            Some([x, y]) => Box2 {
-                x,
-                y,
-                w: s.w,
-                h: s.h,
+            // a pin says where a card stands, not how large: its size is the layout's. And `at`
+            // is written in whole pixels: the pin that names the layout's own place, to the
+            // pixel, is that place (D-031: pinning a card where it stands changes nothing)
+            Some([x, y]) => match base.boxes.get(&n.id) {
+                Some(b) if (b.x - x).abs() <= 0.5 && (b.y - y).abs() <= 0.5 => *b,
+                Some(b) => Box2 { x, y, ..*b },
+                None => Box2 {
+                    x,
+                    y,
+                    w: s.w,
+                    h: s.h,
+                },
             },
             None => base.boxes.get(&n.id).copied().unwrap_or(Box2 {
                 x: 0.0,
@@ -839,7 +1092,17 @@ pub fn final_boxes_report(
     // Q7 (D-033): overlaps are reported, never corrected; the separation computed on a copy serves to
     // name them and stays available as a proposal (`suggest_separation`).
     let moved = suggest_separation(model, &boxes, base, pad, head);
-    let zones = zone_frames(model, &boxes, base, pad, head);
+    // the final frames only: the passes saw the columns stretch as the layout without pins did
+    let zones = match &sizes.stretched {
+        Some(_) => {
+            let decided = Placement {
+                stretched: sizes.stretched.clone(),
+                ..base.clone()
+            };
+            zone_frames(model, &boxes, &decided, pad, head)
+        }
+        None => zone_frames(model, &boxes, base, pad, head),
+    };
     boxes.extend(zones);
     (boxes, moved)
 }

@@ -11,12 +11,14 @@ pub mod animated;
 pub mod arrow;
 pub(crate) mod breathe;
 pub mod contrast;
+pub(crate) mod corridors;
 pub mod diagram;
 pub mod dock;
 pub mod fit;
 pub mod fonts;
 pub mod frise;
 pub mod geometry;
+pub(crate) mod grid;
 pub mod html;
 pub mod icons;
 pub mod images;
@@ -28,19 +30,24 @@ pub mod mindmap;
 pub mod motion;
 #[cfg(feature = "png")]
 pub mod png;
+pub mod quality;
 pub mod reorder;
 pub mod route;
 pub mod scene;
 pub mod session;
+pub(crate) mod slide;
 pub mod source;
 pub mod stack;
 pub mod svg;
 pub mod tidy;
 pub mod timeline;
+pub mod trace;
+pub mod warning;
 #[cfg(feature = "png")]
 pub mod webp;
 
 pub use diagram::{Diagram, Error, Frame, Options, build, from_source};
+pub use warning::EngineWarning;
 
 /// What the engine embeds that is not its own, with the licence and copyright notice that must
 /// travel with it: (what, licence, full text). For `skemo --licences`.

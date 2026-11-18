@@ -57,7 +57,7 @@ fn days_in_month(y: i64, m: u32) -> u32 {
 pub fn parse_timeline(s: &str, is_end: bool) -> Result<f64, String> {
     let bad = || {
         tr!(
-            "invalid date: « {s} » (expected YYYY, YYYY-MM or YYYY-MM-DD)",
+            "invalid date: `{s}` (expected YYYY, YYYY-MM or YYYY-MM-DD)",
             "date invalide : « {s} » (attendu AAAA, AAAA-MM ou AAAA-MM-JJ)"
         )
     };
@@ -104,7 +104,7 @@ pub fn parse_frise(s: &str, is_end: bool) -> Result<f64, String> {
     let t = s.trim();
     let bad = || {
         tr!(
-            "invalid date: « {s} » (expected a year, optionally followed by -MM or -MM-DD)",
+            "invalid date: `{s}` (expected a year, optionally followed by -MM or -MM-DD)",
             "date invalide : « {s} » (attendu une année, éventuellement suivie de -MM ou -MM-JJ)"
         )
     };
@@ -125,7 +125,7 @@ pub fn parse_frise(s: &str, is_end: bool) -> Result<f64, String> {
     let y: i64 = parts[0].parse().map_err(|_| bad())?;
     if y == 0 {
         return Err(tr!(
-            "« {s} »: there is no year 0 (1 BC = -1, then 1)",
+            "`{s}`: there is no year 0 (1 BC = -1, then 1)",
             "« {s} » : il n'y a pas d'an 0 (1 av. J.-C. = -1, puis 1)"
         ));
     }

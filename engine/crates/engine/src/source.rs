@@ -100,6 +100,32 @@ pub fn safe_name(name: &str) -> Option<String> {
     ok.then(|| base.to_string())
 }
 
+/// `name`, or `stem-2.ext`, `stem-3.ext`… when `taken` already holds it: two stylesheets with the
+/// same base name (a theme's `skemo.css` and a deck's) stay two files in the bundle and after
+/// `skemo extract`.
+pub fn unique_name(name: &str, taken: &[String]) -> String {
+    if !taken.iter().any(|t| t == name) {
+        return name.to_string();
+    }
+    let (stem, ext) = match name.rfind('.') {
+        Some(i) if i > 0 => (&name[..i], &name[i..]),
+        _ => (name, ""),
+    };
+    (2..)
+        .map(|n| format!("{stem}-{n}{ext}"))
+        .find(|c| !taken.iter().any(|t| t == c))
+        .unwrap_or_else(|| name.to_string())
+}
+
+/// Gives each stylesheet of `css` a name no earlier one has (see [`unique_name`]).
+pub fn unique_names(css: &mut [NamedText]) {
+    let mut taken = Vec::new();
+    for c in css.iter_mut() {
+        c.name = unique_name(&c.name, &taken);
+        taken.push(c.name.clone());
+    }
+}
+
 /// The rendered file with the bundle inside; the format is recognised from its content.
 /// An unknown format is returned unchanged.
 pub fn embed(bytes: Vec<u8>, b: &Bundle) -> Vec<u8> {

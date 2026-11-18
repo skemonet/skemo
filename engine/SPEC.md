@@ -53,7 +53,38 @@ Priorities: **M** = mandatory (v1), **S** = desirable, **C** = later.
 | F-LAYOUT-3 | Sizes from the measurement; labels taken into account | M |
 | F-LAYOUT-4 | Partial positions: `at=` cards fixed, the others at the computed position; zones = bounding box, with **a single margin rule** for ELK and recomputed zones (limit L6) | M |
 | F-LAYOUT-6 | **Column alignment** (D-036): within a zone, free cards whose horizontal extents overlap (one ELK column) are aligned on the side that receives most links from outside the column (tie: nothing moves). Computed on ELK's placement **before** pins, so pinning a card moves no other card; routes of moved cards are re-routed from scratch. Micro-jogs under 0.75 px are removed from routes | S |
-| F-LAYOUT-5 | **Overlaps reported, never corrected** (D-033, Q7): a card that overlaps a pinned card (`at=`) stays where it is; the warning names it ("card « a » overlaps « b » (position pinned by at=)", in French for now). `layout::suggest_separation` computes, without applying it, what would need to be moved away (editor proposal, ED-10). `fixtures/reseau-conflit` case: parity with the prototype's oracle | S |
+| F-LAYOUT-5 | **Overlaps reported, never corrected** (D-033, Q7): a card that overlaps a pinned card (`at=`) stays where it is; the warning names it ("card `a` overlaps `b` (position pinned by at=)"). `layout::suggest_separation` computes, without applying it, what would need to be moved away (editor proposal, ED-10). `fixtures/reseau-conflit` case: parity with the prototype's oracle | S |
+
+### Grid mode *(experimental, D-106)*
+
+Enabled by `diagram(layout="grid")`; meant to become the default once it does as well as the layered
+layout on the properties of `quality` that rank first (nothing hidden, stability, readable lines,
+writing order). The pipeline and the name of each rule are in `crates/engine/src/grid/mod.rs`.
+
+| ID | Requirement | Prio |
+|---|---|---|
+| F-GRID-1 | **A grid, not a graph**: top-level zones and cards are blocks set in rows (a mosaic near the target proportions, rows justified); the arrows only choose the order of the blocks and of the cards that makes the links shortest | S |
+| F-GRID-2 | **Room for the lines**: the gutters between rows and between columns grow by what a first routing lacked, for its lines and for its labels; linked cards facing each other a little offset line up | S |
+| F-GRID-3 | **Routing**: no side imposed, zones that hold neither end are walls, a bend costs more than the length it saves, lines are routed again once the others stand; then straight links between neighbours and a tail behind every head | S |
+| F-GRID-4 | **Stability** (D-031): placement ignores pins; a pinned card stands where `at` says with the size the grid gave it, and its zones grow to hold it. Pinning a card where it stands changes nothing | M |
+| F-GRID-5 | **One rule, one name**: each rule is switched off by `SKEMO_OFF=name` so that the ledger (`examples/ledger.rs`) measures what it earns; `SKEMO_LAYOUT=grid` lays out in the grid the diagrams that name no layout | S |
+
+### Slide mode *(experimental)*
+
+Enabled by `diagram(layout="slide")` (or `SKEMO_LAYOUT=slide` for the diagrams that name no layout).
+A diagram drawn as a slide is placed, routed and labelled as **one model solved at once**, not built
+then repaired by passes; the rules it keeps are the maintainers' constitution of a slide (hard
+rules as conflicts, preferences as one objective in their order). The pipeline is described in
+`crates/engine/src/slide/mod.rs`. What it does not read (nested zones, pinned cards, an arrow to a
+zone) goes to the grid engine.
+
+| ID | Requirement | Prio |
+|---|---|---|
+| F-SLIDE-1 | **A lattice**: every size and gap a whole number of 10 px steps; one module for every card, one header height for every zone; the groups tiled like a slide layout (guillotine cuts near 16:9), the cards in their cells | S |
+| F-SLIDE-2 | **One model**: for each arrow a set of candidate routes, each keeping the rules a line keeps alone (stub, tail, no staircase, no wild detour, a hook priced as three bends, a stretch along a zone's title band priced); the rules between two lines (one track each, crossings at most once, bends a step apart, ends apart) and between labels and lines are conflicts; the objective counts crossings, then bends, then length | S |
+| F-SLIDE-3 | **Its own search, deterministic**: no solver library, no clock (the same drawing every time, and in WebAssembly); the moves of one line, of two lines together, kicks around the line that pays most; routes found round the lines as drawn, and routes sharing a trunk with a sibling (forks part late, joins meet early) | S |
+| F-SLIDE-4 | **Room where it lacks**: the narrowest even gutters where everything fits, then one gutter wider or a row's cards lower under their title where a line pays for the lack of room; a change is kept only when the whole slide scores better | S |
+| F-SLIDE-5 | **Labels** on their line or beside it, a step from every card, frame and text, near the start of the line; a label wider than 140 px is wrapped, three lines at most; beside a level line its middle falls on a track (two labels side by side are on one line or a step apart) | S |
 
 ### Routing (orchestration around `router`)
 
@@ -121,7 +152,7 @@ Priorities: **M** = mandatory (v1), **S** = desirable, **C** = later.
 | F-RENDER-2 | Standalone SVG: translated decorative subset (backgrounds, borders, radii, colours, simple shadow, badges, arrows and their styles); what is not translated is documented | M |
 | F-RENDER-3 | PNG without a browser (SVG → resvg), scale 2 by default; **transparent background** option (D-029) | M |
 | F-RENDER-4 | `layout.json` output in the oracle's format (`sizes`, `nodes`, `edges`) | M |
-| F-RENDER-9 | **Source embedded** in every output (D-042): PNG/APNG `iTXt` chunk `skemo`, GIF comment, WebP `SKMO` chunk, SVG `<metadata>`, HTML `<script type="application/json">`; bundle = source, stylesheets, options; `source::extract` gives it back; viewers unaffected | S |
+| F-RENDER-9 | **Source embedded** in every output (D-042): PNG/APNG `iTXt` chunk `skemo`, GIF comment, WebP `SKMO` chunk, SVG `<metadata>`, HTML `<script type="application/json">`; bundle = source, stylesheets (under distinct names: a second `skemo.css` becomes `skemo-2.css`, D-094), options; `source::extract` gives it back; viewers unaffected | S |
 | F-RENDER-5 | Prototype framing (28 px margin); the file's coordinates are never rewritten | M |
 | F-RENDER-6 | DOM and SVG structure of `FORMAT.md` §4.2 (`lang` repository) (stable selectors: `g.edge`, `path.line`, `.edge-label`…) | M |
 | F-RENDER-7 | PDF export | C (not planned) |
@@ -134,8 +165,8 @@ Principle: **the engine resolves and marks**; it only animates when it produces 
 | ID | Requirement | Prio |
 |---|---|---|
 | F-ANIM-1 | **Resolution** of `@` markers (`FORMAT.md` §3.8): inheritance `appearance = max(parent, own)`, `end = min(parent, own)`; links = bounds of their endpoints and `draw` effect by default; marker too early (or end too late) → warning, inherited value. The result (per element: appearance, end, effect, focus ranges) appears in `layout.json` (`anim` key) | M |
-| F-ANIM-2 | **List of states** = 0 (only if it contains at least one visible element), then the written values, sorted and de-duplicated (starts, ends, focus). State `s`: visible if `a ≤ s ≤ b`, focused if `f0 ≤ s ≤ f1`; disappearance at the first step defined after `b` (warning if there is none) | M |
-| F-ANIM-3 | **Marked SVG** (`FORMAT.md` §4.4): `<g>` per node with nested children; links group above; `data-id` (never `id`), `data-step` (original text), `data-fx`, `data-until`, `data-focus`, `data-from`/`data-to`, `pathLength="1"` on the stroke. **No** attribute on a non-animated element; **no** class, style or script related to animation (but the keyframes of `--motion`, F-ANIM-11) | M |
+| F-ANIM-2 | **List of states** = 0 (only if it contains at least one visible element), then the written values, sorted and de-duplicated (starts, ends, focus, highlights). State `s`: visible if `a ≤ s ≤ b`, focused if `f0 ≤ s ≤ f1`; disappearance at the first step defined after `b` (warning if there is none) | M |
+| F-ANIM-3 | **Marked SVG** (`FORMAT.md` §4.4): `<g>` per node with nested children; links group above; `data-id` (never `id`), `data-step` (original text), `data-fx`, `data-until`, `data-focus`, `data-highlight` (D-090), `data-from`/`data-to`, `pathLength="1"` on the stroke. **No** attribute on a non-animated element; **no** class, style or script related to animation (but the keyframes of `--motion`, F-ANIM-11) | M |
 | F-ANIM-4 | **HTML**: same attributes; built-in player (→, space, PageDown, click = next; ←, PageUp = previous; `?all` = everything; `?step=N`) that plays effects and focus in CSS | M |
 | F-ANIM-5 | **PNG per state** (`--animated`): one file per state of F-ANIM-2, rendered **without transition effect** (final state of each step) but **with focus** (it is a state, not an effect); names `name.00.png`, `name.01.png`… + `name.states.json` (index → step value, visible elements, focused elements). A **still** PNG or WebP of an animated diagram is its **last state** (D-069) | M |
 | F-ANIM-6 | **Animated GIF**: chains the states **with their effects**. Effects: `fade` (opacity 0 → 1), `up` (+ 12 px upward translation), `zoom` (+ scale 0.92 → 1), `draw` (stroke from 0 to 100 % through `pathLength`, head at the end); disappearance = reverse effect; focus = dimming transition. Parameters: hold time per state (default 1.6 s), transition time (0.45 s; 0.6 s for `draw`), frames per second (default 20), loop (default yes), last frame held longer (default 3 s) | M |

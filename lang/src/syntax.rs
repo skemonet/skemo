@@ -112,7 +112,7 @@ pub fn parse_tree(src: &str, diags: &mut Vec<Diagnostic>) -> Vec<Tag> {
                     "orphan-text",
                     Span::new(l.body_start, l.body_start + l.body.len()),
                     tr!(
-                        "« | » text outside any tag: ignored",
+                        "`|` text outside any tag: ignored",
                         "texte « | » hors de toute balise : ignoré"
                     ),
                 )),
@@ -180,7 +180,7 @@ pub(crate) fn parse_line(body: &str, base: usize, diags: &mut Vec<Diagnostic>) -
             "syntax",
             Span::new(base, base + body.len()),
             tr!(
-                "unreadable line: a tag (diagram, title, card, zone, to) or a line « | » is expected",
+                "unreadable line: a tag (diagram, title, card, zone, to) or a line `|` is expected",
                 "ligne illisible : une balise (diagram, title, card, zone, to) ou une ligne « | » est attendue"
             ),
         ));
@@ -241,7 +241,7 @@ fn parse_id_or_class(
             "syntax",
             Span::new(base + i, base + i + 1),
             tr!(
-                "« {} » must be followed by an identifier",
+                "`{}` must be followed by an identifier",
                 "« {} » doit être suivi d'un identifiant",
                 kind as char
             ),
@@ -257,7 +257,7 @@ fn parse_id_or_class(
             "syntax",
             Span::new(base + i, base + e),
             tr!(
-                "two « # » identifiers on the same tag",
+                "two `#` identifiers on the same tag",
                 "deux identifiants « # » sur la même balise"
             ),
         ));
@@ -320,7 +320,7 @@ fn parse_trailing_text(
             "syntax",
             Span::new(base + i, base + body.len()),
             tr!(
-                "inline nesting « : » is not supported: put the child on the next line, indented",
+                "inline nesting `:` is not supported: put the child on the next line, indented",
                 "imbrication en ligne « : » non prise en charge : mettre l'enfant sur la ligne suivante, indenté"
             ),
         ));
@@ -329,7 +329,7 @@ fn parse_trailing_text(
             "syntax",
             Span::new(base + i, base + body.len()),
             tr!(
-                "unexpected character « {} » after the tag",
+                "unexpected character `{}` after the tag",
                 "caractère inattendu « {} » après la balise",
                 rest.chars().next().unwrap_or(' ')
             ),
@@ -356,7 +356,7 @@ fn parse_attrs(
             diags.push(Diagnostic::error(
                 "syntax",
                 Span::new(base + open, base + body.len()),
-                tr!("unclosed parenthesis « ( »", "parenthèse « ( » non fermée"),
+                tr!("unclosed parenthesis `(`", "parenthèse « ( » non fermée"),
             ));
             break;
         };
@@ -375,7 +375,7 @@ fn parse_attrs(
                 "syntax",
                 Span::new(base + i, base + i + 1),
                 tr!(
-                    "unexpected character « {c} » in the attributes",
+                    "unexpected character `{c}` in the attributes",
                     "caractère inattendu « {c} » dans les attributs"
                 ),
             ));

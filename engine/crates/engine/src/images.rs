@@ -45,7 +45,7 @@ pub fn is_file(name: &str) -> bool {
 /// Checks a file name written in a source: a relative path that stays inside the source's
 /// folder (no `..`, no absolute path, no URL scheme). Returns the reason it is refused.
 pub fn check_name(name: &str) -> Result<(), String> {
-    let refused = |why: String| Err(tr!("image « {name} »: {why}", "image « {name} » : {why}"));
+    let refused = |why: String| Err(tr!("image `{name}`: {why}", "image « {name} » : {why}"));
     if name.contains("://") || name.starts_with("data:") {
         return refused(tr!(
             "only local files are accepted (rendering stays offline)",
@@ -66,7 +66,7 @@ pub fn check_name(name: &str) -> Result<(), String> {
 pub fn decode(name: &str, data: Vec<u8>) -> Result<Image, String> {
     if data.len() > MAX_BYTES {
         return Err(tr!(
-            "image « {name} »: larger than 1 MB",
+            "image `{name}`: larger than 1 MB",
             "image « {name} » : plus de 1 Mo"
         ));
     }
@@ -80,15 +80,38 @@ pub fn decode(name: &str, data: Vec<u8>) -> Result<Image, String> {
         "image/svg+xml"
     } else {
         return Err(tr!(
-            "image « {name} »: not an SVG, PNG, JPEG or WebP file",
+            "image `{name}`: not an SVG, PNG, JPEG or WebP file",
             "image « {name} » : ni SVG, ni PNG, ni JPEG, ni WebP"
         ));
     };
+    if !extension_fits(name, mime) {
+        return Err(tr!(
+            "image `{name}`: its content is {}, which its extension does not say",
+            "image « {name} » : son contenu est du {}, ce que son extension ne dit pas",
+            mime.trim_start_matches("image/")
+                .trim_end_matches("+xml")
+                .to_uppercase()
+        ));
+    }
     Ok(Image {
         name: name.to_string(),
         mime,
         data,
     })
+}
+
+/// Does the name's extension announce this format? (A `.svg` that holds a PNG is refused: what a
+/// file is never depends on its content alone.) A name without a known extension is not checked.
+fn extension_fits(name: &str, mime: &str) -> bool {
+    let lower = name.to_ascii_lowercase();
+    let ext = lower.rsplit_once('.').map_or("", |(_, e)| e);
+    match ext {
+        "svg" => mime == "image/svg+xml",
+        "png" => mime == "image/png",
+        "jpg" | "jpeg" => mime == "image/jpeg",
+        "webp" => mime == "image/webp",
+        _ => true,
+    }
 }
 
 /// Decodes standard base64 (padding optional); `None` on any other character.
@@ -171,6 +194,9 @@ mod tests {
         let svg = decode("a.svg", b"<?xml version=\"1.0\"?><svg/>".to_vec()).unwrap();
         assert_eq!(svg.mime, "image/svg+xml");
         assert!(decode("a.png", b"GIF89a".to_vec()).is_err());
+        // the content must be what the extension says
+        assert!(decode("a.svg", b"\x89PNG\r\n\x1a\n....".to_vec()).is_err());
+        assert!(decode("a.JPG", vec![0xFF, 0xD8, 0xFF, 0]).is_ok());
         assert!(decode("a.svg", vec![b' '; MAX_BYTES + 1]).is_err());
         for len in 0..8 {
             let data: Vec<u8> = (0..len).map(|i| (i * 37 + 5) as u8).collect();

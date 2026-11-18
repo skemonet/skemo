@@ -1,0 +1,9 @@
+/* Shared by every view: `skemo site examples/site -o out --css examples/site/c4.css` */
+.person    { --c: #7048E8; --label: "Person"; }
+.system    { --c: #3E6FC4; --label: "Software system"; }
+.app       { --c: #3E6FC4; --label: "Container"; }
+.component { --c: #0F8A7E; --label: "Component"; }
+.store     { --c: #B45309; --label: "Data"; }
+.external  { --c: #6B7280; --label: "External system"; }
+.boundary  { --z-ink: #3E6FC4; }
+.edge.async .line { stroke-dasharray: 5 4; }

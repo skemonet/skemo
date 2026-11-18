@@ -132,7 +132,11 @@ impl Ctx<'_> {
 }
 
 /// Positions of the cards of a mindmap, and warnings.
-pub fn layout(model: &Model, sizes: &Sizes, root: &str) -> (BTreeMap<String, Box2>, Vec<String>) {
+pub fn layout(
+    model: &Model,
+    sizes: &Sizes,
+    root: &str,
+) -> (BTreeMap<String, Box2>, Vec<crate::EngineWarning>) {
     let (children, loose) = tree(model, root);
     let mut cx = Ctx {
         sizes: &sizes.cards,
@@ -189,10 +193,11 @@ pub fn layout(model: &Model, sizes: &Sizes, root: &str) -> (BTreeMap<String, Box
             },
         );
         x += s.w + SIBLING_GAP;
-        warnings.push(tr!(
-            "card « {id} » is not linked to the root « {root} »: placed under the mindmap",
+        let message = tr!(
+            "card `{id}` is not linked to the root `{root}`: placed under the mindmap",
             "carte « {id} » sans lien avec la racine « {root} » : placée sous la mindmap"
-        ));
+        );
+        warnings.push(crate::EngineWarning::new("mindmap-unlinked", message).on(id.clone()));
     }
     (boxes, warnings)
 }

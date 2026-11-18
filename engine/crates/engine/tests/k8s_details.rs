@@ -1,7 +1,9 @@
 //! Details of the Kubernetes example (D-051): line pills, named joins into one card, badge
 //! sides, wide zones, columns across zones, zone titles below their cards.
 
-use skemo_engine::{Options, from_source, geometry, html};
+use skemo_engine::{Options, geometry, html};
+mod elk;
+use elk::from_source;
 
 fn build(src: &str) -> skemo_engine::Diagram {
     build_css(src, &[])

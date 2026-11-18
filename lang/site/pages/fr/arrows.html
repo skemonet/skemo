@@ -51,10 +51,12 @@ card#queue File</code></pre>
 <skemo name="trunk"></skemo>
 <p>Avec <code>join="trunk"</code>, les flèches d’un même <code>to(…)</code> partent du même point et partagent un tronc avant de se
   séparer, comme dans un organigramme. Chaque cible garde sa propre flèche, avec son id et son marqueur d’animation.</p>
-<p><em>(Préversion)</em> Des flèches simples d’une carte vers plusieurs cartes de la rangée suivante sont dessinées ainsi sans rien
-  demander (une <em>fourche</em>). Quand plusieurs cartes relient chacune les mêmes cartes de la rangée suivante, toutes à toutes,
-  leurs flèches partagent une barre entre les rangées (un <em>bus</em>) au lieu de se croiser. Les jonctions sont marquées d’un
-  point.</p>
+<p><em>(Préversion)</em> Des flèches d’une carte vers plusieurs cartes de la rangée suivante, semblables (mêmes classes, sans
+  étiquette ou avec la même), sont dessinées ainsi sans rien demander quand le côté est encombré ou qu’elles croiseraient une rangée
+  de cartes (une <em>fourche</em>) ; une étiquette commune est écrite une fois. Quand plusieurs cartes relient chacune les mêmes
+  cartes de la rangée suivante, toutes à toutes, leurs flèches partagent une barre entre les rangées (un <em>bus</em>) au lieu de se
+  croiser. Les jonctions sont des virages arrondis vers le tronc. Là où deux lignes se croisent encore, l’horizontale est coupée de
+  part et d’autre de l’autre.</p>
 <p><em>(Préversion)</em> Tout autre nom fait se rejoindre des flèches <em>vers</em> une carte : des flèches vers la même carte qui
   portent le même <code>join="http"</code>, écrites sous des cartes différentes, se rejoignent avant elle et finissent sur une seule
   ligne avec une seule pointe (les appels HTTP de deux frontaux vers un même back-end, dans l’exemple Kubernetes de

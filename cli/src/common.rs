@@ -1,7 +1,8 @@
 //! Reading the inputs, writing the outputs and preparing a diagram, shared by the commands.
 
 use crate::args::ThemeArg;
-use crate::out::Out;
+use crate::out::{Out, Place, allowed};
+use crate::root::Root;
 use skemo_engine::source::{Bundle, NamedText, embed, extract, safe_name};
 use skemo_lang::style::Theme;
 use skemo_lang::tr;
@@ -45,18 +46,14 @@ pub fn read_source(file: &str) -> Result<String, String> {
     } else {
         std::fs::read_to_string(file)
             .map_err(|e| io(&e))
-            .map_err(|e| tr!("reading « {file} »: {e}", "lecture de « {file} » : {e}"))
+            .map_err(|e| tr!("reading `{file}`: {e}", "lecture de « {file} » : {e}"))
     }
 }
 
 pub fn read_file(p: &Path) -> Result<String, String> {
-    std::fs::read_to_string(p).map_err(|e| io(&e)).map_err(|e| {
-        tr!(
-            "reading « {} »: {e}",
-            "lecture de « {} » : {e}",
-            p.display()
-        )
-    })
+    std::fs::read_to_string(p)
+        .map_err(|e| io(&e))
+        .map_err(|e| tr!("reading `{}`: {e}", "lecture de « {} » : {e}", p.display()))
 }
 
 /// A file system error in the language of the messages, for the cases a user meets (the system's
@@ -84,7 +81,7 @@ pub fn check_css_name(name: &str) -> Result<(), String> {
         || name.contains('\0')
     {
         return Err(tr!(
-            "stylesheet « {name} »: a path relative to the source file, inside its folder, is expected",
+            "stylesheet `{name}`: a path relative to the source file, inside its folder, is expected",
             "feuille de style « {name} » : un chemin relatif au fichier source, dans son dossier, est attendu"
         ));
     }
@@ -128,18 +125,15 @@ pub fn write_out(path: &str, data: &[u8]) -> Result<(), Fail> {
             .map_err(|e| io(&e))
             .map_err(|e| {
                 Fail::internal(tr!(
-                    "creating « {} »: {e}",
+                    "creating `{}`: {e}",
                     "création de « {} » : {e}",
                     dir.display()
                 ))
             })?;
     }
-    std::fs::write(path, data).map_err(|e| io(&e)).map_err(|e| {
-        Fail::internal(tr!(
-            "writing « {path} »: {e}",
-            "écriture de « {path} » : {e}"
-        ))
-    })
+    std::fs::write(path, data)
+        .map_err(|e| io(&e))
+        .map_err(|e| Fail::internal(tr!("writing `{path}`: {e}", "écriture de « {path} » : {e}")))
 }
 
 /// What is needed to prepare a diagram.
@@ -155,6 +149,10 @@ pub struct Inputs<'a> {
     pub font_scale: Option<f32>,
     /// `--font`: font files to use besides the embedded ones.
     pub fonts: &'a [PathBuf],
+    /// `--root`: the folder the diagram's own files are read in (default: the source's).
+    pub root: Option<&'a Path>,
+    /// The source itself, instead of reading `file` (`--batch`; `file` is then `-`).
+    pub text: Option<&'a str>,
 }
 
 impl<'a> Inputs<'a> {
@@ -168,7 +166,17 @@ impl<'a> Inputs<'a> {
             transparent: false,
             font_scale: None,
             fonts: &[],
+            root: None,
+            text: None,
         }
+    }
+
+    pub fn text(self, text: Option<&'a str>) -> Self {
+        Inputs { text, ..self }
+    }
+
+    pub fn root(self, root: Option<&'a Path>) -> Self {
+        Inputs { root, ..self }
     }
 
     pub fn fonts(self, fonts: &'a [PathBuf]) -> Self {
@@ -204,6 +212,9 @@ pub struct Loaded {
     pub src: String,
     pub options: skemo_engine::Options,
     pub bundle: Bundle,
+    /// Name of each of `bundle.css` in the messages: as written in the diagram or on the command
+    /// line.
+    pub css_names: Vec<String>,
 }
 
 fn read_bytes(file: &str) -> Result<Vec<u8>, String> {
@@ -222,7 +233,7 @@ fn read_bytes(file: &str) -> Result<Vec<u8>, String> {
     } else {
         std::fs::read(file)
             .map_err(|e| io(&e))
-            .map_err(|e| tr!("reading « {file} »: {e}", "lecture de « {file} » : {e}"))
+            .map_err(|e| tr!("reading `{file}`: {e}", "lecture de « {file} » : {e}"))
     }
 }
 
@@ -248,14 +259,18 @@ fn theme_name(t: ThemeArg) -> &'static str {
 
 /// Reads the inputs. An image that carries a bundle gives its source, and its stylesheets and
 /// options unless the command line gives its own.
-pub fn load(i: &Inputs) -> Result<Loaded, Fail> {
-    let raw = read_bytes(i.file).map_err(Fail::usage)?;
+pub fn load(out: &Out, i: &Inputs) -> Result<Loaded, Fail> {
+    let raw = match i.text {
+        Some(t) => t.as_bytes().to_vec(),
+        None => read_bytes(i.file).map_err(Fail::usage)?,
+    };
+    let root = Root::new(i.root, i.file).map_err(Fail::usage)?;
     let mut b = if let Some(b) = extract(&raw) {
         b
     } else {
         let src = String::from_utf8(raw).map_err(|_| {
             Fail::usage(tr!(
-                "« {} » is neither a text file nor an image that carries a skemo source",
+                "`{}` is neither a text file nor an image that carries a skemo source",
                 "« {} » n'est ni un fichier texte ni une image qui contient une source skemo",
                 i.file
             ))
@@ -268,12 +283,16 @@ pub fn load(i: &Inputs) -> Result<Loaded, Fail> {
             .filter(|_| i.file != "-");
         b
     };
+    let mut css_names: Vec<String> = b.css.iter().map(|c| c.name.clone()).collect();
     if !i.css.is_empty() || b.css.is_empty() {
         // the stylesheets the source includes first, then those of the command line over them
-        let mut css = included(i.file, &b)?;
+        let mut css = included(out, &root, &b)?;
+        css_names = included_css(&b.source);
+        css_names.extend(i.css.iter().map(|p| p.display().to_string()));
         for p in i.css {
             css.push(read_file(p).map(|c| named(p, c)).map_err(Fail::usage)?);
         }
+        skemo_engine::source::unique_names(&mut css);
         b.css = css;
     }
     if let Some(p) = i.base_theme {
@@ -296,17 +315,17 @@ pub fn load(i: &Inputs) -> Result<Loaded, Fail> {
     if let Some(k) = b.font_scale {
         css.push(format!(".stage {{ --font-scale: {k}; }}"));
     }
-    let images = load_images(i.file, &mut b, &css)?;
+    let images = load_images(out, &root, &mut b, &css)?;
     let fonts = i
         .fonts
         .iter()
         .map(|p| {
             let data = std::fs::read(p).map_err(|e| io(&e)).map_err(|e| {
-                Fail::usage(tr!("font « {} »: {e}", "police « {} » : {e}", p.display()))
+                Fail::usage(tr!("font `{}`: {e}", "police « {} » : {e}", p.display()))
             })?;
             if skemo_engine::fonts::describe(&data).is_none() {
                 return Err(Fail::usage(tr!(
-                    "font « {} »: not a TrueType or OpenType file",
+                    "font `{}`: not a TrueType or OpenType file",
                     "police « {} » : ce n'est pas un fichier TrueType ou OpenType",
                     p.display()
                 )));
@@ -327,67 +346,93 @@ pub fn load(i: &Inputs) -> Result<Loaded, Fail> {
         src: b.source.clone(),
         options,
         bundle: b,
+        css_names,
     })
 }
 
-/// The stylesheets the source includes (`diagram(css=…)`), read next to it; from an image, those
-/// of its bundle with the same names.
-fn included(file: &str, b: &Bundle) -> Result<Vec<NamedText>, Fail> {
-    let base = Path::new(file).parent().filter(|_| file != "-");
-    let mut out = Vec::new();
+/// The stylesheets the source includes (`diagram(css=…)`), read in the root folder; from an
+/// image, those of its bundle with the same names. Every refused one is reported, then the
+/// diagram is refused (code 1).
+fn included(out: &Out, root: &Root, b: &Bundle) -> Result<Vec<NamedText>, Fail> {
+    let mut found = Vec::new();
+    let mut failed = false;
     for name in included_css(&b.source) {
-        check_css_name(&name).map_err(Fail::usage)?;
-        let p = base.map_or_else(|| PathBuf::from(&name), |d| d.join(&name));
-        match b
-            .css
-            .iter()
-            .find(|c| Some(c.name.as_str()) == p.file_name().and_then(|n| n.to_str()))
-        {
-            Some(c) => out.push(c.clone()),
-            None => out.push(named(&p, read_file(&p).map_err(Fail::usage)?)),
+        let base = Path::new(&name).file_name().and_then(|n| n.to_str());
+        if let Some(c) = b.css.iter().find(|c| Some(c.name.as_str()) == base) {
+            found.push(c.clone());
+            continue;
+        }
+        let what = tr!("stylesheet", "feuille de style");
+        let read = root
+            .read(&name, &what, crate::root::MAX_CSS_BYTES)
+            .and_then(|data| {
+                String::from_utf8(data).map_err(|_| crate::root::Refused {
+                    code: "file-not-text",
+                    message: tr!(
+                        "stylesheet `{name}`: not valid UTF-8 text",
+                        "feuille de style « {name} » : pas un texte UTF-8 valide"
+                    ),
+                })
+            });
+        match read {
+            Ok(content) => found.push(named(Path::new(&name), content)),
+            Err(r) => {
+                out.error_at(r.code, &r.message, Place::file(&name));
+                failed = true;
+            }
         }
     }
-    Ok(out)
+    if failed {
+        return Err(Fail::source());
+    }
+    Ok(found)
 }
 
-/// Image files used as icons (D-046): read next to the source (relative paths inside its folder),
-/// or taken from the bundle of an image given as input. They go into the bundle, so that the
-/// rendered file reopens with them. A refused name or a missing file stops the command.
+/// Image files used as icons (D-046): read in the root folder (relative paths inside it), or
+/// taken from the bundle of an image given as input. They go into the bundle, so that the
+/// rendered file reopens with them. Every refused, missing, oversized or mistyped one is
+/// reported, then the diagram is refused (code 1).
 pub fn load_images(
-    file: &str,
+    out: &Out,
+    root: &Root,
     b: &mut Bundle,
     css: &[String],
 ) -> Result<std::collections::BTreeMap<String, Vec<u8>>, Fail> {
     let model = skemo_lang::parse(&b.source).model;
     let names = skemo_engine::images::referenced(&model, css);
-    let base = Path::new(file).parent().filter(|_| file != "-");
-    let mut out = std::collections::BTreeMap::new();
+    let mut found = std::collections::BTreeMap::new();
     let mut kept = Vec::new();
+    let mut failed = false;
+    let what = tr!("image", "image");
     for name in names {
-        skemo_engine::images::check_name(&name).map_err(Fail::usage)?;
-        let data = if let Some(i) = b.images.iter().find(|i| i.name == name) {
-            i.bytes().unwrap_or_default()
-        } else {
-            let path = base.map_or_else(|| PathBuf::from(&name), |d| d.join(&name));
-            std::fs::read(&path).map_err(|e| io(&e)).map_err(|e| {
-                Fail::usage(tr!(
-                    "image « {name} » ({}): {e}",
-                    "image « {name} » ({}) : {e}",
-                    path.display()
-                ))
-            })?
+        let data = match b.images.iter().find(|i| i.name == name) {
+            Some(i) => Ok(i.bytes().unwrap_or_default()),
+            None => root.read(&name, &what, skemo_engine::images::MAX_BYTES),
         };
-        if data.len() > skemo_engine::images::MAX_BYTES {
-            return Err(Fail::usage(tr!(
-                "image « {name} »: larger than 1 MB",
-                "image « {name} » : plus de 1 Mo"
-            )));
+        let checked = data.and_then(|d| {
+            skemo_engine::images::decode(&name, d.clone())
+                .map(|_| d)
+                .map_err(|m| crate::root::Refused {
+                    code: "image-type",
+                    message: m,
+                })
+        });
+        match checked {
+            Ok(data) => {
+                kept.push(skemo_engine::source::NamedBytes::new(&name, &data));
+                found.insert(name, data);
+            }
+            Err(r) => {
+                out.error_at(r.code, &r.message, Place::file(&name));
+                failed = true;
+            }
         }
-        kept.push(skemo_engine::source::NamedBytes::new(&name, &data));
-        out.insert(name, data);
+    }
+    if failed {
+        return Err(Fail::source());
     }
     b.images = kept;
-    Ok(out)
+    Ok(found)
 }
 
 /// The rendered bytes with the bundle inside, unless `bundle` is `None` (`--no-source`).
@@ -405,17 +450,23 @@ pub fn prepare(out: &Out, i: Inputs) -> Result<(skemo_engine::Diagram, usize, Bu
         src,
         options,
         bundle,
-    } = load(&i)?;
-    let name = if i.file == "-" { "<stdin>" } else { i.file };
+        css_names,
+    } = load(out, &i)?;
+    let name = i.file;
+    let css_warnings = check_css(out, &bundle, &css_names);
+    if let Err(m) = crate::limits::check(&src) {
+        out.error_at("too-large", &m, Place::file(name));
+        return Err(Fail::source());
+    }
     match skemo_engine::from_source(&src, &options) {
         Ok((d, warnings)) => {
             for w in &warnings {
                 out.diag(&src, name, w);
             }
-            for w in &d.warnings {
-                out.warn(w);
-            }
-            let n = warnings.len() + d.warnings.len();
+            engine_warnings(out, &src, name, &d);
+            let n = css_warnings
+                + warnings.iter().filter(|w| !allowed(w.code)).count()
+                + d.warnings.iter().filter(|w| !allowed(w.code)).count();
             Ok((d, n, bundle))
         }
         Err(skemo_engine::Error::Source(diags)) => {
@@ -428,9 +479,73 @@ pub fn prepare(out: &Out, i: Inputs) -> Result<(skemo_engine::Diagram, usize, Bu
     }
 }
 
+/// The diagnostics of the stylesheets (`css-syntax`, `css-property`), each at its place in its
+/// file; their number.
+fn check_css(out: &Out, b: &Bundle, names: &[String]) -> usize {
+    let all: Vec<&str> = b.css.iter().map(|c| c.content.as_str()).collect();
+    let mut n = 0;
+    for (k, c) in b.css.iter().enumerate() {
+        let name = names.get(k).unwrap_or(&c.name);
+        let others: Vec<&str> = all
+            .iter()
+            .enumerate()
+            .filter(|(j, _)| *j != k)
+            .map(|(_, s)| *s)
+            .collect();
+        for d in skemo_lang::style::check::check(&c.content, &others) {
+            out.diag(&c.content, name, &d);
+            n += usize::from(d.is_error() || !allowed(d.code));
+        }
+    }
+    n
+}
+
+/// The engine's warnings, with their code and, when they are about an element, its line.
+fn engine_warnings(out: &Out, src: &str, file: &str, d: &skemo_engine::Diagram) {
+    let map = if out.json {
+        skemo_lang::parse(src).map
+    } else {
+        Default::default()
+    };
+    for w in &d.warnings {
+        let line = w.element.as_deref().and_then(|e| element_line(&map, e));
+        let place = Place {
+            file,
+            at: line.map(|l| (src, l)),
+        };
+        out.warn_at(w.code, &w.message, place);
+    }
+}
+
+/// The line of an animated element (`a`, `a/li[2]`, `a/tag`, an arrow `a->b`) in the source.
+fn element_line(map: &skemo_lang::SourceMap, key: &str) -> Option<skemo_lang::Span> {
+    if let Some(l) = map.nodes.get(key).or_else(|| map.edges.get(key)) {
+        return Some(l.line);
+    }
+    let (id, part) = key.split_once('/')?;
+    if part == "tag" {
+        return map.nodes.get(id).map(|l| l.line);
+    }
+    let k: usize = part.strip_prefix("li[")?.strip_suffix(']')?.parse().ok()?;
+    map.lis.get(&(id.to_string(), k)).map(|l| l.line)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn steps_warnings_point_at_their_element() {
+        let src = "diagram\n  card#a A @2\n    | x @1\n    to(b)\n  card#b B\n";
+        let map = skemo_lang::parse(src).map;
+        let line = |k: &str| element_line(&map, k).map(|s| &src[s.start..s.end]);
+        assert_eq!(line("a"), Some("card#a A @2"));
+        assert_eq!(line("a/li[0]"), Some("| x @1"));
+        assert_eq!(line("a/tag"), Some("card#a A @2"));
+        assert_eq!(line("a->b"), Some("to(b)"));
+        assert_eq!(line("z"), None);
+        assert_eq!(line("a/li[x]"), None);
+    }
 
     #[test]
     fn fail_constructors_use_the_documented_exit_codes() {

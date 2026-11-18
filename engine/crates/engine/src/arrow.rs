@@ -3,6 +3,7 @@
 
 use crate::diagram::Diagram;
 use crate::svg::n;
+use std::fmt::Write as _;
 
 /// Size of the head (px): length of the segment taken off the line.
 pub const SIZE: f64 = 7.0;
@@ -207,10 +208,117 @@ fn trim_start(line: &[(f64, f64)], mates: &[Vec<(f64, f64)>]) -> Option<Vec<(f64
             w[0].1 + (w[1].1 - w[0].1) * t,
         );
         let mut out = vec![cut];
+        // start a little back on the trunk: the trunk's own bends are drawn rounded, so the cut
+        // as computed on the route would leave a gap; and leaving at a bend, the branch draws
+        // its own rounded bend into the trunk (D-093: curved junctions, no dot)
+        let (from, to) = if t < 1e-9 && i > 0 {
+            (line[i - 1], line[i])
+        } else {
+            (w[0], cut)
+        };
+        let len = (to.0 - from.0).hypot(to.1 - from.1);
+        if len > 0.5 {
+            let back = JOIN_LEAD.min(len);
+            let lead = (
+                to.0 - (to.0 - from.0) / len * back,
+                to.1 - (to.1 - from.1) / len * back,
+            );
+            if t < 1e-9 && i > 0 {
+                out.insert(0, lead);
+            } else {
+                out[0] = lead;
+            }
+        }
         out.extend_from_slice(&line[i + 1..]);
         return Some(out);
     }
     None
+}
+
+/// How far back on a shared trunk a branch starts, so that its bend into the trunk is drawn
+/// rounded (px; at least twice the corner radius).
+const JOIN_LEAD: f64 = 16.0;
+
+/// Junctions drawn as rounded bends into the trunk, without a dot (D-093, user 2026-11-06);
+/// `false` gives back the sharp corner and its dot (D-047).
+pub const CURVED_JUNCTIONS: bool = true;
+
+/// Length of a line as drawn: its corners rounded with radius `r` (as `rounded_path_hops` draws
+/// them), each rounded corner a quadratic curve measured by sampling.
+pub fn drawn_length(line: &[(f64, f64)], r: f64) -> f64 {
+    let dist = |a: (f64, f64), b: (f64, f64)| (b.0 - a.0).hypot(b.1 - a.1);
+    let mut total: f64 = line.windows(2).map(|w| dist(w[0], w[1])).sum();
+    for i in 1..line.len().saturating_sub(1) {
+        let (p, c, q) = (line[i - 1], line[i], line[i + 1]);
+        let (l1, l2) = (dist(p, c), dist(c, q));
+        if l1 == 0.0 || l2 == 0.0 {
+            continue;
+        }
+        let k = r.min(l1 / 2.0).min(l2 / 2.0);
+        let a = (c.0 - (c.0 - p.0) / l1 * k, c.1 - (c.1 - p.1) / l1 * k);
+        let b = (c.0 + (q.0 - c.0) / l2 * k, c.1 + (q.1 - c.1) / l2 * k);
+        let at = |t: f64| {
+            let u = 1.0 - t;
+            (
+                u * u * a.0 + 2.0 * u * t * c.0 + t * t * b.0,
+                u * u * a.1 + 2.0 * u * t * c.1 + t * t * b.1,
+            )
+        };
+        let curve: f64 = (0..16)
+            .map(|j| dist(at(f64::from(j) / 16.0), at(f64::from(j + 1) / 16.0)))
+            .sum();
+        total += curve - 2.0 * k;
+    }
+    total
+}
+
+/// Where a grouped arrow's dashes start, so that they fall on those of the trunk it shares
+/// (D-093): a fork's branch counts from the shared source, the length drawn before the part it
+/// draws itself; the arrows of a join count back from the shared target (negative). `full`: the
+/// arrow's whole line, `line`: the part it draws; 0 for an arrow in no group.
+pub fn dash_phase(
+    d: &Diagram,
+    e: &skemo_lang::Edge,
+    full: &[(f64, f64)],
+    line: &[(f64, f64)],
+) -> f64 {
+    let Some(g) = d.edge_groups.get(&e.id) else {
+        return 0.0;
+    };
+    if g.contains("|join|") {
+        return -drawn_length(full, CORNER);
+    }
+    let Some(&start) = line.first() else {
+        return 0.0;
+    };
+    // the whole line up to where the drawn part starts
+    let mut prefix = vec![full[0]];
+    for w in full.windows(2) {
+        let on = {
+            let (a, b) = (w[0], w[1]);
+            let cross = (b.0 - a.0) * (start.1 - a.1) - (b.1 - a.1) * (start.0 - a.0);
+            let len = (b.0 - a.0).hypot(b.1 - a.1).max(1e-9);
+            let inside = |v: f64, s: f64, t: f64| v >= s.min(t) - 0.5 && v <= s.max(t) + 0.5;
+            (cross / len).abs() < 0.5 && inside(start.0, a.0, b.0) && inside(start.1, a.1, b.1)
+        };
+        if on {
+            prefix.push(start);
+            return drawn_length(&prefix, CORNER);
+        }
+        prefix.push(w[1]);
+    }
+    0.0
+}
+
+/// Radius of an arrow's rounded corners (px).
+pub const CORNER: f64 = 8.0;
+
+/// The points an arrow draws as a sharp corner: its junctions, unless they are curved.
+pub fn sharp_corners(d: &Diagram, id: &str) -> Vec<(f64, f64)> {
+    if CURVED_JUNCTIONS {
+        return Vec::new();
+    }
+    crate::route::junctions_on(&d.routes, &d.edge_groups, id, (d.frame.ox, d.frame.oy))
 }
 
 /// The junction dots an arrow draws: those no arrow of its group drawn before it passes through
@@ -237,27 +345,68 @@ pub fn own_dots(d: &Diagram, e: &skemo_lang::Edge, sharp: &[(f64, f64)]) -> Vec<
         .collect()
 }
 
-/// Radius of a bridge (px): a horizontal line hops over a vertical one it crosses.
+/// Half the gap cut in a horizontal line where it passes under a vertical one it crosses (px).
 pub const HOP: f64 = 5.0;
 
+/// A mask that cuts a line at its crossings (`hops`, in the drawing's frame), `HOP` on each side,
+/// and the attribute that applies it; `None` without crossings. A mask rather than a break in
+/// the path: dashes and the progressive drawing run on as if the line were whole (D-093).
+pub fn gap_mask(prefix: &str, hops: &[(f64, f64)]) -> Option<(String, String)> {
+    let first = hops.first()?;
+    let num = |v: f64| format!("{v:.0}").replace('-', "m");
+    let id = format!("{prefix}-gap{}x{}", num(first.0), num(first.1));
+    let mut cuts = String::new();
+    for (x, y) in hops {
+        let _ = write!(
+            cuts,
+            "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"black\"/>",
+            n(x - HOP),
+            n(y - HOP),
+            n(2.0 * HOP),
+            n(2.0 * HOP)
+        );
+    }
+    let mask = format!(
+        "<mask id=\"{id}\" maskUnits=\"userSpaceOnUse\" x=\"-100000\" y=\"-100000\" width=\"200000\" height=\"200000\"><rect x=\"-100000\" y=\"-100000\" width=\"200000\" height=\"200000\" fill=\"white\"/>{cuts}</mask>"
+    );
+    Some((mask, format!(" mask=\"url(#{id})\"")))
+}
+
 /// Where the horizontal segments of arrow `id` cross the vertical segment of another arrow (not
-/// of its group: a shared trunk is one line), in the drawing's frame (`ox`, `oy`): each gets a
-/// bridge, so that a crossing does not read as a junction. Crossings too close to a bend of
-/// either line (where a bridge would bite into the rounded corner) get none.
+/// of its group: a shared trunk is one line, nor one never shown at the same time: two lines of
+/// different steps never meet on screen), in the drawing's frame (`ox`, `oy`): each gets a
+/// gap (`gap_mask`), so that a crossing does not read as a junction; near a bend too.
 pub fn hops(d: &Diagram, id: &str, (ox, oy): (f64, f64)) -> Vec<(f64, f64)> {
-    const CORNER: f64 = 8.0;
     let Some(me) = d.routes.get(id) else {
         return Vec::new();
     };
+    let life = |id: &str| {
+        d.anim
+            .elements
+            .get(id)
+            .map_or((f64::NEG_INFINITY, f64::INFINITY), |r| {
+                (
+                    r.appear.value,
+                    r.until.as_ref().map_or(f64::INFINITY, |u| u.value),
+                )
+            })
+    };
+    let (a, z) = life(id);
     let group = d.edge_groups.get(id);
     let verticals: Vec<((f64, f64), (f64, f64))> = d
         .routes
         .iter()
         .filter(|(o, _)| *o != id && (group.is_none() || d.edge_groups.get(*o) != group))
+        .filter(|(o, _)| {
+            let (b, y) = life(o);
+            b <= z && a <= y
+        })
         .flat_map(|(_, r)| r.windows(2).map(|w| (w[0], w[1])).collect::<Vec<_>>())
         .filter(|(p, q)| (p.0 - q.0).abs() < 0.5 && (p.1 - q.1).abs() > 0.5)
         .collect();
-    let room = HOP + CORNER;
+    // a gap bites into nothing (D-093): every crossing inside both segments is cut, even near a
+    // bend (a bridge needed HOP + CORNER of straight line)
+    let room = 1.0;
     let mut out = Vec::new();
     for w in me.windows(2) {
         let (p, q) = (w[0], w[1]);

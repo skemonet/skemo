@@ -51,7 +51,7 @@ pub fn state(d: &Diagram, step: &str, scale: f32) -> Result<Vec<u8>, String> {
         .find(|s| s.raw == step)
         .map(|s| s.value)
         .or_else(|| step.parse().ok())
-        .ok_or_else(|| tr!("unknown step « {step} »", "étape « {step} » inconnue"))?;
+        .ok_or_else(|| tr!("unknown step `{step}`", "étape « {step} » inconnue"))?;
     let v = d.anim.view_at(&d.model, s, dim_opacity(d));
     let (w, h, px) = rgba(&render_view(d, &v, true), scale)?;
     encode(w, h, &px)

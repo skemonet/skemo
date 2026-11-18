@@ -86,12 +86,12 @@ fn floor_char(s: &str, mut i: usize) -> usize {
 /// Rendu texte d'un diagnostic :
 ///
 /// ```text
-/// error[unknown-target]: unknown target « cor »
+/// error[unknown-target]: unknown target `cor`
 ///   ┌─ reseau.skemo:7:8
 ///   │
 /// 7 │     to(cor).wan transit
 ///   │        ^^^
-///   = help: did you mean « core »?
+///   = help: did you mean `core`?
 /// ```
 pub fn render(src: &str, file: &str, d: &Diagnostic) -> String {
     let mut out = String::new();

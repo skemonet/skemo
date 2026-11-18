@@ -1,7 +1,9 @@
 //! Feedback from a Kubernetes deck (D-045): cards of a zone stacked on one another by the
 //! column alignment, and the features asked for alongside.
 
-use skemo_engine::{Options, from_source};
+use skemo_engine::Options;
+mod elk;
+use elk::from_source;
 use skemo_lang::Kind;
 
 fn build(src: &str) -> skemo_engine::Diagram {

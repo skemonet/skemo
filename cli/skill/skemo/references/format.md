@@ -22,8 +22,8 @@ Complete reference of the `.skemo` language as implemented by `skemo` 0.1. The s
 
 ## 1. Syntax
 
-A file is a valid Pug document restricted to the tags `diagram`, `title`, `card`, `cards`, `zone`, `stack`
-and `to`, and lines written with Pug's text marker `|`, whose text follows Markdown (emphasis, tables).
+A file is a valid Pug document restricted to the tags `diagram`, `title`, `card`, `cards`, `node`, `zone`,
+`stack` and `to`, and lines written with Pug's text marker `|`, whose text follows Markdown (emphasis, tables).
 
 ```
 tag        := name ("#" id | "." class)* attributes? (" " text)?
@@ -98,6 +98,22 @@ Predefined classes:
 Default theme types: `.t0` (red, "T0"), `.t1` (orange, "T1"), `.t2` (blue, "T2"), `.t3` (grey, "T3"),
 zones `.cloud`, `.dmz`, `.lan`.
 
+**Nodes**. `node` instead of `card` draws a thing by its icon: the icon on the left, the name beside it, the
+lines under the name, no frame. Nodes and cards mix freely: the looks (`look="header"`, `--look`) leave nodes
+alone. Every node's icon is 32 px, centred on its text and coloured by its type; arrows end on the icon. A node
+takes what a card takes except `tag` and `label`.
+
+```pug
+diagram(dir="right")
+  node#user(icon="user") Customer
+    | web and mobile
+    to(api) HTTPS
+  card#api.t2(tag="ECS") API
+    to(db)
+  node#db.t1(icon="database") Orders
+    | PostgreSQL 16
+```
+
 **Piles** (pre-release). `cards` instead of `card` draws a pile of cards (several instances: the tasks of a
 service, the machines of a group); it takes everything a card takes. `count="4"` draws up to three cards and a
 `×4` badge on the bottom-right corner; without it, three cards and no badge.
@@ -111,7 +127,7 @@ diagram(dir="right")
 ```
 
 **Title and stacks** (pre-release). `title` (once, directly under `diagram`) draws a title above the
-drawing; its `|` lines are subtitle lines under it, its `|.pill` lines pills on the right. `stack` is an invisible group whose children (zones or
+drawing; its `|` lines are subtitle lines under it, its `|.pill` lines pills on the right: a class that sets `--c` colours a pill, one that sets `--icon` gives it an icon, and a pill written as a Markdown link, `|.pill [How HyperShift works](how/hypershift.skemo)`, is a link (the place for links to related documents, never a card). `stack` is an invisible group whose children (zones or
 cards) are laid one after the other in writing order along `dir`, whatever the arrows between them;
 arrows still align what they link, and one going back up the stack leaves by the top, enters by the
 bottom; its zones share one width. Use it to order layers that are not linked (application above infrastructure).
@@ -250,11 +266,12 @@ Markers go at the **end of a line**, after a space, on `card`, `zone`, a line `|
 | `@2-4` | visible from step 2 to step 4 included |
 | `@0-2` | (pre-release) visible from the start to step 2 included: `| A @0-2` then `| B @3` is one line whose text changes at step 3 |
 | `@4:focus`, `@4-6:focus` | highlighted at step 4 (or 4 to 6); does not control appearance |
+| `@3-4:halo`, `@5:chase`, `@6:magnify` | highlight effects for an integration (glitu), written in `data-highlight`; not drawn in PNG, GIF, APNG, WebP |
 | `@2.5` | steps are ordered values: 2.5 slots between 2 and 3 |
 
 `tag="8080 @1"` animates the chip alone (pre-release; in HTML not with the `classic` look).
 
-Rules: at most one appearance marker per node, any number of `:focus`. Only trailing tokens are read
+Rules: at most one appearance marker per node, any number of `:focus` and highlights. Only trailing tokens are read
 (`meet @3 tomorrow` stays text). `\@` writes a literal `@`. A child never appears before its parent; an
 arrow without marker appears with the later of its two ends.
 
@@ -347,6 +364,12 @@ zone#lan(href="#core") LAN
 - `href="…"`: `http:`, `https:`, `mailto:`, relative paths and `#fragments` only; anything else
   (`javascript:`, `data:`, `file:`…) or an empty value is the error `unsafe-href`. Clickable in SVG and HTML;
   a small link glyph follows the name in every format (`--link-mark: none` hides it).
+- (Pre-release) A title pill links with a Markdown link instead of `href=`: `|.pill [API](shop/api.skemo)`
+  under `title`; same rules, same glyphs.
+- (Pre-release) A relative link to another `.skemo` (`href="shop/api.skemo"`, `href="ctx.skemo#web"`) is a
+  way down into the view that details the element: a magnifier glyph instead. To split a large system into
+  views (context, containers, components), write one diagram per view, link the cards to their detail
+  views, and run `skemo site <folder> -o <out>`: a website where a click opens the linked view.
 
 ## 13. Diagnostics
 
@@ -364,8 +387,12 @@ errors. Blocking errors:
 | malformed `at`, `size`, `via`, date, year 0 | numbers / dates expected |
 | `unsafe-href` | use an allowed scheme |
 
-Warnings never block: `unknown-icon`, `icon-ignored`, overlaps of pinned cards, markers earlier than their
-parent, `at=` in a mode where it has no effect, unreachable mindmap cards.
+Warnings never block (`--deny-warnings` makes them fatal): `unknown-icon`, `icon-ignored`, `overlap` of pinned
+cards, markers earlier than their parent, `step-gap` (a click between 1 and the last step changes nothing:
+`@1`, `@2`, then `@9`; `@2.5` is fine), `empty-diagram`, `part-class` (a class named like a drawn part,
+or `.stage`, the class of the whole drawing: name classes after what they mean, `.step`), `at=` in a mode
+where it has no effect, `mindmap-unlinked`. In stylesheets: `css-property` (a typo: `colr`, `--lable`)
+and `css-syntax` (a `{` never closed, a declaration outside a rule), at their line in the `.css` file.
 
 `skemo lint --fix f.skemo` rewrites the file in canonical form (`--dry` only reports).
 
@@ -386,7 +413,7 @@ parent, `at=` in a mode where it has no effect, unreachable mindmap cards.
 
 Render options: `--css f.css` (repeatable, after the diagram's own `diagram(css=…)`), `--theme light|dark|print|auto`, `--scale 2` (raster
 resolution), `--transparent`, `--contrast high`, `--step N`, `--animated`, `--board`, `--base-theme t.css`,
-`--deny-warnings`, `--no-fonts` (HTML), `--embed-fonts` (SVG: fonts inside, ~0.8 MB per weight),
+`--deny-warnings`, `--allow <code>` (leave a warning code out), `--no-fonts` (HTML), `--embed-fonts` (SVG: fonts inside, ~0.8 MB per weight),
 `--font-scale 1.4` (every text size; for slides). The SVG root carries `data-states` (ordered steps).
 Every output embeds its source and stylesheets (PNG iTXt chunk, SVG `<metadata>`, WebP/GIF/HTML too);
 `--no-source` leaves them out; any command accepts such an image instead of a `.skemo`. `-` as input reads standard input; `-o -` with `--format` writes to

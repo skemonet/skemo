@@ -117,13 +117,34 @@ fn data(name: &str) -> skemo_engine::Diagram {
     .0
 }
 
-/// A step under a centimetre is straightened when the straight line crosses no more lines: the
-/// load balancer's HTTPS arrow to the api, 21 px apart, went down, stepped aside, went down.
+/// Arrows of one card that carry the same label merge when they cross a row of cards on their
+/// way, and the label is written once, on the trunk (D-093): backoffice's two `5432`.
 #[test]
-fn a_step_under_a_centimetre_is_straightened() {
+fn long_arrows_with_one_label_merge_and_say_it_once() {
+    let d = terraform();
+    let (ra, rb) = (
+        &d.routes["backoffice->orders"],
+        &d.routes["backoffice->orders-replica"],
+    );
+    assert_eq!(ra[..2], rb[..2], "one trunk: {ra:?} {rb:?}");
+    let shown = d
+        .labels
+        .keys()
+        .filter(|k| k.starts_with("backoffice->"))
+        .count();
+    assert_eq!(shown, 1, "{:?}", d.labels);
+}
+
+/// An end alone on its side lands in its middle, a step rather than an end off the middle
+/// (D-093; small steps are no longer straightened by sliding an end): the load balancer's HTTPS
+/// arrow to the api.
+#[test]
+fn a_lone_end_lands_in_the_middle_of_its_side() {
     let d = terraform();
     let r = &d.routes["shop-prod->api"];
-    assert_eq!(r.len(), 2, "{r:?}");
+    let api = d.boxes["api"];
+    let end = r.last().unwrap();
+    assert!((end.0 - (api.x + api.w / 2.0)).abs() < 1.0, "{r:?} {api:?}");
 }
 
 /// Two arrows that share neither their source nor their target are never drawn on one line (the
@@ -213,20 +234,26 @@ fn no_arrow_runs_through_a_zone_title() {
     assert!(bad.is_empty(), "{bad:#?}");
 }
 
-/// Where two arrows cross, the horizontal line hops over the vertical one (a bridge): a
-/// crossing then never reads as a junction. One bridge per crossing away from the bends.
+/// Where two arrows cross, the horizontal line is cut on each side of the vertical one, as
+/// passing under it (D-093): a crossing then never reads as a junction. One cut per crossing
+/// away from the bends, by a mask: the line itself runs on unbroken.
 #[test]
-fn crossings_get_a_bridge() {
+fn crossings_get_a_gap() {
     let d = terraform();
     let svg = skemo_engine::svg::render(&d);
-    let bridges = svg.matches(" A5,5 0 0 ").count();
+    let cuts = svg.matches("fill=\"black\"/>").count();
     let expected: usize = d
         .routes
         .keys()
         .map(|id| skemo_engine::arrow::hops(&d, id, (0.0, 0.0)).len())
         .sum();
     assert!(expected > 0);
-    assert_eq!(bridges, expected, "{bridges} bridges, {expected} crossings");
+    assert_eq!(cuts, expected, "{cuts} cuts, {expected} crossings");
+    assert!(!svg.contains(" A5,5 0 0 "), "no bridge left");
+    assert_eq!(
+        svg.matches("<mask ").count(),
+        svg.matches(" mask=\"url(#").count()
+    );
 }
 
 /// A step in the middle of an arrow (two parallel runs the same way, joined by less than a
@@ -404,4 +431,33 @@ fn no_label_lies_on_a_card_or_a_label() {
     }
     assert!(checked > 30, "only {checked} labels checked");
     assert!(bad.is_empty(), "{bad:#?}");
+}
+
+/// Every segment of a graph's route is horizontal or vertical (2026-11-09: a port's stub and the
+/// segment after it, a few hundred-thousandths of a pixel apart, let a pass slant the line; less
+/// than a pixel is the micro steps dropped on purpose).
+#[test]
+fn no_route_slants() {
+    let mut bad = Vec::new();
+    for (name, src, css) in corpus() {
+        let (d, _) = from_source(
+            &src,
+            &Options {
+                css,
+                ..Options::default()
+            },
+        )
+        .unwrap();
+        if d.model.option("layout").is_some_and(|l| l != "graph") {
+            continue;
+        }
+        for (id, r) in &d.routes {
+            if r.windows(2)
+                .any(|s| (s[0].0 - s[1].0).abs() > 1.0 && (s[0].1 - s[1].1).abs() > 1.0)
+            {
+                bad.push(format!("{name}: {id}"));
+            }
+        }
+    }
+    assert!(bad.is_empty(), "slanted routes: {bad:?}");
 }

@@ -3,7 +3,12 @@
    Principe : un type ne définit que son accent (--c) et son libellé (--label).
    Fonds, bordures et encres sont DÉRIVÉS de --c avec color-mix() → clair et sombre gratuits.
    ============================================================ */
-.stage {
+:root {
+  /* The theme's variables are set on :root, so that an author's `:root { --bg: … }` (FORMAT §4,
+     the documentation's "Styling" page) wins over them; the dark and print themes redefine the
+     colours on `.stage.theme-…`. */
+  --zone-pad: 30px;      /* marge intérieure des zones (lue par le core) */
+  --zone-head: 30px;     /* hauteur réservée au titre de zone (lue par le core) */
   --font: Inter, system-ui, sans-serif;
   --mono: 'JetBrains Mono', 'DejaVu Sans Mono', monospace;
   --bg: #F6F7F9;          /* fond de page */
@@ -19,13 +24,13 @@
   --grid: rgba(110,120,140,.13);
   --grid-major: rgba(110,120,140,.32);
   --radius: 12px;
-  --zone-pad: 30px;      /* marge intérieure des zones (lue par le core) */
-  --zone-head: 30px;     /* hauteur réservée au titre de zone (lue par le core) */
   --event-date: on;      /* frieze: the date of an event above its title (read by the engine) */
   --event-anchor: edge;  /* frieze: an event card may hang by an edge of its stem to pack (read by the engine) */
   --tl-gap-x: 4px;       /* timeline: gap between periods of one row (read by the engine; prototype 12px) */
   --tl-gap-y: 12px;      /* timeline: gap between rows of a lane (read by the engine; prototype 22px) */
   --tl-deps: drop;       /* timeline: dependencies drop straight from the end of a bar (read by the engine) */
+}
+.stage {
   position: relative; font: 14px/1.4 var(--font); color: var(--ink); background: var(--bg);
   font-size: calc(14px * var(--font-scale, 1));   /* --font-scale: every text of the theme (1.4 for a projected slide) */
 }
@@ -103,7 +108,7 @@ card.no-tag .title::before { content: none; }   /* classe posée par le core si 
 /* a card without lines: in the classic look its title is centred (the band look keeps it left,
    like its neighbours with lines: user's choice, 2026-11-03) */
 .stage.look-classic card.no-body > .title { text-align: center; }
-card.look-band { padding: 0; min-width: 96px; overflow: hidden; border-radius: 10px;
+card.look-band { padding: 0; min-width: 96px; overflow: hidden; border-radius: calc(var(--radius) - 2px);
        border: 1.5px solid var(--accent-fill, var(--c, #9AA3B2)); background: color-mix(in srgb, var(--c, #9AA3B2) 9%, var(--surface)); }
 card.look-band > .head { display: flex; align-items: center; justify-content: space-between; gap: 12px;
        padding: 7px 10px 7px 13px; background: var(--accent-fill, var(--c, #9AA3B2)); color: var(--on-c); font-size: calc(14px * var(--font-scale, 1)); font-weight: 700; text-align: left; }
@@ -120,7 +125,7 @@ card.deck > .count { position: absolute; right: calc(-1 * var(--deck-m, 0px)); b
 card.deck.look-band > .head, card.deck.look-header > .head { border-radius: 8.5px 8.5px 0 0; }
 card.look-band li { color: var(--ink-2); font-size: calc(13px * var(--font-scale, 1)); }
 
-card.look-header { padding: 0; min-width: 120px; text-align: center; overflow: hidden; border-radius: 10px;
+card.look-header { padding: 0; min-width: 120px; text-align: center; overflow: hidden; border-radius: calc(var(--radius) - 2px);
        border: 1.5px solid var(--c, #9AA3B2); background: color-mix(in srgb, var(--c, #9AA3B2) 9%, var(--surface)); }
 card.look-header > .head { display: flex; align-items: center; justify-content: space-between; gap: 10px;
        padding: 6px 10px 6px 12px; background: var(--accent-fill, var(--c, #9AA3B2)); color: var(--on-c); font-size: calc(12.5px * var(--font-scale, 1)); font-weight: 700; text-align: left; }
@@ -169,7 +174,7 @@ card.chip .title, card.info .title { font-weight: 500; color: color-mix(in srgb,
 card.chip .title::before, card.info .title::before, card.note .title::before { content: none; }
 
 /* ---------- Zones : teintes dérivées de --c (ou --z-bg / --z-border / --z-ink si fournis) ---------- */
-zone { position: absolute; display: block; box-sizing: border-box; border-radius: 16px; z-index: 0;
+zone { position: absolute; display: block; box-sizing: border-box; border-radius: calc(var(--radius) + 4px); z-index: 0;
        background: var(--z-bg, color-mix(in srgb, var(--c, #8A93A3) 8%, var(--bg)));
        border: 1px solid var(--z-border, color-mix(in srgb, var(--c, #8A93A3) 40%, var(--bg))); }
 zone > .title { position: absolute; left: 16px; top: 9px; font-size: calc(12px * var(--font-scale, 1)); font-weight: 700;
@@ -198,16 +203,20 @@ card.look-band.tag-left > .head .tag { order: -1; }
 zone.tag-right > .title { right: 16px; display: flex; align-items: center; }
 zone.tag-right > .title > .tag { margin-left: auto; }
 
-/* D-050: the diagram's title (`title`), its `li` as pills on the right */
+/* D-050: the diagram's title (`title`), its `li` as pills on the right; a class with a colour
+   (`|.pill.t2`) tints the pill, a class with `--icon` puts an icon in it, a Markdown link a link mark */
 .diagram-title { position: absolute; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
 .diagram-title > .text { font-size: calc(22px * var(--font-scale, 1)); font-weight: 700; letter-spacing: -.01em; color: var(--ink); white-space: nowrap; }
 .diagram-title > ul { display: flex; margin: 0; padding: 0; }
 .diagram-title li { list-style: none; margin-left: 8px; padding: 3px 12px; border-radius: 999px; white-space: nowrap;
-       border: 1px solid var(--card-border); background: var(--surface); font-size: calc(12.5px * var(--font-scale, 1)); color: var(--muted); }
+       border: 1px solid color-mix(in srgb, var(--c, var(--card-border)) 45%, var(--card-border));
+       background: color-mix(in srgb, var(--c, var(--surface)) 10%, var(--surface));
+       font-size: calc(12.5px * var(--font-scale, 1)); color: var(--muted);
+       --icon-size: 13px; --icon-gap: 5px; --icon-color: var(--c, currentColor); }
 
 /* D-050: a `.wide` card spans its group (a network, a bus bar); its arrows plug in straight, with a dot on the bar */
 .stage card.wide { --look: plain; }
-card.wide { min-width: 0; padding: 9px 18px; text-align: left; box-shadow: none; border-radius: 10px;
+card.wide { min-width: 0; padding: 9px 18px; text-align: left; box-shadow: none; border-radius: calc(var(--radius) - 2px);
        background: color-mix(in srgb, var(--c, #6B7280) 10%, var(--surface)); border: 1px solid color-mix(in srgb, var(--c, #6B7280) 35%, var(--surface)); }
 card.wide .title { font-size: calc(11.5px * var(--font-scale, 1)); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
 card.wide .title::before { content: none; }
@@ -349,8 +358,9 @@ card.era.outside { overflow: visible; }
 card.era.outside .title { position: absolute; left: calc(100% + 6px); overflow: visible; color: var(--c, #6B7280); }
 
 /* ---------- Icônes et liens (FORMAT §3.2.1) : valeurs par défaut, selon le look ---------- */
-card { --icon-size: 16px; --icon-gap: 6px; --icon-color: var(--accent-fill, var(--c, #9AA3B2)); --link-mark: auto; }
-zone { --icon-size: 16px; --icon-gap: 6px; --icon-color: currentColor; --link-mark: auto; }
+card { --icon-size: 16px; --icon-gap: 6px; --icon-color: var(--accent-fill, var(--c, #9AA3B2)); }
+zone { --icon-size: 16px; --icon-gap: 6px; --icon-color: currentColor; }
+/* --link-mark is not set here: `:root { --link-mark: none }` reaches every card and zone (FORMAT §4) */
 card.look-band { --icon-color: currentColor; }
 card.look-header { --icon-size: 14px; --icon-color: currentColor; }
 .stage card.note, .stage card.chip, .stage card.info { --icon-size: 14px; }
@@ -430,11 +440,19 @@ card.legend .swatch { display: inline-block; width: 22px; height: 12px; margin-r
 card.legend .swatch.zone-sample { border-radius: 4px; box-sizing: border-box;
        background: var(--z-bg, color-mix(in srgb, var(--c, #8A93A3) 8%, var(--bg)));
        border: 1.5px solid var(--z-border, color-mix(in srgb, var(--c, #8A93A3) 40%, var(--bg))); }
+/* a secondary card's sample: the card in small, tinted and edged as it is drawn (a note's dashes) */
+card.legend .swatch.note, card.legend .swatch.info { --c: #D4A017; border-radius: 4px; box-sizing: border-box;
+       background: color-mix(in srgb, var(--c) 12%, var(--surface)); }
+card.legend .swatch.note { border: 1.5px dashed color-mix(in srgb, var(--c) 75%, var(--surface)); }
+card.legend .swatch.info { border: 1.5px solid color-mix(in srgb, var(--c) 70%, var(--surface)); }
+card.legend .swatch.chip { --c: #7B5CC4; box-sizing: border-box; border: 1.5px solid var(--c);
+       background: color-mix(in srgb, var(--c) 10%, var(--surface)); }
 /* a class with an icon (--icon): the icon, in the type's accent */
 card.legend svg.sample-icon { display: inline-block; width: 14px; height: 14px; margin: 0 12px 0 4px; vertical-align: -2px;
        --icon-color: var(--c, currentColor); }
 card.legend svg.sample { display: inline-block; width: 34px; height: 10px; margin-right: 8px; vertical-align: 0; overflow: visible; }
-card.text { min-width: 0; max-width: none; padding: 0; border: 0; box-shadow: none; background: transparent; }
+/* a paragraph wraps at a reading measure (about 70 characters); `.wide` spans its group instead */
+card.text { min-width: 0; max-width: 440px; padding: 0; border: 0; box-shadow: none; background: transparent; }
 card.text .title { font-size: calc(13px * var(--font-scale, 1)); font-weight: 700; }
 card.text ul { margin-top: 2px; }
 card.text li { color: var(--muted); font-size: calc(12px * var(--font-scale, 1)); margin-top: 2px; }
@@ -442,3 +460,16 @@ card.text li { color: var(--muted); font-size: calc(12px * var(--font-scale, 1))
 /* HTML: the category takes a row of its own in the band (the engine lays it out the same) */
 card.look-band > .head { flex-wrap: wrap; row-gap: 0; }
 card.look-band > .head .kind { flex: 0 0 100%; }
+
+/* `node` (D-087, FORMAT §3.2.10): a thing drawn as its icon, with its name and lines beside it, no frame.
+   Last in the theme, so that the looks' rules (`.stage.look-eyebrow card`…) do not reach it. */
+.stage card.node { --look: plain; min-width: 0; max-width: 280px; padding: 0; border: 0; border-radius: 0; box-shadow: none;
+       background: transparent; outline: none; --icon-size: 32px; --icon-gap: 12px; }
+.stage card.node.no-type { --icon-color: var(--ink); }
+.stage card.node .title { font-size: calc(14px * var(--font-scale, 1)); font-weight: 700; color: var(--ink); text-align: left; }
+.stage card.node .title::before { content: none; }
+.stage card.node ul { margin-top: 2px; }
+.stage card.node li { color: var(--muted); font-size: calc(12.5px * var(--font-scale, 1)); margin-top: 2px; }
+/* HTML: the icon in its column (the engine sets the card's left padding to the column's width and
+   `--icon-top` to centre the icon in the text's height) */
+card.node > svg.icon { position: absolute; left: 0; top: var(--icon-top, 0); margin: 0; }

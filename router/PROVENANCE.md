@@ -12,3 +12,4 @@ Mandatory register (see SPEC §3): for each module, where the ideas and the code
 | `src/nudge.rs`, `center_segments` | general drawing practice (bends centred in the free corridor between shapes) | original code | — | no source consulted |
 | `src/hint.rs`, `valid_hint` (R-15) | SPEC §5 (R-15) | original code | — | reuse of a valid hint route |
 | `src/scene.rs`, sparse graph | Wybrow, Marriott, Stuckey, GD 2009, §2 (visibility segments stopped at the first obstacle) | idea from the paper, re-implemented (coverage of lines by intervals, nodes at covered intersections) | — | original code |
+| `src/router.rs`, `tree_starts` (`Params::late_split`) | the classic greedy heuristic for rectilinear Steiner trees (each new terminal joins the tree built so far by its shortest path), as applied to hyperedges in general graph drawing practice | original code; the A* simply starts from every node of the group's routes already drawn | — | no source consulted |

@@ -2,7 +2,7 @@
 source: tests/errors.rs
 expression: out
 ---
-warning[bad-join]: « join="bus" »: no other arrow to « b » carries it; ignored
+warning[bad-join]: `join="bus"`: no other arrow to `b` carries it; ignored
   ┌─ join-invalide.skemo:2:10
   │
 2 │   to(b c join="bus")

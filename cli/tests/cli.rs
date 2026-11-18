@@ -448,7 +448,7 @@ fn a_diagram_includes_its_stylesheets() {
             "svg",
         ])
         .assert()
-        .code(2);
+        .code(1); // the diagram is refused, not the command line
 }
 
 #[test]
@@ -733,7 +733,7 @@ fn errors_and_help_are_translated_too() {
     );
     let en = stderr_of(bin_env(&[]), &["lint", "/nonexistent/x.skemo"]);
     assert!(
-        en.starts_with("error: reading « /nonexistent/x.skemo »"),
+        en.starts_with("error: reading `/nonexistent/x.skemo`"),
         "{en}"
     );
     let help = |vars: &[(&str, &str)]| {
@@ -1060,5 +1060,43 @@ fn image_icons_are_read_next_to_the_source_and_travel_with_the_image() {
     bin()
         .args(["render", src.to_str().unwrap(), "-o", png.to_str().unwrap()])
         .assert()
-        .code(2);
+        .code(1);
+}
+
+/// The engine of a `layout` output's JSON.
+fn engine_of(mut c: Command, file: &Path) -> String {
+    let out = c
+        .args(["layout", file.to_str().unwrap(), "-q"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let json: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    json["layout"]["engine"].as_str().unwrap_or("").to_string()
+}
+
+/// The slide engine draws a diagram that names no layout (the default since 2026-11-18); the
+/// diagram asks for another by name (`layout="graph"`, ELK; `layout="grid"`), and `SKEMO_LAYOUT`
+/// gives one to a diagram that names none.
+#[test]
+fn the_engine_is_chosen_by_the_diagram_or_the_environment() {
+    let body = "\n  card#a A\n    to(b)\n  card#b B\n";
+    let (bare, graph, grid) = (
+        tmp("engine-bare.skemo"),
+        tmp("engine-graph.skemo"),
+        tmp("engine-grid.skemo"),
+    );
+    std::fs::write(&bare, format!("diagram{body}")).unwrap();
+    std::fs::write(&graph, format!("diagram(layout=\"graph\"){body}")).unwrap();
+    std::fs::write(&grid, format!("diagram(layout=\"grid\"){body}")).unwrap();
+    assert_eq!(engine_of(bin(), &bare), "slide");
+    assert_eq!(engine_of(bin(), &graph), "elk");
+    assert_eq!(engine_of(bin(), &grid), "grid");
+    let env = |v| bin_env(&[("SKEMO_LANG", "en"), ("SKEMO_LAYOUT", v)]);
+    assert_eq!(engine_of(env("grid"), &bare), "grid");
+    assert_eq!(engine_of(env("graph"), &bare), "elk");
+    assert_eq!(engine_of(env("grid"), &graph), "elk");
+    // any other value of the variable is the default
+    assert_eq!(engine_of(env("other"), &bare), "slide");
 }

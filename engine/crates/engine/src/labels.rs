@@ -36,7 +36,8 @@ pub fn zone_titles(
         let (Some(b), Some(z)) = (boxes.get(&n.id), scene.zones.get(&n.id)) else {
             continue;
         };
-        let zt = geometry::zone_title(scene, z, (&n.title, n.tag.as_deref()), b.w, b.h);
+        let text = scene.zone_text(&n.id, &n.title);
+        let zt = geometry::zone_title(scene, z, (text, n.tag.as_deref()), b.w, b.h);
         let run = &zt.run;
         let c = scene.style(z.title);
         let (asc, _) = text_style(c).metrics();
@@ -47,7 +48,8 @@ pub fn zone_titles(
                 x: b.x + zt.span.0 - 2.0,
                 y: b.y + run.baseline - asc - 2.0,
                 w: zt.span.1 - zt.span.0 + 4.0,
-                h: lh + 4.0,
+                // a wrapped title (D-099) is a wall over all its lines
+                h: lh * (zt.more.len() as f64 + 1.0) + 4.0,
             },
         ));
         // its description lines (v0.8): walls for the lines, like the title
@@ -80,6 +82,119 @@ pub fn zone_titles(
     out
 }
 
+/// What stands in the drawing, for the labels.
+struct Stage<'a> {
+    cards: Vec<Box2>,
+    /// The visible zones' outlines (an invisible group has none to keep clear of).
+    zones: Vec<Box2>,
+    titles: Vec<Box2>,
+    title_rows: Vec<Box2>,
+    /// Where grouped arrows split or meet: a label there hides the junction (D-093).
+    junctions: Vec<(f64, f64)>,
+    routes: &'a BTreeMap<String, Points>,
+}
+
+/// One label being placed.
+struct Label<'a> {
+    id: &'a str,
+    /// The arrows of its join (D-054), itself included.
+    joined: Vec<&'a str>,
+    route: &'a Points,
+    /// The routes of the other arrows of its join.
+    mates: Vec<&'a Points>,
+    /// The middle of its longest segment, or the spot its join shares.
+    default: (f64, f64),
+    w: f64,
+    h: f64,
+}
+
+impl Stage<'_> {
+    /// Is `id` a line of another flow than the label's? (the arrows of its join run under the
+    /// label they share, D-054)
+    fn foreign(&self, l: &Label, id: &str) -> bool {
+        id != l.id && !l.joined.contains(&id)
+    }
+
+    /// What bounds the places of a label at `rows`: of everything (`all`), else of the cards and
+    /// outlines alone.
+    fn around(&self, placed: &[Box2], l: &Label, rows: (f64, f64), all: bool) -> Vec<Wall> {
+        let mut v = walls(&self.cards, &self.zones, rows);
+        if !all {
+            return v;
+        }
+        let (top, bottom) = (rows.0 - 2.0, rows.1 + 2.0);
+        let level = |t: &&Box2| t.y < bottom && top < t.bottom();
+        v.extend(
+            self.titles
+                .iter()
+                .chain(placed)
+                .filter(level)
+                .map(|t| (t.x - PAD, t.right() + PAD, t.x)),
+        );
+        for (_, other) in self.routes.iter().filter(|(id, _)| self.foreign(l, id)) {
+            for s in other.windows(2) {
+                let (y0, y1) = (s[0].1.min(s[1].1), s[0].1.max(s[1].1));
+                if y1 > top && y0 < bottom {
+                    let (x0, x1) = (s[0].0.min(s[1].0), s[0].0.max(s[1].0));
+                    v.push((x0 - PAD, x1 + PAD, x0));
+                }
+            }
+        }
+        v
+    }
+
+    /// The cost of label `l` centred at `c`.
+    fn cost(&self, placed: &[Box2], l: &Label, c: (f64, f64)) -> f64 {
+        let (w, h) = (l.w, l.h);
+        let rb = Box2 {
+            x: c.0 - w / 2.0 - 2.0,
+            y: c.1 - h / 2.0 - 2.0,
+            w: w + 4.0,
+            h: h + 4.0,
+        };
+        let count = |v: &[Box2]| v.iter().filter(|b| hits(b, &rb)).count() as f64;
+        let mut k = 1000.0 * count(&self.cards);
+        k += 300.0
+            * self
+                .junctions
+                .iter()
+                .filter(|p| {
+                    p.0 > rb.x - 6.0
+                        && p.0 < rb.right() + 6.0
+                        && p.1 > rb.y - 6.0
+                        && p.1 < rb.bottom() + 6.0
+                })
+                .count() as f64;
+        k += 500.0 * count(&self.titles);
+        // over another label: the text of both is lost, as over a card
+        k += 1000.0 * count(placed);
+        k += TITLE_ROW * count(&self.title_rows);
+        // straddling the outline of a zone
+        let inside = |z: &Box2| {
+            rb.x >= z.x && rb.right() <= z.right() && rb.y >= z.y && rb.bottom() <= z.bottom()
+        };
+        k += ASTRIDE
+            * self
+                .zones
+                .iter()
+                .filter(|z| hits(z, &rb) && !inside(z))
+                .count() as f64;
+        let crossed = self
+            .routes
+            .iter()
+            .filter(|(id, _)| self.foreign(l, id))
+            .filter(|(_, other)| other.windows(2).any(|s| seg_hits(&rb, s[0], s[1])))
+            .count();
+        k += FOREIGN_LINE * crossed as f64;
+        k += squeezed(l.route, c, w);
+        // the label of a join names the flow they share: on that part (D-054)
+        if !l.mates.is_empty() && !l.mates.iter().all(|m| on_route(m, c)) {
+            k += 100.0;
+        }
+        k + 0.001 * ((c.0 - l.default.0).abs() + (c.1 - l.default.1).abs())
+    }
+}
+
 /// Centre of each label (file coordinates).
 pub fn place(
     model: &Model,
@@ -87,23 +202,27 @@ pub fn place(
     boxes: &BTreeMap<String, Box2>,
     routes: &BTreeMap<String, Points>,
     sizes: &Sizes,
+    groups: &BTreeMap<String, String>,
 ) -> BTreeMap<String, (f64, f64)> {
-    let cards: Vec<Box2> = model
-        .nodes
-        .iter()
-        .filter(|n| n.kind == skemo_lang::Kind::Card)
-        .filter_map(|n| boxes.get(&n.id).copied())
-        .collect();
+    let of_kind = |kind: skemo_lang::Kind| -> Vec<Box2> {
+        model
+            .nodes
+            .iter()
+            .filter(|n| {
+                n.kind == kind && !(kind == skemo_lang::Kind::Zone && crate::layout::invisible(n))
+            })
+            .filter_map(|n| boxes.get(&n.id).copied())
+            .collect()
+    };
     let named = zone_titles(model, scene, boxes);
-    let title_rows = title_rows(&named, boxes);
-    let titles: Vec<Box2> = named.into_iter().map(|(_, b)| b).collect();
-    // an invisible group (a stack, an untitled bare zone) has no outline to keep clear of
-    let zones: Vec<Box2> = model
-        .nodes
-        .iter()
-        .filter(|n| n.kind == skemo_lang::Kind::Zone && !crate::layout::invisible(n))
-        .filter_map(|n| boxes.get(&n.id).copied())
-        .collect();
+    let stage = Stage {
+        cards: of_kind(skemo_lang::Kind::Card),
+        zones: of_kind(skemo_lang::Kind::Zone),
+        title_rows: title_rows(&named, boxes),
+        titles: named.into_iter().map(|(_, b)| b).collect(),
+        junctions: crate::route::junctions(routes, groups),
+        routes,
+    };
     let mut placed: Vec<Box2> = Vec::new();
     let mut out = BTreeMap::new();
     for e in model.edges.iter().filter(|e| !e.label.is_empty()) {
@@ -116,66 +235,50 @@ pub fn place(
             continue;
         };
         let (w, h) = (sz.w, sz.h);
-        if said_by_mate(model, e) {
+        if said_by_mate(model, groups, e) {
             continue;
         }
-        if let Some(spot) = joined_spot(model, routes, e, w) {
+        let joined = mates_of(model, groups, e);
+        if let Some(spot) = joined_spot(routes, e, &joined, w) {
             default = spot;
         }
-        let joined: Vec<&str> = model
-            .edges
-            .iter()
-            .filter(|f| crate::route::fan_in(e) && f.to == e.to && f.join == e.join)
-            .map(|f| f.id.as_str())
-            .collect();
         let mates: Vec<&Points> = joined
             .iter()
             .filter(|id| **id != e.id)
             .filter_map(|id| routes.get(*id))
             .collect();
-        let (cands, extra) = candidates(r, default, w, h);
-        let cost = |c: (f64, f64)| -> f64 {
-            let rb = Box2 {
-                x: c.0 - w / 2.0 - 2.0,
-                y: c.1 - h / 2.0 - 2.0,
-                w: w + 4.0,
-                h: h + 4.0,
-            };
-            let mut k = 0.0;
-            k += 1000.0 * cards.iter().filter(|b| hits(b, &rb)).count() as f64;
-            k += 500.0 * titles.iter().filter(|b| hits(b, &rb)).count() as f64;
-            k += 300.0 * placed.iter().filter(|b| hits(b, &rb)).count() as f64;
-            k += TITLE_ROW * title_rows.iter().filter(|b| hits(b, &rb)).count() as f64;
-            // straddling the outline of a zone
-            let inside = |z: &Box2| {
-                rb.x >= z.x && rb.right() <= z.right() && rb.y >= z.y && rb.bottom() <= z.bottom()
-            };
-            k += 100.0 * zones.iter().filter(|z| hits(z, &rb) && !inside(z)).count() as f64;
-            for (id, other) in routes {
-                // the arrows of its join run under the label they share (D-054)
-                if *id == e.id || joined.contains(&id.as_str()) {
-                    continue;
-                }
-                k += 50.0
-                    * other
-                        .windows(2)
-                        .filter(|s| seg_hits(&rb, s[0], s[1]))
-                        .count() as f64;
-            }
-            k += squeezed(r, c, w);
-            // the label of a join names the flow they share: on that part (D-054)
-            if !mates.is_empty() && !mates.iter().all(|m| on_route(m, c)) {
-                k += 100.0;
-            }
-            k + 0.001 * ((c.0 - default.0).abs() + (c.1 - default.1).abs())
+        let l = Label {
+            id: &e.id,
+            joined,
+            route: r,
+            mates,
+            default,
+            w,
+            h,
         };
+        let (cands, mut extra) = candidates(r, default, w, h);
+        // the places clear of what stands round the line, found exactly
+        extra.extend(clear_spots(r, (w, h), &|rows, all| {
+            stage.around(&placed, &l, rows, all)
+        }));
         // the extra places win only where they avoid something
         let best = cands
             .into_iter()
-            .map(|c| (c, cost(c)))
-            .chain(extra.into_iter().map(|c| (c, cost(c) + 1.0)))
-            .min_by(|a, b| a.1.total_cmp(&b.1))
-            .map_or(default, |(c, _)| c);
+            .map(|c| (c, stage.cost(&placed, &l, c)))
+            .chain(
+                extra
+                    .into_iter()
+                    .map(|c| (c, stage.cost(&placed, &l, c) + 1.0)),
+            )
+            .min_by(|a, b| a.1.total_cmp(&b.1));
+        if crate::trace::wanted(&e.id) {
+            eprintln!(
+                "trace label {}: {w:.0}x{h:.0} at {best:?} (the middle of its longest segment: {default:?}, cost {:.1})",
+                e.id,
+                stage.cost(&placed, &l, default)
+            );
+        }
+        let best = best.map_or(default, |(c, _)| c);
         placed.push(Box2 {
             x: best.0 - w / 2.0,
             y: best.1 - h / 2.0,
@@ -189,15 +292,32 @@ pub fn place(
 
 /// Is the label of `e` already said by an arrow of its join written before it, with the same
 /// text and the same steps? The flow they share is named once, on the part they share (D-054).
-fn said_by_mate(model: &Model, e: &skemo_lang::Edge) -> bool {
-    crate::route::fan_in(e)
-        && model.edges.iter().take_while(|f| f.id != e.id).any(|f| {
-            f.to == e.to
-                && f.join == e.join
-                && f.label == e.label
-                && f.step == e.step
-                && f.anim == e.anim
-        })
+fn said_by_mate(model: &Model, groups: &BTreeMap<String, String>, e: &skemo_lang::Edge) -> bool {
+    let Some(g) = groups.get(&e.id) else {
+        return false;
+    };
+    model.edges.iter().take_while(|f| f.id != e.id).any(|f| {
+        groups.get(&f.id) == Some(g) && f.label == e.label && f.step == e.step && f.anim == e.anim
+    })
+}
+
+/// The arrows of `e`'s group (a join, a fork, D-054, D-093), `e` included; empty when it is in
+/// none. A label they share is written once, on the part they share.
+fn mates_of<'m>(
+    model: &'m Model,
+    groups: &BTreeMap<String, String>,
+    e: &skemo_lang::Edge,
+) -> Vec<&'m str> {
+    let Some(g) = groups.get(&e.id) else {
+        return Vec::new();
+    };
+    model
+        .edges
+        .iter()
+        // an arrow without a label runs under the one its group shows
+        .filter(|f| groups.get(&f.id) == Some(g) && (f.label == e.label || f.label.is_empty()))
+        .map(|f| f.id.as_str())
+        .collect()
 }
 
 /// The label of arrows joined into one card (a named join, D-051) names their common flow
@@ -205,20 +325,16 @@ fn said_by_mate(model: &Model, e: &skemo_lang::Edge) -> bool {
 /// up to the card, long enough for it (8 px of line on each side), else of its longest shared
 /// segment. `None` for other arrows, or when they share nothing.
 fn joined_spot(
-    model: &Model,
     routes: &BTreeMap<String, Points>,
     e: &skemo_lang::Edge,
+    joined: &[&str],
     w: f64,
 ) -> Option<(f64, f64)> {
-    if !crate::route::fan_in(e) {
-        return None;
-    }
     let r = routes.get(&e.id)?;
-    let mates: Vec<&Points> = model
-        .edges
+    let mates: Vec<&Points> = joined
         .iter()
-        .filter(|f| f.id != e.id && f.to == e.to && f.join == e.join)
-        .filter_map(|f| routes.get(&f.id))
+        .filter(|id| **id != e.id)
+        .filter_map(|id| routes.get(*id))
         .collect();
     // the shared part: the segments that lie on every other arrow of the join
     let on_all = |p: (f64, f64)| !mates.is_empty() && mates.iter().all(|m| on_route(m, p));
@@ -249,8 +365,266 @@ fn on_route(r: &Points, p: (f64, f64)) -> bool {
 }
 
 /// Cost of a label on a zone's title row, clear of the title: tolerated, but read as a second
-/// title, so any place that crosses no arrow is preferred (an arrow crossed costs 50).
+/// title, so any place that crosses no arrow is preferred (`FOREIGN_LINE`).
 const TITLE_ROW: f64 = 40.0;
+
+/// Cost of each other arrow under a label (once, whatever its segments there): the label hides
+/// it, or reads as that arrow's (bug 24). Something hidden (the layout method's first rank), so
+/// above what is only untidy: a label squeezed on a short segment (200), off a join's shared
+/// part (100); under a label over a card or another label (1000), whose text is lost, where the
+/// label drawn over a line stays readable. It was 50, under the outline's cost: a label slid
+/// onto a parallel line rather than over a frame.
+const FOREIGN_LINE: f64 = 250.0;
+
+/// Cost of each zone whose outline a label sits astride: the label cuts the outline (the layout
+/// method's first rank too), so above a label squeezed on its segment (200), and under another
+/// arrow's line (`FOREIGN_LINE`), which the label would seem to name. It was 100, under the
+/// squeezed label's 200: between two cards with an outline in between, the label sat on the
+/// outline rather than in the room made for it beside.
+const ASTRIDE: f64 = 225.0;
+
+/// Least room kept between an arrow label and a zone's outline it does not cross (px).
+pub(crate) const LABEL_ROOM: f64 = 6.0;
+
+/// Room kept between a label and a card, a title, another label or another arrow's line (px):
+/// what `place` counts as touching (2 px), and a hair for the rounding.
+pub(crate) const PAD: f64 = 2.01;
+
+/// The grid engine's lanes (`grid::lanes`): a line that would run through a label stands beside
+/// it, `LANE_EDGE` from what bounds the gap (a card: the router's margin, a zone's border: clear
+/// of it), the next ones every `LANE`.
+pub(crate) const LANE_EDGE: f64 = 12.0;
+pub(crate) const LANE: f64 = 10.0;
+
+/// A stretch along x a label must stay out of: where it starts, where it ends, and where what
+/// stands there starts (its margin left out).
+pub(crate) type Wall = (f64, f64, f64);
+
+/// The stretches along x that a label on the rows `rows` (its top and its bottom) must stay out
+/// of, for the cards (`PAD` away) and the zone outlines (`LABEL_ROOM` away): each side of a zone
+/// the label is level with, and the zone's whole width where the label would sit astride its top
+/// or its bottom.
+pub(crate) fn walls(cards: &[Box2], zones: &[Box2], rows: (f64, f64)) -> Vec<Wall> {
+    let (top, bottom) = (rows.0 - 2.0, rows.1 + 2.0);
+    let mut out = Vec::new();
+    for b in cards.iter().filter(|b| b.y < bottom && top < b.bottom()) {
+        out.push((b.x - PAD, b.right() + PAD, b.x));
+    }
+    for z in zones.iter().filter(|z| z.y < bottom && top < z.bottom()) {
+        if top >= z.y && bottom <= z.bottom() {
+            out.push((z.x - LABEL_ROOM, z.x + LABEL_ROOM, z.x));
+            out.push((z.right() - LABEL_ROOM, z.right() + LABEL_ROOM, z.right()));
+        } else {
+            out.push((z.x - LABEL_ROOM, z.right() + LABEL_ROOM, z.x));
+        }
+    }
+    out
+}
+
+/// The free stretches of `range` between the walls: where each starts, where it ends, and where
+/// what ends it starts (the end of the range for the last one).
+pub(crate) fn free_spans(range: (f64, f64), mut walls: Vec<Wall>) -> Vec<Wall> {
+    walls.sort_by(|a, b| a.0.total_cmp(&b.0));
+    let mut out = Vec::new();
+    let mut from = range.0;
+    for (lo, hi, at) in walls {
+        if lo >= range.1 {
+            break;
+        }
+        if lo > from {
+            out.push((from, lo, at));
+        }
+        from = from.max(hi);
+    }
+    if from < range.1 {
+        out.push((from, range.1, range.1));
+    }
+    out
+}
+
+/// The rows of a label `h` high centred on `cy`.
+fn rows(cy: f64, h: f64) -> (f64, f64) {
+    (cy - h / 2.0, cy + h / 2.0)
+}
+
+/// Where a label `h` high may stand along an upright segment from `y0` down to `y1`: every
+/// `STEP / 2`, 8 px of line kept at each end; the middle of a segment too short for that.
+fn heights(y0: f64, y1: f64, h: f64) -> Vec<f64> {
+    let (len, need) = (y1 - y0, h + 16.0);
+    if len < need {
+        return vec![(y0 + y1) / 2.0];
+    }
+    let mut out = Vec::new();
+    let mut d = need / 2.0;
+    while d <= len - need / 2.0 {
+        out.push(y0 + d);
+        d += STEP / 2.0;
+    }
+    out
+}
+
+/// The label's line `y` above a level segment at `line`: the text sits over the arrow (D-049).
+fn above(line: f64, h: f64) -> f64 {
+    line - h / 2.0 - 3.0
+}
+
+/// The centre nearest `x` of a label `w` wide within `(a, b)` (at least `w` wide: `b - a` and
+/// `a + w` may round apart, so the bounds are kept in order).
+fn centre_in(x: f64, (a, b): (f64, f64), w: f64) -> f64 {
+    let lo = a + w / 2.0;
+    x.clamp(lo, (b - w / 2.0).max(lo))
+}
+
+/// The places of a label `w` by `h` on the route `r` that are clear of the walls `around` gives
+/// for its rows (of everything, then of the cards and outlines alone), found exactly where the
+/// places every `STEP` px miss a gap just wide enough: on each level segment, in each free
+/// stretch between two walls, as near its middle as the stretch lets (`CLEAR` of line kept at
+/// each end, else the label's room), and above it; on each upright segment, at each height, slid
+/// sideways into the free stretch while it stays over its line.
+fn clear_spots(
+    r: &Points,
+    (w, h): (f64, f64),
+    around: &dyn Fn((f64, f64), bool) -> Vec<Wall>,
+) -> Spots {
+    let mut out = Vec::new();
+    for s in r.windows(2) {
+        let (p, q) = (s[0], s[1]);
+        let (flat, upright) = ((p.1 - q.1).abs() < 1e-9, (p.0 - q.0).abs() < 1e-9);
+        if flat && !upright {
+            let (x0, x1) = (p.0.min(q.0), p.0.max(q.0));
+            let mid = (x0 + x1) / 2.0;
+            for (cy, ends) in [(p.1, CLEAR), (p.1, LABEL_ROOM), (above(p.1, h), 0.0)] {
+                for all in [true, false] {
+                    for (a, b, _) in free_spans((x0 + ends, x1 - ends), around(rows(cy, h), all)) {
+                        if b - a >= w {
+                            out.push((centre_in(mid, (a, b), w), cy));
+                        }
+                    }
+                }
+            }
+        } else if upright && !flat {
+            let reach = (p.0 - w + 4.0, p.0 + w - 4.0);
+            for cy in heights(p.1.min(q.1), p.1.max(q.1), h) {
+                for all in [true, false] {
+                    for (a, b, _) in free_spans(reach, around(rows(cy, h), all)) {
+                        if b - a >= w {
+                            out.push((centre_in(p.0, (a, b), w), cy));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    out
+}
+
+/// A place where the label of an arrow may stand on its line, as `clear_spots` finds them.
+pub(crate) struct Slot {
+    /// The label's top and its bottom.
+    pub rows: (f64, f64),
+    /// The gap between two walls (cards, zone outlines) the place lies in, at those rows.
+    pub gap: (f64, f64),
+    /// How far the label may slide in it: its left edge at the least, its right edge at the most.
+    pub slide: (f64, f64),
+    /// Where the stretch starts, and where what ends it starts.
+    pub ends: (f64, f64),
+}
+
+impl Slot {
+    /// The room a label `w` wide lacks there (px; none or less: it fits).
+    pub fn lack(&self, w: f64) -> f64 {
+        w - (self.slide.1 - self.slide.0)
+    }
+}
+
+const FAR: (f64, f64) = (f64::NEG_INFINITY, f64::INFINITY);
+
+/// The places where the label (`w` by `h`) of the route `r` may stand clear of the cards and of
+/// the zone outlines, on its line or above a level segment of it, wide enough or not. The places
+/// are those of `clear_spots`: one wide enough here is a place found there.
+pub(crate) fn slots(r: &Points, (w, h): (f64, f64), cards: &[Box2], zones: &[Box2]) -> Vec<Slot> {
+    let mut out = Vec::new();
+    for s in r.windows(2) {
+        let (p, q) = (s[0], s[1]);
+        let (flat, upright) = ((p.1 - q.1).abs() < 1e-9, (p.0 - q.0).abs() < 1e-9);
+        if flat && !upright {
+            let (x0, x1) = (p.0.min(q.0), p.0.max(q.0));
+            for (cy, ends) in [(p.1, CLEAR), (above(p.1, h), 0.0)] {
+                let range = (x0 + ends, x1 - ends);
+                let rows = rows(cy, h);
+                let gaps = free_spans(FAR, walls(cards, zones, rows));
+                for (a, b, at) in free_spans(range, walls(cards, zones, rows)) {
+                    let gap = gaps.iter().find(|g| g.0 <= a && b <= g.1);
+                    out.push(Slot {
+                        rows,
+                        gap: gap.map_or((a, b), |g| (g.0, g.1)),
+                        slide: (a, b),
+                        // the segment's own end stands where the stretch stops short of it
+                        ends: (a, if at == range.1 { x1 } else { at }),
+                    });
+                }
+            }
+        } else if upright && !flat {
+            for cy in heights(p.1.min(q.1), p.1.max(q.1), h) {
+                // the corridor the line runs in at that height
+                let rows = rows(cy, h);
+                let free = free_spans(FAR, walls(cards, zones, rows));
+                if let Some((a, b, at)) = free.into_iter().find(|(a, b, _)| *a < p.0 && p.0 < *b) {
+                    out.push(Slot {
+                        rows,
+                        gap: (a, b),
+                        slide: (a.max(p.0 - w + 4.0), b.min(p.0 + w - 4.0)),
+                        ends: (a, at),
+                    });
+                }
+            }
+        }
+    }
+    out
+}
+
+/// The place where the label `label` of the route `r` stands: the gap that holds it, and how
+/// far it may slide there along the segment it stands on. `None` when it stands in no gap (on a
+/// card, astride an outline) or on no segment of its line.
+pub(crate) fn slot_at(r: &Points, label: &Box2, cards: &[Box2], zones: &[Box2]) -> Option<Slot> {
+    let rows = (label.y, label.bottom());
+    let (cx, cy) = (label.x + label.w / 2.0, label.y + label.h / 2.0);
+    let (lo, hi, _) = free_spans(FAR, walls(cards, zones, rows))
+        .into_iter()
+        .find(|(a, b, _)| *a <= label.x + 0.5 && label.right() <= *b + 0.5)?;
+    for s in r.windows(2) {
+        let (p, q) = (s[0], s[1]);
+        let (flat, upright) = ((p.1 - q.1).abs() < 1e-9, (p.0 - q.0).abs() < 1e-9);
+        let slide = if flat && !upright {
+            let (x0, x1) = (p.0.min(q.0), p.0.max(q.0));
+            let on = (cy - p.1).abs() < 0.5;
+            if !(on || (cy - above(p.1, label.h)).abs() < 0.5)
+                || label.x < x0 - 0.5
+                || label.right() > x1 + 0.5
+            {
+                continue;
+            }
+            // as `slots`, and the label where it stands (a place nearer the segment's end)
+            let ends = if on { CLEAR } else { 0.0 };
+            ((x0 + ends).min(label.x), (x1 - ends).max(label.right()))
+        } else if upright && !flat {
+            let (y0, y1) = (p.1.min(q.1), p.1.max(q.1));
+            if cy < y0 || cy > y1 || (cx - p.0).abs() > label.w / 2.0 {
+                continue;
+            }
+            (p.0 - label.w + 4.0, p.0 + label.w - 4.0)
+        } else {
+            continue;
+        };
+        return Some(Slot {
+            rows,
+            gap: (lo, hi),
+            slide: (slide.0.max(lo), slide.1.min(hi)),
+            ends: (lo, hi),
+        });
+    }
+    None
+}
 
 /// Free line wanted on each side of a label set on a horizontal segment (px).
 const CLEAR: f64 = 20.0;
@@ -303,6 +677,18 @@ fn candidates(r: &Points, default: (f64, f64), w: f64, h: f64) -> (Spots, Spots)
             // too short to carry it (two cards close together): beside it, a little further each
             // time, for a place clear of the cards
             let mid = ((p.0 + q.0) / 2.0, (p.1 + q.1) / 2.0);
+            // on the segment itself: a short step between two cards side by side, whose label
+            // then sits in the middle of the gap, over the step (D-093)
+            extra.push(mid);
+            if !flat {
+                // a wide label on a short upright step: slid sideways, still over its line, clear
+                // of a parallel line beside it (bug 24)
+                let mut dx = STEP;
+                while dx < w / 2.0 - 4.0 {
+                    extra.extend([(mid.0 - dx, mid.1), (mid.0 + dx, mid.1)]);
+                    dx += STEP;
+                }
+            }
             let mut d = if flat { h } else { w } / 2.0 + 3.0;
             while d <= REACH {
                 for sign in [-1.0, 1.0] {

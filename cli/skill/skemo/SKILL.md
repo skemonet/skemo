@@ -42,7 +42,7 @@ Warnings (unknown icon, unreachable mindmap card…) do not block; read them and
 
 ## 3. The language in one example
 
-A `.skemo` file is a subset of Pug: a few tags (`diagram`, `title`, `card`, `cards`, `zone`, `stack`, `to`)
+A `.skemo` file is a subset of Pug: a few tags (`diagram`, `title`, `card`, `cards`, `node`, `zone`, `stack`, `to`)
 and lines written `| text` under a card or a zone. The text of lines follows Markdown.
 
 ```pug
@@ -76,6 +76,7 @@ diagram(dir="right" lang="en")
 | Write | Meaning |
 |---|---|
 | `card#id.type Title` | a card; `#id` unique, `.type` = CSS class (several allowed), text = title |
+| `node#id.type(icon="database") Title` | a thing drawn by its icon, name and lines beside it, no frame; mixes with cards whatever their look; no `tag` nor `label` |
 | `cards#id.type(count="4") Title` | (pre-release) a card drawn as a pile, for several instances of one thing; `count` adds a `×4` badge |
 | `\| text` (under a card) | a content line; an IPv4/CIDR at its start is set in monospace; under a zone, a description line under its title |
 | `zone#id.type Title` | a group; cards and zones indented below are inside it |
@@ -94,8 +95,16 @@ caption below). Default theme types: `.t0` to `.t3`, `.cloud`, `.dmz`, `.lan`.
 
 ## 4. Rules that keep diagrams good and short
 
-- **No coordinates.** Do not write `at=`, `via=` or `side=` unless the user asks to pin or adjust
+- **No coordinates.** Do not write `at="x,y"`, `via=` or `side=` unless the user asks to pin or adjust
   something. The automatic layout is better than guessed numbers, and guessed numbers cause overlaps.
+- **Dock what stands outside the flow** with a compass point (not a coordinate): a legend
+  `card#key.legend(at="ne")` (or `se`), a footnote or a paragraph of explanation
+  `card.text.wide(at="s")`. Left in the drawing, a card with no arrow goes to the last row, after
+  everything written before it, and a long paragraph there widens the whole image.
+- **A link to another document is a title pill**, never a card: `|.pill [How HyperShift works](../how/hypershift.skemo)`
+  under `title`, written before the other pills (pills line up from the right in writing order, so links
+  come left of the level or version pills). A class of the pill that sets `--c` colours it, one that sets
+  `--icon` adds that icon (`|.pill.doc [Backups](backup.skemo)` with `.doc { --c: #2E8B57; --icon: book; }`).
 - **Direction**: `dir="right"` for pipelines and processes, `down` (default) for hierarchies and networks.
 - **Ids** are short, unique, lowercase (`api`, `db-main`): they are only used as arrow targets.
 - **One attribute group per tag**, before the classes or right after the id:
@@ -201,8 +210,8 @@ diagram(dir="right" lang="en")
 - **Docking**: `at="s"` (or `n`, `e`, `w`, `ne`, `nw`, `se`, `sw`) on a top-level card or zone puts it around the
   drawing without moving anything in it: panels below (`at="s"`, side by side), a legend at the top right
   (`at="ne"`), a footnote `card.text.wide(at="s")`. Arrows between a docked element and the rest are not drawn.
-- **Subtitle**: `|` lines under `title`; `|.pill` lines are pills beside it. A zone's `|` lines are a
-  description under its title.
+- **Subtitle**: `|` lines under `title`; `|.pill` lines are pills beside it (a class colours one or gives it
+  an icon; `|.pill [text](other.skemo)` makes it a link). A zone's `|` lines are a description under its title.
 
 ## 7. Steps (presentations)
 

@@ -41,8 +41,29 @@ pub fn parts_width(scene: &Scene, line_el: usize, parts: &[(String, usize)]) -> 
         .sum()
 }
 
-/// Breaks pieces into rows of at most `avail` px, at spaces, like the browser; a piece keeps its
-/// style across a break.
+/// A word cut where the browser may break it besides spaces: after a hyphen between a letter or
+/// digit and a letter (Unicode's line breaking, UAX #14: never before a digit, "eu-west-3a"
+/// keeps "west-3a"). Used only for a word too wide for a row of its own: a long
+/// `open-cluster-management-addon` identifier ran out of its card (bug 17 of the private
+/// corpus), while an identifier that fits a row stays whole.
+pub fn hyphen_pieces(word: &str) -> Vec<&str> {
+    let mut out = Vec::new();
+    let mut start = 0;
+    let chars: Vec<(usize, char)> = word.char_indices().collect();
+    for k in 1..chars.len().saturating_sub(1) {
+        let (i, c) = chars[k];
+        if c == '-' && chars[k - 1].1.is_alphanumeric() && chars[k + 1].1.is_alphabetic() {
+            out.push(&word[start..=i]);
+            start = i + 1;
+        }
+    }
+    out.push(&word[start..]);
+    out
+}
+
+/// Breaks pieces into rows of at most `avail` px, at spaces like the browser, and after the
+/// hyphens of a word too wide for a row (`hyphen_pieces`); a piece keeps its style across a
+/// break.
 pub fn break_parts(
     scene: &Scene,
     line_el: usize,
@@ -60,7 +81,14 @@ pub fn break_parts(
             if w.is_empty() {
                 continue;
             }
-            words.push((w.to_string(), *el, space && !words.is_empty()));
+            let pieces = if seg(scene, line_el, *el, w).width > avail + 1e-6 {
+                hyphen_pieces(w)
+            } else {
+                vec![w]
+            };
+            for (j, piece) in pieces.into_iter().enumerate() {
+                words.push((piece.to_string(), *el, j == 0 && space && !words.is_empty()));
+            }
             space = false;
         }
         if text.ends_with(' ') {

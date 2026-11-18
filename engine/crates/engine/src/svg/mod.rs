@@ -100,12 +100,26 @@ fn presence_attrs(p: Presence, cx: f64, cy: f64) -> String {
 }
 
 /// Stable prefix of the internal identifiers (`<defs>`), to avoid collisions between several
-/// diagrams of one page.
+/// diagrams of one page. Besides the model, the theme and the stylesheets change the content of
+/// the definitions (a shadow's colour): the same diagram in light and dark on one page must not
+/// share them. Default theme and stylesheets add nothing, so that those prefixes do not move.
 pub(crate) fn prefix(d: &Diagram) -> String {
     let mut h: u64 = 0xcbf29ce484222325;
-    for b in serde_json::to_string(&d.model).unwrap_or_default().bytes() {
-        h ^= u64::from(b);
-        h = h.wrapping_mul(0x100000001b3);
+    let mut mix = |s: &str| {
+        for b in s.bytes() {
+            h ^= u64::from(b);
+            h = h.wrapping_mul(0x100000001b3);
+        }
+    };
+    mix(&serde_json::to_string(&d.model).unwrap_or_default());
+    if d.theme != skemo_lang::style::Theme::Light {
+        mix(&d.theme.class());
+    }
+    for c in &d.css {
+        mix(c);
+    }
+    if d.base_css != skemo_lang::style::DEFAULT_THEME {
+        mix(&d.base_css);
     }
     format!("sk{:08x}", h as u32)
 }
@@ -126,6 +140,13 @@ pub fn render_with_fonts(d: &Diagram) -> String {
 pub fn render_with(d: &Diagram, fonts: bool, motion: bool) -> String {
     let clock = if motion { Clock::Css } else { Clock::Still };
     render_inner(d, false, None, fonts, clock)
+}
+
+/// The SVG of a page of `skemo site` (D-097): an animated diagram at its last step, as a still
+/// image shows it; the arrows in motion played by CSS keyframes; fonts not embedded (the page
+/// loads them).
+pub fn render_final(d: &Diagram) -> String {
+    render_inner(d, false, last_state(d).as_ref(), false, Clock::Css)
 }
 
 /// Variant for resvg (PNG, WebP): shadows without SVG filters. A still image of an animated
@@ -233,6 +254,14 @@ fn render_inner(
         edge(&mut ctx, e);
     }
     ctx.out.push_str("</g>");
+    // the labels over every line, as the HTML lays them (bug 24)
+    if d.model.edges.iter().any(|e| d.labels.contains_key(&e.id)) {
+        ctx.out.push_str("<g class=\"edge-labels\">");
+        for e in &d.model.edges {
+            edge_label(&mut ctx, e);
+        }
+        ctx.out.push_str("</g>");
+    }
     tl_over(&mut ctx);
     fr_over(&mut ctx);
     let keyframes = ctx.keyframes.css();

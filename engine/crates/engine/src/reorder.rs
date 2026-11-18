@@ -59,10 +59,10 @@ fn dump(b: &Block, out: &mut String) {
     }
 }
 
-/// A card or a zone: what the engine lays out in writing order.
+/// A card, a node or a zone: what the engine lays out in writing order.
 fn movable(b: &Block) -> bool {
     let t = b.line.trim_start();
-    ["cards", "card", "zone"].iter().any(|k| {
+    ["cards", "card", "node", "zone"].iter().any(|k| {
         t.strip_prefix(k)
             .is_some_and(|r| r.starts_with(['#', '.', '(', ' ']) || r.is_empty())
     })
@@ -376,7 +376,8 @@ mod tests {
 
     #[test]
     fn two_crossed_links_are_written_apart() {
-        let src = "diagram(dir=\"down\")\n  card#a A\n    to(y)\n  card#b B\n    to(x)\n  card#x X\n  card#y Y\n";
+        // ELK's drawing: the slide engine, the default, uncrosses them without a reorder
+        let src = "diagram(layout=\"graph\" dir=\"down\")\n  card#a A\n    to(y)\n  card#b B\n    to(x)\n  card#x X\n  card#y Y\n";
         let (out, before, after) = improve(src, &Options::default());
         assert!(before >= 100.0, "{before}");
         assert!(after < 100.0, "{after}\n{out}");

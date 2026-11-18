@@ -1,6 +1,8 @@
 //! The diagram's title, zone tags, stacks and wide cards (D-050).
 
-use skemo_engine::{Options, from_source, html, svg};
+use skemo_engine::{Options, html, svg};
+mod elk;
+use elk::from_source;
 
 fn build(src: &str) -> skemo_engine::Diagram {
     from_source(src, &Options::default()).unwrap().0
@@ -128,4 +130,60 @@ fn a_subtitle_line_keeps_its_classes() {
     assert!(!out.contains("fill=\"#C92A2A\" xml:space=\"preserve\">AWS"));
     let page = html::render(&d, &Default::default());
     assert!(page.contains("class=\"sub gone\""), "{page}");
+}
+
+/// A pill takes the colour and the icon of its class, and a pill written as a Markdown link is a
+/// link with its mark (the zoom glyph for another diagram), in SVG and in HTML.
+#[test]
+fn a_pill_takes_a_colour_an_icon_and_a_link() {
+    let src = "diagram\n  title Hosted control planes\n    |.pill.doc [How HyperShift works](../how/hypershift.skemo)\n    |.pill level 2\n  card#a A\n";
+    let opts = Options {
+        css: vec![".doc { --c: #2E8B57; --icon: book; }".to_string()],
+        ..Options::default()
+    };
+    let d = from_source(src, &opts).unwrap().0;
+    let plain = from_source(
+        &src.replace(
+            ".doc [How HyperShift works](../how/hypershift.skemo)",
+            " How HyperShift works",
+        ),
+        &Options::default(),
+    )
+    .unwrap()
+    .0;
+    // the icon and the mark widen the pill, so the title
+    assert!(d.title_box.unwrap().w > plain.title_box.unwrap().w + 20.0);
+    let out = svg::render(&d);
+    assert!(
+        out.contains("<a href=\"../how/hypershift.skemo\"><rect"),
+        "{out}"
+    );
+    assert!(
+        out.contains("<g class=\"icon\"") && out.contains("<g class=\"link-mark\""),
+        "{out}"
+    );
+    // tinted by its colour, the plain pill keeps the theme's
+    assert!(out.contains("stroke=\"#2E8B57\""), "{out}");
+    let page = html::render(&d, &Default::default());
+    assert!(
+        page.contains("<li class=\"pill doc\"><a class=\"href\" href=\"../how/hypershift.skemo\"")
+            && page.contains("<li class=\"pill\">level 2</li>"),
+        "{page}"
+    );
+}
+
+/// A zone whose `tag=` stands at the end of its title row (`.tag-right`) is wide enough for its
+/// title, a gap and the pill: the pill ran over the title (the private map's "Comment marche ACM",
+/// "OBSE" left of `open-cluster-management-observability`).
+#[test]
+fn a_right_tag_leaves_its_zone_title_whole() {
+    let src = "diagram\n  zone#obs.tag-right(tag=\"open-cluster-management-observability\") Observabilité\n    card#t Thanos\n";
+    let d = build(src);
+    let defects = skemo_engine::quality::defects(&d);
+    assert!(
+        defects["zone-title-overflow"].is_empty(),
+        "{:?} {:?}",
+        defects["zone-title-overflow"],
+        d.boxes["obs"]
+    );
 }

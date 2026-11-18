@@ -1,0 +1,12 @@
+diagram(dir="right" look="header")
+  node#user(icon="user") Customer
+    | web and mobile
+    to(api) HTTPS
+  card#api.service(tag="ECS") API
+    | 3 tasks
+    to(db cache)
+  node#db.db(icon="database") Orders
+    | PostgreSQL 16
+    | Multi-AZ, encrypted
+  node#cache.cache(icon="zap") Cache
+    | Redis 7

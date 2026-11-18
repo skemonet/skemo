@@ -24,7 +24,7 @@ embedded, and the output is **identical from one machine to the next**.
 
 ## Installation
 
-The project is a pre-release (`0.1.0-rc.8`). Release binaries (Linux x86_64 and ARM, macOS ARM, Windows, with
+The project is a pre-release (`0.1.0-rc.9`). Release binaries (Linux x86_64 and ARM, macOS ARM and Intel, Windows, with
 SHA-256 checksums) are on the repository's [releases page](https://github.com/skemonet/skemo/releases).
 
 **From source** (recent Rust, edition 2024, i.e. 1.85 or later; [rustup.rs](https://rustup.rs)):
@@ -44,7 +44,7 @@ Static Linux binary (musl): `sudo apt install musl-tools && rustup target add x8
 curl -fsSL https://skemo.net/install.sh | sh
 ```
 
-Installs the latest release into `~/.local/bin` after checking its SHA-256 (`SKEMO_VERSION`, `SKEMO_BIN`). Linux (x86_64, ARM) and macOS (ARM); on Windows, take `skemo-windows-x86_64.exe` from the releases page. A release is one binary per platform, its SHA-256 in the release's description; `skemo --licences` prints the licences of what it embeds (fonts, icons, Rust crates).
+Installs the latest release into `~/.local/bin` after checking its SHA-256 (`SKEMO_VERSION`, `SKEMO_BIN`). Linux (x86_64, ARM) and macOS (ARM, Intel); on Windows, take `skemo-windows-x86_64.exe` from the releases page. A release is one binary per platform, its SHA-256 in the release's description and in `SHA256SUMS` beside the binaries (install page: <https://skemo.net/install>); `skemo --licences` prints the licences of what it embeds (fonts, icons, Rust crates).
 
 ## Getting started
 
@@ -56,12 +56,13 @@ skemo demo.skemo --watch           # live preview in the browser, reloaded on ev
 
 ### The format in 30 seconds
 
-A `.skemo` file is **Pug** restricted to seven tags, with content lines written `| text`:
+A `.skemo` file is **Pug** restricted to eight tags, with content lines written `| text`:
 
 | Tag | Role |
 |---|---|
 | `card#id.type Title` | a card; its `\|` lines are content lines (Markdown emphasis; a line ending in `\|` is a table row) |
 | `cards#id.type Title` | a card drawn as a pile of several instances; `count="N"` adds a `×N` badge |
+| `node#id.type Title` | a thing drawn by its icon, its name and lines beside it, without a frame; mixes with cards whatever their look |
 | `zone#id.type Title` | a group containing cards or other zones (by indentation); its `\|` lines are description lines |
 | `stack` | an invisible group that lays its children one after the other |
 | `to(target).type Label` | an arrow, written inside its source card |

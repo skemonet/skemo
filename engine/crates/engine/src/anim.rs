@@ -5,7 +5,7 @@
 
 use serde::Serialize;
 use skemo_lang::tr;
-use skemo_lang::{Anim, Focus, Kind, Model, Step};
+use skemo_lang::{Anim, Focus, Highlight, Kind, Model, Step};
 use std::collections::BTreeMap;
 
 /// Effective step: value and text as written (copied into `data-step`).
@@ -38,6 +38,8 @@ pub struct Resolved {
     pub until: Option<At>,
     pub fx: String,
     pub focus: Vec<(At, Option<At>)>,
+    /// Highlights (`@3-4:halo`), in writing order: start, end, effect.
+    pub highlights: Vec<(At, Option<At>, String)>,
     /// Group that holds it (`None` = root); for a link, `None`.
     pub container: Option<String>,
     pub is_link: bool,
@@ -105,6 +107,19 @@ fn kind_word(model: &Model, id: &str) -> String {
 /// Appearance, end, effect and focus ranges after inheritance.
 type Inherited = (At, Option<At>, String, Vec<(At, Option<At>)>);
 
+/// An element's own highlights (never inherited: the effect belongs to the element).
+fn highlights(own: Option<&Anim>) -> Vec<(At, Option<At>, String)> {
+    own.map(|a| {
+        a.highlights
+            .iter()
+            .map(|Highlight { from, to, effect }| {
+                (At::of(from), to.as_ref().map(At::of), effect.clone())
+            })
+            .collect()
+    })
+    .unwrap_or_default()
+}
+
 /// Applies the inheritance rule to an element that has (or not) markers of its own.
 #[allow(clippy::too_many_arguments)]
 fn inherit(
@@ -127,7 +142,7 @@ fn inherit(
                     element: id.into(),
                     code: "step-before-parent",
                     message: tr!(
-                        "« {id} »: @{} is earlier than {parent_desc} (@{}); step kept: {}",
+                        "`{id}`: @{} is earlier than {parent_desc} (@{}); step kept: {}",
                         "« {id} » : @{} est plus tôt que {parent_desc} (@{}) ; étape retenue : {}",
                         s.raw,
                         inh_appear.raw,
@@ -143,7 +158,7 @@ fn inherit(
                 Some(iu) if u.value > iu.value => warnings.push(Warning {
                     element: id.into(),
                     code: "until-after-parent",
-                    message: tr!("« {id} »: end @{} is later than {parent_desc} (@{}); end kept: {}", "« {id} » : fin @{} plus tardive que {parent_desc} (@{}) ; fin retenue : {}", u.raw, iu.raw, iu.raw),
+                    message: tr!("`{id}`: end @{} is later than {parent_desc} (@{}); end kept: {}", "« {id} » : fin @{} plus tardive que {parent_desc} (@{}) ; fin retenue : {}", u.raw, iu.raw, iu.raw),
                 }),
                 _ => until = Some(At::of(u)),
             }
@@ -169,6 +184,7 @@ pub fn resolve(model: &Model) -> Animation {
     warn_focus_outside(&out, &mut warnings);
     let vals = step_values(&out);
     warn_never_visible(&out, &vals, &mut warnings);
+    warn_step_gaps(&out, &vals, &mut warnings);
     out.states = vals;
     warnings.sort_by(|a, b| a.element.cmp(&b.element).then(a.code.cmp(b.code)));
     warnings.dedup();
@@ -185,7 +201,7 @@ fn resolve_nodes(model: &Model, out: &mut Animation, warnings: &mut Vec<Warning>
         let desc = n
             .parent
             .as_ref()
-            .map(|p| format!("{} « {p} »", kind_word(model, p)))
+            .map(|p| tr!("{} `{p}`", "{} « {p} »", kind_word(model, p)))
             .unwrap_or_default();
         let (appear, until, fx, focus) =
             inherit(&n.id, n.anim.as_ref(), &pa, &pu, &desc, "fade", warnings);
@@ -196,6 +212,7 @@ fn resolve_nodes(model: &Model, out: &mut Animation, warnings: &mut Vec<Warning>
                 until: until.clone(),
                 fx,
                 focus,
+                highlights: highlights(n.anim.as_ref()),
                 container: n.parent.clone(),
                 is_link: false,
                 from: None,
@@ -204,7 +221,7 @@ fn resolve_nodes(model: &Model, out: &mut Animation, warnings: &mut Vec<Warning>
         );
         if let Some(ta) = &n.tag_anim {
             let key = format!("{}/tag", n.id);
-            let desc = tr!("its card « {} »", "sa carte « {} »", n.id);
+            let desc = tr!("its card `{}`", "sa carte « {} »", n.id);
             let (a, u, fx, focus) =
                 inherit(&key, Some(ta), &appear, &until, &desc, "fade", warnings);
             out.elements.insert(
@@ -214,6 +231,7 @@ fn resolve_nodes(model: &Model, out: &mut Animation, warnings: &mut Vec<Warning>
                     until: u,
                     fx,
                     focus,
+                    highlights: highlights(Some(ta)),
                     container: Some(n.id.clone()),
                     is_link: false,
                     from: None,
@@ -223,7 +241,7 @@ fn resolve_nodes(model: &Model, out: &mut Animation, warnings: &mut Vec<Warning>
         }
         for (k, li) in n.li.iter().enumerate() {
             let key = format!("{}/li[{k}]", n.id);
-            let desc = tr!("its card « {} »", "sa carte « {} »", n.id);
+            let desc = tr!("its card `{}`", "sa carte « {} »", n.id);
             let (a, u, fx, focus) = inherit(
                 &key,
                 li.anim.as_ref(),
@@ -240,6 +258,7 @@ fn resolve_nodes(model: &Model, out: &mut Animation, warnings: &mut Vec<Warning>
                     until: u,
                     fx,
                     focus,
+                    highlights: highlights(li.anim.as_ref()),
                     container: Some(n.id.clone()),
                     is_link: false,
                     from: None,
@@ -274,6 +293,7 @@ fn resolve_edges(model: &Model, out: &mut Animation, warnings: &mut Vec<Warning>
                 until,
                 fx,
                 focus,
+                highlights: highlights(e.anim.as_ref()),
                 container: None,
                 is_link: true,
                 from: Some(e.from.clone()),
@@ -283,9 +303,24 @@ fn resolve_edges(model: &Model, out: &mut Animation, warnings: &mut Vec<Warning>
     }
 }
 
-/// Warns about an emphasis outside the element's visible period.
+/// Warns about an emphasis (focus or highlight) outside the element's visible period.
 fn warn_focus_outside(out: &Animation, warnings: &mut Vec<Warning>) {
     for (id, r) in &out.elements {
+        for (a, b, fx) in &r.highlights {
+            let end = b.as_ref().map_or(a.value, |b| b.value);
+            let visible_end = r.until.as_ref().map_or(f64::INFINITY, |u| u.value);
+            if a.value < r.appear.value || end > visible_end {
+                warnings.push(Warning {
+                    element: id.clone(),
+                    code: "highlight-outside",
+                    message: tr!(
+                        "`{id}`: highlight @{}:{fx} is outside the visibility period",
+                        "« {id} » : mise en évidence @{}:{fx} hors de la période de visibilité",
+                        a.raw
+                    ),
+                });
+            }
+        }
         for (a, b) in &r.focus {
             let end = b.as_ref().map_or(a.value, |b| b.value);
             let visible_end = r.until.as_ref().map_or(f64::INFINITY, |u| u.value);
@@ -294,7 +329,7 @@ fn warn_focus_outside(out: &Animation, warnings: &mut Vec<Warning>) {
                     element: id.clone(),
                     code: "focus-outside",
                     message: tr!(
-                        "« {id} »: highlight @{} is outside the visibility period",
+                        "`{id}`: highlight @{} is outside the visibility period",
                         "« {id} » : mise en valeur @{} hors de la période de visibilité",
                         a.raw
                     ),
@@ -323,6 +358,12 @@ fn step_values(out: &Animation) -> Vec<At> {
                 push(b);
             }
         }
+        for (a, b, _) in &r.highlights {
+            push(a);
+            if let Some(b) = b {
+                push(b);
+            }
+        }
     }
     vals.sort_by(|a, b| a.value.total_cmp(&b.value));
     if out.elements.values().any(|r| r.appear.value == 0.0) {
@@ -343,13 +384,90 @@ fn warn_never_visible(out: &Animation, vals: &[At], warnings: &mut Vec<Warning>)
                 element: id.clone(),
                 code: "no-step-after",
                 message: tr!(
-                    "« {id} »: @…-{}: no step after {}",
+                    "`{id}`: @…-{}: no step after {}",
                     "« {id} » : @…-{} : aucune étape après {}",
                     u.raw,
                     u.raw
                 ),
             });
         }
+    }
+}
+
+/// The marker of `r` that writes step `v` (`@9:halo`), if any.
+fn marker_at(r: &Resolved, v: f64) -> Option<String> {
+    if let Some((a, _, fx)) = r
+        .highlights
+        .iter()
+        .find(|(a, b, _)| a.value == v || b.as_ref().is_some_and(|b| b.value == v))
+    {
+        return Some(format!("@{}:{fx}", a.raw));
+    }
+    if r.appear.value == v {
+        return Some(format!("@{}", r.appear.raw));
+    }
+    if let Some((a, _)) = r
+        .focus
+        .iter()
+        .find(|(a, b)| a.value == v || b.as_ref().is_some_and(|b| b.value == v))
+    {
+        return Some(format!("@{}:focus", a.raw));
+    }
+    let u = r.until.as_ref().filter(|u| u.value == v)?;
+    Some(format!("@…-{}", u.raw))
+}
+
+/// Warns about clicks that change nothing (glitu SK-4.5): every whole click `k` from 1 to the last
+/// step needs a step `s` with `k ≤ s < k + 1`, so `@2.5` stays free to slot between 2 and 3. The
+/// warning goes to the element whose marker writes the first step after the gap.
+fn warn_step_gaps(out: &Animation, vals: &[At], warnings: &mut Vec<Warning>) {
+    let Some(last) = vals.last() else {
+        return;
+    };
+    let mut k = 1.0;
+    while k <= last.value.floor() {
+        if vals.iter().any(|s| s.value >= k && s.value < k + 1.0) {
+            k += 1.0;
+            continue;
+        }
+        let Some(next) = vals.iter().find(|s| s.value >= k) else {
+            return;
+        };
+        let to = next.value.ceil() - 1.0;
+        let clicks = if to > k {
+            tr!(
+                "clicks {k} to {to} change",
+                "les clics {k} à {to} ne changent"
+            )
+        } else {
+            tr!("click {k} changes", "le clic {k} ne change")
+        };
+        let found = out
+            .elements
+            .iter()
+            .find_map(|(id, r)| marker_at(r, next.value).map(|m| (id, m)));
+        if let Some((id, m)) = found {
+            let prev = vals.iter().rev().find(|s| s.value < k);
+            let message = match prev {
+                Some(p) => tr!(
+                    "{clicks} nothing: the next step after {} is {} (`{m}`)",
+                    "{clicks} rien : l'étape qui suit {} est {} (« {m} »)",
+                    p.raw,
+                    next.raw
+                ),
+                None => tr!(
+                    "{clicks} nothing: the first step is {} (`{m}`)",
+                    "{clicks} rien : la première étape est {} (« {m} »)",
+                    next.raw
+                ),
+            };
+            warnings.push(Warning {
+                element: id.clone(),
+                code: "step-gap",
+                message,
+            });
+        }
+        k = to + 1.0;
     }
 }
 
@@ -405,11 +523,28 @@ impl Animation {
                 .collect();
             a.push(("data-focus", f.join(" ")));
         }
+        if let Some(h) = self.highlight(id) {
+            a.push(("data-highlight", h));
+        }
         if r.is_link && !a.is_empty() {
             a.push(("data-from", r.from.clone().unwrap_or_default()));
             a.push(("data-to", r.to.clone().unwrap_or_default()));
         }
         a
+    }
+
+    /// `data-highlight` of an element: `halo:3-4 magnify:6`, in writing order (FORMAT §4.4).
+    pub fn highlight(&self, id: &str) -> Option<String> {
+        let r = self.elements.get(id)?;
+        let h: Vec<String> = r
+            .highlights
+            .iter()
+            .map(|(a, b, fx)| match b {
+                Some(b) => format!("{fx}:{}-{}", a.raw, b.raw),
+                None => format!("{fx}:{}", a.raw),
+            })
+            .collect();
+        (!h.is_empty()).then(|| h.join(" "))
     }
 
     /// Is the diagram animated?

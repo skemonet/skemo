@@ -18,7 +18,7 @@ erreur[bad-marker] : « @4-2 » : la fin de la plage précède son début
   │
 3 │ card#c C @4-2
   │          ^^^^
-erreur[bad-marker] : « @2:wiggle » : effet « wiggle » inconnu (fade, up, zoom, draw, focus)
+erreur[bad-marker] : « @2:wiggle » : effet « wiggle » inconnu (fade, up, zoom, draw, focus, halo, chase, magnify)
   ┌─ marqueurs.skemo:4:10
   │
 4 │ card#d D @2:wiggle

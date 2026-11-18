@@ -1,7 +1,7 @@
 //! # skemo-lang — langage de diagramme skemo
 //!
-//! A diagram is a Pug file limited to 7 tags (`diagram`, `title`, `card`, `cards`, `zone`, `stack`,
-//! `to`) and lines `|` whose text follows Markdown (emphasis, tables). The contract of the format
+//! A diagram is a Pug file limited to 8 tags (`diagram`, `title`, `card`, `cards`, `node`, `zone`,
+//! `stack`, `to`) and lines `|` whose text follows Markdown (emphasis, tables). The contract of the format
 //! is `FORMAT.md`.
 //!
 //! ```
@@ -27,7 +27,9 @@ pub mod syntax;
 pub mod table;
 
 pub use diag::{Diagnostic, Severity, Span};
-pub use model::{Align, Anim, Cell, Deck, Edge, Focus, Join, Kind, Li, Model, Node, Step, Title};
+pub use model::{
+    Align, Anim, Cell, Deck, Edge, Focus, Highlight, Join, Kind, Li, Model, Node, Step, Title,
+};
 pub use parse::{Document, Located, SourceMap, parse};
 
 /// The README's examples are compiled and run with the tests (`cargo test --doc`).

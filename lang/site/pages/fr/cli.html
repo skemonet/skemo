@@ -21,8 +21,12 @@ description: Toutes les commandes et options de skemo : rendu en PNG, SVG, WebP,
   <tr><td><code>skemo layout f.skemo --json</code></td><td>modèle, positions et tracés en JSON</td></tr>
   <tr><td><code>skemo lint f.skemo --fit [16:9] [--fix]</code></td><td>réglages (<code>dir</code>, <code>wrap</code>) qui
     amènent le diagramme à des proportions cibles ; <code>--fix</code> applique le meilleur (<em>préversion</em>)</td></tr>
+  <tr><td><code>skemo site dossier -o sortie</code></td><td>un site web à partir d’un dossier de schémas : une carte liée à un autre
+    <code>.skemo</code> (<code>href="shop/api.skemo"</code>) ouvre sa page au clic ; fil d’Ariane, liste des schémas, déplacement
+    et zoom (<em>préversion</em>, voir plus bas)</td></tr>
   <tr><td><code>skemo extract image.png [-o dossier]</code></td><td>rend la source et les feuilles de style intégrées dans une image
-    produite par skemo, pour les modifier (<code>--stdout</code> : la source seule)</td></tr>
+    produite par skemo, pour les modifier (<code>--stdout</code> : la source seule) ; deux feuilles de même nom reviennent en
+    <code>skemo.css</code> et <code>skemo-2.css</code></td></tr>
   <tr><td><code>skemo icons [requête]</code></td><td>les icônes intégrées, filtrées par nom ou mot-clé ; <code>--json</code> pour les éditeurs et la complétion (absente de <code>--help</code>)</td></tr>
 </table>
 
@@ -34,7 +38,8 @@ description: Toutes les commandes et options de skemo : rendu en PNG, SVG, WebP,
     <code>webp</code>, quand l’extension ne suffit pas</td></tr>
   <tr><td><code>--css FICHIER</code></td><td>feuille de style personnelle, après le thème (répétable)</td></tr>
   <tr><td><code>--base-theme FICHIER</code></td><td>un thème qui remplace celui par défaut</td></tr>
-  <tr><td><code>--theme T</code></td><td><code>light</code> <code>dark</code> <code>print</code> <code>auto</code>, en passant outre le fichier</td></tr>
+  <tr><td><code>--theme T</code></td><td><code>light</code> <code>dark</code> <code>print</code> <code>auto</code>, en passant outre le fichier (<code>auto</code> suit le
+    lecteur en HTML seulement ; les autres formats sont dessinés en clair, avec un avertissement)</td></tr>
   <tr><td><code>--scale N</code></td><td>résolution des sorties matricielles (<code>--scale 2</code> pour les écrans denses)</td></tr>
   <tr><td><code>--transparent</code></td><td>pas de fond (SVG, PNG, APNG)</td></tr>
   <tr><td><code>--contrast high</code></td><td>les textes sous le seuil WCAG sont foncés ou éclaircis, placement inchangé</td></tr>
@@ -48,8 +53,26 @@ description: Toutes les commandes et options de skemo : rendu en PNG, SVG, WebP,
   <tr><td><code>--font-scale K</code></td><td>multiplie toutes les tailles de texte du thème (<code>1.4</code> pour une diapositive)</td></tr>
   <tr><td><code>--no-source</code></td><td>ne pas intégrer la source et les feuilles de style dans la sortie (ci-dessous)</td></tr>
   <tr><td><code>--deny-warnings</code></td><td>échouer au moindre avertissement (utile en CI)</td></tr>
+  <tr><td><code>--allow CODE</code></td><td>écarter les avertissements de ce code : ni affichés, ni comptés par <code>--deny-warnings</code> (<code>--allow step-gap,overlap</code>)</td></tr>
 </table>
 <p>L’entrée <code>-</code> lit l’entrée standard : <code>cat f.skemo | skemo render - --format svg -o - &gt; f.svg</code>.</p>
+
+<h2>Lancer skemo depuis un outil</h2>
+<p>Pour un programme qui lance skemo (un outil de présentation, une CI, un éditeur), la ligne de commande est un contrat stable
+  (<a href="https://github.com/skemonet/skemo/blob/main/cli/SPEC.md">cli/SPEC.md §2</a>) :</p>
+<table>
+  <tr><th>Option</th><th>Effet</th></tr>
+  <tr><td>codes de sortie</td><td><code>0</code> rendu, <code>1</code> schéma refusé (rien sur la sortie standard),
+    <code>2</code> mauvaise utilisation, <code>3</code> erreur interne</td></tr>
+  <tr><td><code>--diagnostics json</code></td><td>un objet JSON par ligne sur la sortie d’erreur : gravité, code stable, message,
+    fichier, ligne et colonne</td></tr>
+  <tr><td><code>--root DOSSIER</code></td><td>les images et feuilles de style que nomme le schéma ne sont lues que dans ce dossier
+    (défaut : celui du schéma)</td></tr>
+  <tr><td><code>skemo render --batch</code></td><td>plusieurs schémas dans un seul processus : une demande JSON par ligne en entrée,
+    une réponse par ligne en sortie</td></tr>
+  <tr><td><code>skemo capabilities --format json</code></td><td>version, version des <a
+    href="https://github.com/skemonet/skemo/blob/main/engine/SVG.md">conventions SVG</a>, fonctions</td></tr>
+</table>
 
 <h2>Des images qui se rouvrent</h2>
 <p>Comme draw.io, chaque fichier rendu par skemo porte sa source et ses feuilles de style (PNG, APNG, SVG, WebP, GIF et HTML), dans
@@ -58,6 +81,22 @@ description: Toutes les commandes et options de skemo : rendu en PNG, SVG, WebP,
 skemo render diagramme.png -o nouveau.svg # toute commande accepte aussi l’image à la place de la source</code></pre>
 <p>L’éditeur ouvre directement une telle image. Le texte intégré est lisible par quiconque reçoit le fichier : rendez avec
   <code>--no-source</code> quand la source ne doit pas voyager avec l’image.</p>
+
+<h2>Un site de vues liées</h2>
+<p>Un système trop grand pour un seul dessin se lit mieux en plusieurs vues : le contexte, puis les conteneurs d’une partie, puis
+  les composants d’un conteneur. Liez une carte au schéma qui la détaille, puis faites un site du dossier :</p>
+<pre><code>card#api.app(href="api.skemo") API          # dans shop/containers.skemo
+card#db.store(href="containers.skemo#db") DB  # retour au-dessus, centré sur l’élément
+
+skemo site architecture/ -o public/ --css architecture/c4.css</code></pre>
+<p>Chaque <code>.skemo</code> devient une page au même endroit (<code>shop/api.html</code>). Un lien vers un schéma montre une loupe
+  au lieu du glyphe de lien ; un clic zoome sur la carte et ouvre sa page. <code>index.skemo</code> est la page d’accueil (sans lui,
+  l’accueil montre une vignette de chaque schéma) ; le fil d’Ariane suit le plus court chemin depuis lui. Un lien vers un schéma
+  absent est un avertissement (<code>site-missing-diagram</code>) ; un schéma refusé refuse le site. <code>--css</code> donne un style
+  à tous les schémas ; les pages suivent le thème clair ou sombre du lecteur, avec un bouton (<code>--theme light</code> n'en
+  dessine qu'un) ; le bord du panneau latéral règle sa largeur ; <code>--title</code> nomme le site. Le
+  champ de recherche en haut (<kbd>/</kbd>) trouve une carte dans tous les schémas, par son titre, sa catégorie, son tag, sa zone
+  ou ses lignes, et ouvre sa page centrée sur elle. Les pages ne demandent ni serveur ni réseau.</p>
 
 <h2>Codes de sortie</h2>
 <table>

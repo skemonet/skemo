@@ -122,7 +122,7 @@ fn loose_cards_are_reported_and_put_below() {
     let src = "diagram(layout=\"mindmap\")\n  card#r Root\n    to(a)\n  card#a A\n  card#z Alone\n";
     let (d, _) = from_source(src, &Options::default()).unwrap();
     assert!(
-        d.warnings.iter().any(|w| w.contains("« z »")),
+        d.warnings.iter().any(|w| w.contains("`z`")),
         "{:?}",
         d.warnings
     );

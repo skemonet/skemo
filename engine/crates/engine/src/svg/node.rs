@@ -74,19 +74,25 @@ pub(super) fn icon(ctx: &mut Ctx, b: &geometry::IconBox, (ox, oy): (f64, f64)) {
     }
     let _ = write!(
         ctx.out,
-        "<g class=\"{class}\" transform=\"translate({} {}) scale({})\" fill=\"none\"{} stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" color=\"{}\">{}</g>",
+        "<g class=\"{class}\" transform=\"translate({} {}) scale({})\" fill=\"none\"{} stroke-width=\"{}\" stroke-linecap=\"round\" stroke-linejoin=\"round\" color=\"{}\">{}</g>",
         n(b.x + ox),
         n(b.y + oy),
         n(b.size / 24.0),
         paint("stroke", Some(col)),
+        n(geometry::icon_stroke(b.size)),
         col.to_css(),
         b.icon.markup
     );
 }
 
 pub(super) fn pill(ctx: &mut Ctx, p: &Pill) {
+    pill_capped(ctx, p, f64::INFINITY);
+}
+
+/// A pill whose corners round by `cap` at most (a label on several lines: corners, not ends).
+pub(super) fn pill_capped(ctx: &mut Ctx, p: &Pill, cap: f64) {
     let c = ctx.d.scene.style(p.el);
-    let r = radius(c, p.w, p.h);
+    let r = radius(c, p.w, p.h).min(cap);
     let fill = background(c);
     // an even border all round (edge-label pills of the theme), drawn inside the pill
     let bw = border(c)[0];
@@ -322,6 +328,7 @@ pub(super) fn card(ctx: &mut Ctx, id: &str) {
     link_open(ctx, node.and_then(|n| n.href.as_deref()));
     let cls: Vec<String> = std::iter::once("card".to_string())
         .chain(node.map(|n| n.classes.clone()).unwrap_or_default())
+        .chain(node.filter(|n| n.node).map(|_| "node".to_string()))
         .collect();
     let _ = write!(
         ctx.out,
@@ -491,11 +498,16 @@ fn sample(ctx: &mut Ctx, s: crate::scene::Sample, (x, my, w, h): (f64, f64, f64,
         crate::scene::Sample::Chip(el) => {
             let c = ctx.d.scene.style(el);
             let fill = background(c).or_else(|| c.var_color("--c"));
-            // an edge (a zone type's frame), drawn inside the box
+            // an edge (a zone type's frame, a note's dashes), drawn inside the box
             let bw = border(c)[0];
+            let dash = match c.get("border-top-style").unwrap_or("solid") {
+                "dashed" => format!(" stroke-dasharray=\"{} {}\"", n(bw * 2.0), n(bw * 1.5)),
+                "dotted" => format!(" stroke-dasharray=\"{} {}\"", n(bw), n(bw)),
+                _ => String::new(),
+            };
             let stroke = if bw > 0.0 {
                 format!(
-                    "{} stroke-width=\"{}\"",
+                    "{} stroke-width=\"{}\"{dash}",
                     paint("stroke", Some(c.border_color(0))),
                     n(bw)
                 )
@@ -809,10 +821,14 @@ pub(super) fn zone(ctx: &mut Ctx, id: &str) {
     tl_lines(ctx, y, y + b.h);
     let title = node.map(|n| n.title.clone()).unwrap_or_default();
     let tag = node.and_then(|n| n.tag.clone());
-    let mut zt = geometry::zone_title(&d.scene, el, (&title, tag.as_deref()), b.w, b.h);
+    let shown = d.scene.zone_text(id, &title).to_string();
+    let mut zt = geometry::zone_title(&d.scene, el, (&shown, tag.as_deref()), b.w, b.h);
     zt.run.x += x;
     zt.run.baseline += y;
     text(ctx, &zt.run, None);
+    for m in &zt.more {
+        text(ctx, &shifted(m, (x, y)), None);
+    }
     deco(ctx, &zt.deco, (x, y));
     if let Some(mut p) = zt.tag {
         p.x += x;
@@ -851,12 +867,19 @@ pub(super) fn diagram_title(ctx: &mut Ctx) {
     g.run.x += x;
     g.run.baseline += y;
     text(ctx, &g.run, None);
-    for mut p in g.pills {
+    for (i, (mut p, deco)) in g.pills.into_iter().zip(g.decos).enumerate() {
+        // a pill written as a Markdown link points to another document
+        let href = t.pill_hrefs.get(i).and_then(Option::as_deref);
+        link_open(ctx, href);
         p.x += x;
         p.y += y;
         p.run.x += x;
         p.run.baseline += y;
         pill(ctx, &p);
+        for b in deco.icon.iter().chain(&deco.mark) {
+            icon(ctx, b, (x, y));
+        }
+        link_close(ctx, href);
     }
     for s in &g.subs {
         text(ctx, &shifted(s, (x, y)), None);

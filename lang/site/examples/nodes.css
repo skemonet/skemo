@@ -1,0 +1,4 @@
+/* the card keeps its look; the nodes are drawn the same in every look */
+.service { --c: #3E6FC4; --label: "Service"; }
+.db      { --c: #D9892B; }
+.cache   { --c: #C94A44; }

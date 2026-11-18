@@ -4,7 +4,7 @@ diagram(dir="right")
   card#push.trigger(icon="git-branch") Push sur main
     to(build)
 
-  zone#ci.stage Intégration continue
+  zone#ci.step Intégration continue
     card#build.job Compilation
       | cargo build --release
       to(test lint)
@@ -18,7 +18,7 @@ diagram(dir="right")
       | signée, poussée au registre
       to(staging)
 
-  zone#cd.stage Livraison
+  zone#cd.step Livraison
     card#staging.env Préproduction
       | tests de fumée
       to(approve)

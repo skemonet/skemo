@@ -46,7 +46,7 @@ impl std::fmt::Display for EditError {
             EditError::NotFound(t) => write!(
                 f,
                 "{}",
-                tr!("element « {t} » not found", "élément « {t} » introuvable")
+                tr!("element `{t}` not found", "élément « {t} » introuvable")
             ),
             EditError::BadValue(m) => write!(f, "{m}"),
         }
@@ -109,7 +109,7 @@ fn head_end(l: &Located) -> usize {
 pub fn set_attr(src: &str, target: &Target, name: &str, value: &str) -> Result<String, EditError> {
     if name.is_empty() || name.contains([' ', '(', ')', '=', '"', '\'']) {
         return Err(EditError::BadValue(tr!(
-            "invalid attribute name: « {name} »",
+            "invalid attribute name: `{name}`",
             "nom d'attribut invalide : « {name} »"
         )));
     }
@@ -167,7 +167,7 @@ fn valid_class(c: &str) -> bool {
 pub fn add_class(src: &str, target: &Target, class: &str) -> Result<String, EditError> {
     if !valid_class(class) {
         return Err(EditError::BadValue(tr!(
-            "invalid class: « {class} »",
+            "invalid class: `{class}`",
             "classe invalide : « {class} »"
         )));
     }
@@ -237,14 +237,20 @@ pub fn set_via(src: &str, edge: &str, points: &[(f64, f64)]) -> Result<String, E
 }
 
 /// Appearance marker of an element (`@2`, `@2-4:up`…): `marker` is written without the `@`
-/// (`Some("2")`); `None` removes the appearance. `:focus` markers are kept. A tag `to(a b)` carries
+/// (`Some("2")`); `None` removes the appearance. `:focus` markers and highlights are kept. A tag `to(a b)` carries
 /// two arrows: the edit touches the tag, hence both.
 pub fn set_appear(src: &str, target: &Target, marker: Option<&str>) -> Result<String, EditError> {
     let l = locate(src, target)?;
     let appear: Vec<_> = l
         .markers
         .iter()
-        .filter(|m| !src[m.start..m.end].ends_with(":focus"))
+        .filter(|m| {
+            let tok = &src[m.start..m.end];
+            !tok.ends_with(":focus")
+                && !crate::anim::HIGHLIGHTS
+                    .iter()
+                    .any(|h| tok.ends_with(&format!(":{h}")))
+        })
         .collect();
     let mut out = src.to_string();
     // from the end to the start: the positions stay valid
@@ -257,7 +263,7 @@ pub fn set_appear(src: &str, target: &Target, marker: Option<&str>) -> Result<St
     let Some(m) = marker else { return Ok(out) };
     if m.is_empty() || m.contains(char::is_whitespace) {
         return Err(EditError::BadValue(tr!(
-            "invalid marker: « {m} »",
+            "invalid marker: `{m}`",
             "marqueur invalide : « {m} »"
         )));
     }

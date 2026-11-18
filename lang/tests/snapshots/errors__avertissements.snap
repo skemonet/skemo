@@ -2,23 +2,23 @@
 source: tests/errors.rs
 expression: out
 ---
-warning[unknown-attribute]: « router » is no longer read: ignored
+warning[unknown-attribute]: `router` is no longer read: ignored
   ┌─ avertissements.skemo:1:9
   │
 1 │ diagram(router="avoid")
   │         ^^^^^^^^^^^^^^
-warning[bad-side]: « side="haut-bas" »: expected sides are top, bottom, left, right (e.g. "left-top", "-top"); ignored
+warning[bad-side]: `side="haut-bas"`: expected sides are top, bottom, left, right (e.g. "left-top", "-top"); ignored
   ┌─ avertissements.skemo:3:10
   │
 3 │     to(b side="haut-bas")
   │          ^^^^^^^^^^^^^^^
-warning[unknown-tag]: unknown tag « boite »: ignored with its content
+warning[unknown-tag]: unknown tag `boite`: ignored with its content
   ┌─ avertissements.skemo:4:3
   │
 4 │   boite#x Inconnue
   │   ^^^^^
-  = help: known tags: diagram, title, card, cards, zone, stack, to; a line starts with « | »
-warning[draw-on-node]: the « draw » effect only applies to links: « fade » is used
+  = help: known tags: diagram, title, card, cards, node, zone, stack, to; a line starts with `|`
+warning[draw-on-node]: the `draw` effect only applies to links: `fade` is used
   ┌─ avertissements.skemo:6:3
   │
 6 │   card#b B @2:draw

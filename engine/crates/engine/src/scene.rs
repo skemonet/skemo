@@ -159,6 +159,32 @@ pub struct CardEl {
     pub tag_side: i8,
     /// `cards` with a `count`: the `×N` badge (`.count`) and its text.
     pub count: Option<(usize, String)>,
+    /// A `node` (D-087): its icon has a column of its own, left of the title and the lines.
+    pub column: bool,
+}
+
+impl CardEl {
+    /// A node's icon (D-087): `(size, column)`, the theme's `--icon-size` (one size for every
+    /// node, whatever its text) and the width of its column, icon and gap. `None` for a card, or a
+    /// node without an icon.
+    pub fn node_icon(&self, scene: &Scene) -> Option<(f64, f64)> {
+        if !self.column {
+            return None;
+        }
+        Some(scene.icon_lead(&self.decor))
+            .filter(|(c, _)| *c > 0.0)
+            .map(|(c, s)| (s, c))
+    }
+}
+
+/// Classes of a card or zone element: its own, and `node` for a node (D-087), which the theme
+/// draws without a frame and the looks leave alone.
+pub fn element_classes(n: &skemo_lang::Node) -> Vec<&str> {
+    let mut cls: Vec<&str> = n.classes.iter().map(String::as_str).collect();
+    if n.node {
+        cls.push("node");
+    }
+    cls
 }
 
 /// `.tag-left` → -1, `.tag-right` → 1, otherwise 0 (D-050). Read on the element's own classes:
@@ -208,6 +234,8 @@ pub struct TitleEl {
     pub el: usize,
     pub text: usize,
     pub lines: Vec<usize>,
+    /// The icon (`--icon` of the pill's classes) and the link mark (a Markdown link) of each pill.
+    pub pill_decor: Vec<Decor>,
     /// Subtitle lines (`|` under `title`, v0.8): `.diagram-title > .sub`.
     pub subs: Vec<usize>,
 }
@@ -252,37 +280,44 @@ fn resolve_icon(
     n: &skemo_lang::Node,
     ps: &Computed,
     images: &[crate::images::Image],
-    warnings: &mut Vec<String>,
+    warnings: &mut Vec<crate::EngineWarning>,
 ) -> Option<Icon> {
     let name = n.icon.clone().or_else(|| ps.string("--icon"))?;
+    icon_named(&name, &n.id, images, warnings)
+}
+
+/// The icon called `name` (a built-in icon or an image file) on `owner`; `none` = none. An unknown
+/// name draws nothing and adds a warning.
+fn icon_named(
+    name: &str,
+    owner: &str,
+    images: &[crate::images::Image],
+    warnings: &mut Vec<crate::EngineWarning>,
+) -> Option<Icon> {
     if name == "none" {
         return None;
     }
-    if crate::images::is_file(&name) {
+    if crate::images::is_file(name) {
         let found = images.iter().position(|i| i.name == name);
         if found.is_none() {
-            warnings.push(tr!(
-                "image « {name} » on « {} » was not provided: nothing drawn",
-                "image « {name} » sur « {} » non fournie : rien n'est dessiné",
-                n.id
-            ));
+            let message = tr!(
+                "image `{name}` on `{owner}` was not provided: nothing drawn",
+                "image « {name} » sur « {owner} » non fournie : rien n'est dessiné"
+            );
+            warnings.push(crate::EngineWarning::new("image-missing", message).on(owner));
         }
         return found.map(Icon::image);
     }
-    let found = icons::get(&name);
+    let found = icons::get(name);
     if found.is_none() {
         let mut msg = tr!(
-            "unknown icon « {name} » on « {} »: nothing drawn",
-            "icône « {name} » inconnue sur « {} » : rien n'est dessiné",
-            n.id
+            "unknown icon `{name}` on `{owner}`: nothing drawn",
+            "icône « {name} » inconnue sur « {owner} » : rien n'est dessiné"
         );
-        if let Some(s) = icons::suggest(&name) {
-            msg.push_str(&tr!(
-                " (did you mean « {s} »?)",
-                " (vouliez-vous « {s} » ?)"
-            ));
+        if let Some(s) = icons::suggest(name) {
+            msg.push_str(&tr!(" (did you mean `{s}`?)", " (vouliez-vous « {s} » ?)"));
         }
-        warnings.push(msg);
+        warnings.push(crate::EngineWarning::new("unknown-icon", msg).on(owner));
     }
     found
 }
@@ -294,16 +329,112 @@ fn add_decor(
     n: &skemo_lang::Node,
     ps: &Computed,
     images: &[crate::images::Image],
-    warnings: &mut Vec<String>,
+    warnings: &mut Vec<crate::EngineWarning>,
 ) -> Decor {
     let icon = resolve_icon(n, ps, images, warnings)
         .map(|i| (tree.add(Some(icon_host), "svg", None, &["icon"]), i));
     let hidden = ps.get("--link-mark").is_some_and(|v| v.trim() == "none");
-    let mark = (n.href.is_some() && !hidden)
-        .then(|| icons::get("external-link"))
-        .flatten()
+    let mark = n
+        .href
+        .as_deref()
+        .filter(|_| !hidden)
+        .and_then(|h| icons::get(link_glyph(h)))
         .map(|i| (tree.add(Some(mark_host), "svg", None, &["link-mark"]), i));
     Decor { icon, mark }
+}
+
+/// The mark after a link: a link to another diagram drills down into it (D-097), a zoom glyph of
+/// the same size; any other link, the external-link glyph.
+fn link_glyph(href: &str) -> &'static str {
+    if skemo_lang::model::diagram_link(href).is_some() {
+        "zoom-in"
+    } else {
+        "external-link"
+    }
+}
+
+/// The diagram's title (D-050): its text, its pills with their icon and link mark, its subtitle
+/// lines. `pill_icons`: the `--icon` of each pill (`title_pill_icons`).
+fn add_title(
+    tree: &mut StyleTree,
+    stage: usize,
+    t: &skemo_lang::Title,
+    pill_icons: &[Option<String>],
+    (images, warnings): (&[crate::images::Image], &mut Vec<crate::EngineWarning>),
+) -> TitleEl {
+    let el = tree.add(Some(stage), "div", None, &["diagram-title"]);
+    let lines: Vec<usize> = (0..t.lines.len())
+        .map(|i| tree.add(Some(el), "li", None, &pill_class_list(t, i)))
+        .collect();
+    let pill_decor = lines
+        .iter()
+        .enumerate()
+        .map(|(i, &li)| {
+            let icon = pill_icons
+                .get(i)
+                .cloned()
+                .flatten()
+                .and_then(|name| icon_named(&name, "title", images, warnings))
+                .map(|icon| (tree.add(Some(li), "svg", None, &["icon"]), icon));
+            let mark = t
+                .pill_hrefs
+                .get(i)
+                .and_then(Option::as_deref)
+                .and_then(|h| icons::get(link_glyph(h)))
+                .map(|icon| (tree.add(Some(li), "svg", None, &["link-mark"]), icon));
+            Decor { icon, mark }
+        })
+        .collect();
+    let subs = (0..t.sub.len())
+        .map(|i| {
+            // a line's classes reach its style, as a zone's subtitle lines' do
+            let cls: Vec<&str> = std::iter::once("sub")
+                .chain(
+                    t.sub_classes
+                        .get(i)
+                        .into_iter()
+                        .flatten()
+                        .map(String::as_str),
+                )
+                .collect();
+            tree.add(Some(el), "div", None, &cls)
+        })
+        .collect();
+    TitleEl {
+        el,
+        text: tree.add(Some(el), "div", None, &["text"]),
+        lines,
+        pill_decor,
+        subs,
+    }
+}
+
+/// The classes of the title's pill `i`: `pill`, then those written on its line (`|.pill.ocp`).
+fn pill_class_list(t: &skemo_lang::Title, i: usize) -> Vec<&str> {
+    std::iter::once("pill")
+        .chain(
+            t.pill_classes
+                .get(i)
+                .into_iter()
+                .flatten()
+                .map(String::as_str),
+        )
+        .collect()
+}
+
+/// The `--icon` of each title pill, read on its classes alone (as `legend_icons` reads a legend's).
+fn title_pill_icons(styler: &Styler, model: &Model, theme: Theme) -> Vec<Option<String>> {
+    let Some(t) = model.title.as_ref().filter(|t| !t.pill_classes.is_empty()) else {
+        return Vec::new();
+    };
+    let mut probe = StyleTree::new();
+    let stage = root(&mut probe, model, theme);
+    let el = probe.add(Some(stage), "div", None, &["diagram-title"]);
+    let lis: Vec<usize> = (0..t.lines.len())
+        .map(|i| probe.add(Some(el), "li", None, &pill_class_list(t, i)))
+        .collect();
+    let st = styler.compute(&probe);
+    lis.into_iter().map(|li| st[li].string("--icon")).collect()
 }
 
 #[derive(Debug, Clone)]
@@ -329,9 +460,14 @@ pub struct Scene {
     /// Styled prototypes of the mode decorations (`tl-tick`, `tl-tick major`…), by classes.
     pub deco: BTreeMap<String, usize>,
     /// Warnings of the scene (`unknown-icon`).
-    pub warnings: Vec<String>,
+    pub warnings: Vec<crate::EngineWarning>,
     /// Image files used as icons (`Icon::image` indexes them).
     pub images: Vec<crate::images::Image>,
+    /// Zone titles the layout wrapped (D-099): zone id → the title with `\n` between its lines.
+    pub title_wraps: BTreeMap<String, String>,
+    /// Lines of room added under a zone's title (D-099): the extra lines of its wrapped title, or
+    /// of a wrapped sibling zone on its row, so that the titles of a row stay level.
+    pub head_lines: BTreeMap<String, usize>,
 }
 
 /// Decorations of the timeline and frieze modes (the theme's classes, FORMAT §4.2).
@@ -423,7 +559,7 @@ fn probe_styles(
     let pstage = root(&mut probe, model, theme);
     let mut pidx = BTreeMap::new();
     for n in &model.nodes {
-        let cls: Vec<&str> = n.classes.iter().map(String::as_str).collect();
+        let cls = element_classes(n);
         let tag = if n.kind == Kind::Card { "card" } else { "zone" };
         pidx.insert(
             n.id.clone(),
@@ -454,7 +590,7 @@ fn add_card(
     n: &skemo_lang::Node,
     ps: &Computed,
     extras: &Extras,
-    warnings: &mut Vec<String>,
+    warnings: &mut Vec<crate::EngineWarning>,
 ) -> CardEl {
     for c in extras.classes.get(&n.id).into_iter().flatten() {
         tree.add_class(el, c);
@@ -462,11 +598,13 @@ fn add_card(
     for (k, v) in extras.inline.get(&n.id).into_iter().flatten() {
         tree.set_inline(el, k, v);
     }
-    // the category (FORMAT §3.2.6): `label=`, else the type's `--label`; `label=""` shows none
+    // the category (FORMAT §3.2.6): `label=`, else the type's `--label`; `label=""` shows none;
+    // a node has none (D-087)
     let type_label = n
         .label
         .clone()
         .unwrap_or_else(|| ps.string("--label").unwrap_or_default());
+    let type_label = if n.node { String::new() } else { type_label };
     let look = ps.string("--look").unwrap_or_default();
     // frieze events: their date becomes the badge when the theme asks for it (`--event-date: on`)
     let date = extras
@@ -475,8 +613,9 @@ fn add_card(
         .and_then(|v| v.iter().find(|(k, _)| k == "--date"))
         .map(|(_, v)| v.clone())
         .filter(|_| n.tag.is_none() && ps.get("--event-date").is_some_and(|v| v.trim() == "on"));
-    // cards of the timeline and frieze modes: never with a header (their classes come from the mode)
-    let mode_card = extras.classes.contains_key(&n.id);
+    // cards of the timeline and frieze modes, and nodes: never with a header (their classes come
+    // from the mode)
+    let mode_card = extras.classes.contains_key(&n.id) || n.node;
     // a card with no accent of its own: the theme draws it light (`.no-type`)
     if ps.get("--c").is_none() {
         tree.add_class(el, "no-type");
@@ -535,6 +674,7 @@ fn add_card(
         after,
         tag_side: tag_side(n),
         count,
+        column: n.node,
     }
 }
 
@@ -607,7 +747,7 @@ fn add_zone(
     stage: usize,
     n: &skemo_lang::Node,
     ps: &Computed,
-    (images, warnings): (&[crate::images::Image], &mut Vec<String>),
+    (images, warnings): (&[crate::images::Image], &mut Vec<crate::EngineWarning>),
 ) -> ZoneEl {
     let cls: Vec<&str> = n.classes.iter().map(String::as_str).collect();
     let el = tree.add(Some(stage), "zone", Some(&n.id), &cls);
@@ -1056,7 +1196,7 @@ impl Scene {
         let mut zones = BTreeMap::new();
         let mut warnings = Vec::new();
         for n in &model.nodes {
-            let cls: Vec<&str> = n.classes.iter().map(String::as_str).collect();
+            let cls = element_classes(n);
             if n.kind == Kind::Zone {
                 let ps = &pst[pidx[&n.id]];
                 let z = add_zone(&mut tree, stage, n, ps, (&extras.images, &mut warnings));
@@ -1093,32 +1233,15 @@ impl Scene {
             let cls: Vec<&str> = d.split(' ').collect();
             deco.insert(d.to_string(), tree.add(Some(stage), "div", None, &cls));
         }
+        let pill_icons = title_pill_icons(&styler, model, theme);
         let title = model.title.as_ref().map(|t| {
-            let el = tree.add(Some(stage), "div", None, &["diagram-title"]);
-            TitleEl {
-                el,
-                text: tree.add(Some(el), "div", None, &["text"]),
-                lines: t
-                    .lines
-                    .iter()
-                    .map(|_| tree.add(Some(el), "li", None, &["pill"]))
-                    .collect(),
-                subs: (0..t.sub.len())
-                    .map(|i| {
-                        // a line's classes reach its style, as a zone's subtitle lines' do
-                        let cls: Vec<&str> = std::iter::once("sub")
-                            .chain(
-                                t.sub_classes
-                                    .get(i)
-                                    .into_iter()
-                                    .flatten()
-                                    .map(String::as_str),
-                            )
-                            .collect();
-                        tree.add(Some(el), "div", None, &cls)
-                    })
-                    .collect(),
-            }
+            add_title(
+                &mut tree,
+                stage,
+                t,
+                &pill_icons,
+                (&extras.images, &mut warnings),
+            )
         });
         let mut labels = BTreeMap::new();
         // a label belongs to its arrow: `.edge.ok { color }` tints it (D-049)
@@ -1144,11 +1267,18 @@ impl Scene {
             deco,
             warnings,
             images: extras.images.clone(),
+            title_wraps: BTreeMap::new(),
+            head_lines: BTreeMap::new(),
         }
     }
 
     pub fn style(&self, i: usize) -> &Computed {
         &self.styles[i]
+    }
+
+    /// The title of a zone as drawn: wrapped by the layout (D-099), else as written.
+    pub fn zone_text<'a>(&'a self, id: &str, title: &'a str) -> &'a str {
+        self.title_wraps.get(id).map_or(title, String::as_str)
     }
 
     /// Margins of the zones (`--zone-pad`, `--zone-head`), read on `.stage`.

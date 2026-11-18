@@ -1,10 +1,13 @@
 //! Animation markers `@` at the end of a line (FORMAT §3.8).
 
 use crate::diag::{Diagnostic, Span};
-use crate::model::{Anim, Focus, Step};
+use crate::model::{Anim, Focus, Highlight, Step};
 use crate::tr;
 
 pub const EFFECTS: [&str; 5] = ["fade", "up", "zoom", "draw", "focus"];
+
+/// Highlight effects (`@3-4:halo`): written in `data-highlight`, played by the integration.
+pub const HIGHLIGHTS: [&str; 3] = ["halo", "chase", "magnify"];
 
 /// What reading a text gives: the text shown, the markers, the markers' positions.
 pub struct Marked {
@@ -37,6 +40,7 @@ enum Token {
         fx: Option<String>,
     },
     Focus(Focus),
+    Highlight(Highlight),
 }
 
 /// `tok` starts with `@` followed by a digit: an attempted marker.
@@ -52,20 +56,20 @@ fn parse_marker(tok: &str) -> Result<Token, String> {
     };
     let a = step(a).ok_or_else(|| {
         tr!(
-            "« {tok} »: invalid step (a number is expected, e.g. @2 or @2.5)",
+            "`{tok}`: invalid step (a number is expected, e.g. @2 or @2.5)",
             "« {tok} » : étape invalide (nombre attendu, ex. @2 ou @2.5)"
         )
     })?;
     if a.value == 0.0 && b.is_none() {
         return Err(tr!(
-            "« {tok} »: step 0 is the initial state, already visible; write « @0-N » to hide the element after step N",
+            "`{tok}`: step 0 is the initial state, already visible; write `@0-N` to hide the element after step N",
             "« {tok} » : l'étape 0 est l'état initial, déjà visible ; écrire « @0-N » pour masquer l'élément après l'étape N"
         ));
     }
     let b = match b {
         Some(b) => Some(step(b).filter(|b| b.value > 0.0).ok_or_else(|| {
             tr!(
-                "« {tok} »: invalid end of range",
+                "`{tok}`: invalid end of range",
                 "« {tok} » : fin de plage invalide"
             )
         })?),
@@ -75,20 +79,33 @@ fn parse_marker(tok: &str) -> Result<Token, String> {
         && b.value < a.value
     {
         return Err(tr!(
-            "« {tok} »: the end of the range is before its start",
+            "`{tok}`: the end of the range is before its start",
             "« {tok} » : la fin de la plage précède son début"
         ));
     }
     match fx {
         Some("focus") => Ok(Token::Focus(Focus { from: a, to: b })),
+        Some(f) if HIGHLIGHTS.contains(&f) => {
+            if a.value == 0.0 {
+                return Err(tr!(
+                    "`{tok}`: a highlight starts at a step after 0",
+                    "« {tok} » : une mise en évidence commence à une étape après 0"
+                ));
+            }
+            Ok(Token::Highlight(Highlight {
+                from: a,
+                to: b,
+                effect: f.to_string(),
+            }))
+        }
         Some(f) if EFFECTS.contains(&f) => Ok(Token::Appear {
             start: a,
             until: b,
             fx: Some(f.to_string()),
         }),
         Some(f) => Err(tr!(
-            "« {tok} »: unknown effect « {f} » (fade, up, zoom, draw, focus)",
-            "« {tok} » : effet « {f} » inconnu (fade, up, zoom, draw, focus)"
+            "`{tok}`: unknown effect `{f}` (fade, up, zoom, draw, focus, halo, chase, magnify)",
+            "« {tok} » : effet « {f} » inconnu (fade, up, zoom, draw, focus, halo, chase, magnify)"
         )),
         None => Ok(Token::Appear {
             start: a,
@@ -141,7 +158,7 @@ pub fn read(text: &str, base: usize, diags: &mut Vec<Diagnostic>) -> Marked {
                             "multiple-appear",
                             span,
                             tr!(
-                                "« {tok} »: only one appearance marker per element",
+                                "`{tok}`: only one appearance marker per element",
                                 "« {tok} » : un seul marqueur d'apparition par élément"
                             ),
                         )
@@ -158,6 +175,7 @@ pub fn read(text: &str, base: usize, diags: &mut Vec<Diagnostic>) -> Marked {
                 anim.fx = fx;
             }
             Ok(Token::Focus(f)) => anim.focus.insert(0, f),
+            Ok(Token::Highlight(h)) => anim.highlights.insert(0, h),
             Err(m) => diags.push(Diagnostic::error("bad-marker", span, m)),
         }
     }
@@ -208,6 +226,32 @@ mod tests {
         assert_eq!(r("x @1 @2").2, 1);
         assert_eq!(r("x @2.5").2, 0);
         assert_eq!(r("x @0-0").2, 1);
+    }
+
+    #[test]
+    fn highlights_follow_the_other_markers_in_writing_order() {
+        let (t, a, e) = r("A @1:up @3-4:halo @6:magnify");
+        assert_eq!((t.as_str(), e), ("A", 0));
+        let a = a.unwrap();
+        assert_eq!(a.fx.as_deref(), Some("up"));
+        let h: Vec<_> = a
+            .highlights
+            .iter()
+            .map(|h| {
+                (
+                    h.effect.as_str(),
+                    h.from.raw.as_str(),
+                    h.to.as_ref().map(|s| s.raw.as_str()),
+                )
+            })
+            .collect();
+        assert_eq!(h, [("halo", "3", Some("4")), ("magnify", "6", None)]);
+        // a highlight alone is no appearance; several are allowed
+        let (_, a, e) = r("B @2:chase @5:chase");
+        let a = a.unwrap();
+        assert!(a.start.is_none() && e == 0 && a.highlights.len() == 2);
+        assert_eq!(r("x @0:halo").2, 1);
+        assert_eq!(r("x @0-2:halo").2, 1);
     }
 
     #[test]

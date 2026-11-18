@@ -2,7 +2,9 @@
 //! a shared trunk and its dot are drawn once, a back edge loops beyond the zone frame, a label
 //! sits over a short arrow, sibling chips share a width.
 
-use skemo_engine::{Options, from_source, svg};
+use skemo_engine::{Options, svg};
+mod elk;
+use elk::from_source;
 
 fn build(src: &str) -> skemo_engine::Diagram {
     from_source(src, &Options::default()).unwrap().0
@@ -31,10 +33,11 @@ fn a_fork_bar_runs_half_way_between_its_source_and_the_zone_frame() {
 }
 
 #[test]
-fn a_shared_trunk_and_its_dot_are_drawn_once() {
+fn a_shared_trunk_is_drawn_once_and_its_junction_curved() {
     let d = build(FORK);
     let out = svg::render(&d);
-    assert_eq!(out.matches("class=\"junction\"").count(), 1, "{out}");
+    // a junction is a rounded bend into the trunk, no dot (D-093)
+    assert_eq!(out.matches("class=\"junction\"").count(), 0, "{out}");
     // the second branch starts where it leaves the first one, not at the source
     let start = d.routes["s->a"][0];
     let lines: Vec<&str> = out

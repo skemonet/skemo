@@ -66,7 +66,13 @@ pub fn route(
         .filter(|it| it.kind == ObstacleKind::Shape)
         .map(|it| (it.id.as_str(), it.hard))
         .collect();
-    crate::nudge::beautify(&mut routes, connectors, &shapes, params);
+    let regions: Vec<crate::geom::Rect> = scene
+        .items
+        .iter()
+        .filter(|it| it.kind == ObstacleKind::Region)
+        .map(|it| it.hard)
+        .collect();
+    crate::nudge::beautify(&mut routes, connectors, (&shapes, &regions), params);
     (routes, diags)
 }
 
@@ -180,8 +186,13 @@ fn route_in_order(
     let mut ws = Workspace::default();
     let mut through: Vec<(u32, u32)> = vec![(0, 0); scene.n_nodes()];
     let mut routes = Vec::new();
+    // the routes searched (neither a straight line nor a hint, nor a shared trunk): what a second
+    // round may route again, with the prepared connector they came from
+    let mut searched: Vec<Option<usize>> = Vec::new();
     let trunk_dirs = trunk_directions(connectors, scene, by_id);
-    for (c, p) in connectors.iter().zip(prepared) {
+    // the routes of each group drawn so far (`Params::late_split`)
+    let mut trees: BTreeMap<&str, Vec<Vec<Point>>> = BTreeMap::new();
+    for (k, (c, p)) in connectors.iter().zip(prepared).enumerate() {
         let Some(p) = p else { continue };
         report_ignored_sides(c, p, diags);
         let rect = |e: &End| match e {
@@ -199,12 +210,23 @@ fn route_in_order(
             crate::hint::straight(c, &p.active, scene, by_id, params.shape_buffer)
                 .or_else(|| crate::hint::valid_hint(c, &p.active, scene, by_id))
         };
+        let again = hinted.is_none() && shared.is_none() && c.group.is_none();
+        let tree = match c.group.as_deref().and_then(|g| trees.get(g)) {
+            Some(drawn) if params.late_split && p.checkpoints.is_empty() => {
+                tree_starts(scene, drawn, 2.0 * params.shape_buffer)
+            }
+            _ => Vec::new(),
+        };
         let points = hinted
-            .or_else(|| route_one(scene, p, params, &through, &mut ws))
+            .or_else(|| route_from(scene, p, params, &through, &mut ws, &tree))
             .or_else(|| route_without_checkpoints(c, p, scene, params, &through, &mut ws, diags));
         match points {
             Some(points) => {
-                record(scene, &points, &mut through);
+                record(scene, &points, &mut through, 1);
+                if let Some(g) = c.group.as_deref() {
+                    trees.entry(g).or_default().push(points.clone());
+                }
+                searched.push(again.then_some(k));
                 routes.push(Route {
                     id: c.id.clone(),
                     points,
@@ -214,6 +236,20 @@ fn route_in_order(
                 id: c.id.clone(),
                 reason: Reason::NoPath,
             }),
+        }
+    }
+    // rip up and route again (`Params::reroute`): each route searched once more with every other
+    // line in place, so that a line routed early no longer crosses those routed after it
+    for _ in 0..params.reroute {
+        for (r, k) in routes.iter_mut().zip(&searched) {
+            let Some(p) = k.and_then(|k| prepared[k].as_ref()) else {
+                continue;
+            };
+            record(scene, &r.points, &mut through, -1);
+            if let Some(points) = route_one(scene, p, params, &through, &mut ws) {
+                r.points = points;
+            }
+            record(scene, &r.points, &mut through, 1);
         }
     }
     routes
@@ -494,12 +530,90 @@ fn prepare_end(
 /// Expansions beyond which avoiding crossings is given up.
 const BUDGET: usize = 40_000;
 
+/// A start on a route of the group already drawn: the route up to `node` (its first point on the
+/// source's border), the direction it arrives in.
+struct Branch {
+    prefix: Vec<Point>,
+    node: Node,
+    dir: Dir,
+}
+
+/// Where a branch may leave the routes of its group already drawn: every node along them, from the
+/// source's stub to `keep` before a sibling's head (a branch leaving closer would split right at
+/// that head and cut its tail short).
+fn tree_starts(scene: &Scene, drawn: &[Vec<Point>], keep: f64) -> Vec<Branch> {
+    let mut out = Vec::new();
+    for r in drawn {
+        if r.len() < 3 {
+            continue;
+        }
+        let head = r[r.len() - 1];
+        for k in 0..r.len() - 1 {
+            let (a, b) = (r[k], r[k + 1]);
+            let dir = if (a.1 - b.1).abs() < 1e-9 && (a.0 - b.0).abs() > 1e-9 {
+                if b.0 > a.0 { Dir::Right } else { Dir::Left }
+            } else if (a.0 - b.0).abs() < 1e-9 && (a.1 - b.1).abs() > 1e-9 {
+                if b.1 > a.1 { Dir::Down } else { Dir::Up }
+            } else {
+                continue;
+            };
+            // the nodes of (a, b], from a towards b
+            let mut along: Vec<Point> = if dir.horizontal() {
+                scene
+                    .xs
+                    .iter()
+                    .filter(|&&x| (x - a.0) * (b.0 - x) >= 0.0 && (x - a.0).abs() > 1e-9)
+                    .map(|&x| (x, a.1))
+                    .collect()
+            } else {
+                scene
+                    .ys
+                    .iter()
+                    .filter(|&&y| (y - a.1) * (b.1 - y) >= 0.0 && (y - a.1).abs() > 1e-9)
+                    .map(|&y| (a.0, y))
+                    .collect()
+            };
+            if matches!(dir, Dir::Left | Dir::Up) {
+                along.reverse();
+            }
+            for q in along {
+                if k == r.len() - 2 && (q.0 - head.0).abs() + (q.1 - head.1).abs() < keep {
+                    continue;
+                }
+                let (Some(i), Some(j)) = (scene.ix(q.0), scene.iy(q.1)) else {
+                    continue;
+                };
+                let mut prefix = r[..=k].to_vec();
+                prefix.push(q);
+                out.push(Branch {
+                    prefix,
+                    node: (i, j),
+                    dir,
+                });
+            }
+        }
+    }
+    out
+}
+
 fn route_one(
     scene: &Scene,
     p: &Prepared,
     params: &Params,
     through: &[(u32, u32)],
     ws: &mut Workspace,
+) -> Option<Vec<Point>> {
+    route_from(scene, p, params, through, ws, &[])
+}
+
+/// [`route_one`], also starting from the routes of its group already drawn (`tree`, at no cost).
+fn route_from(
+    scene: &Scene,
+    p: &Prepared,
+    params: &Params,
+    through: &[(u32, u32)],
+    ws: &mut Workspace,
+    tree: &[Branch],
 ) -> Option<Vec<Point>> {
     let node = |q: Point| Some((scene.ix(q.0)?, scene.iy(q.1)?));
     let len = |a: Point, b: Point| (a.0 - b.0).abs() + (a.1 - b.1).abs();
@@ -522,6 +636,13 @@ fn route_one(
             });
             src_ports.push(port);
         }
+    }
+    for b in tree {
+        sources.push(Source {
+            node: b.node,
+            dir: Some(b.dir),
+            cost: 0.0,
+        });
     }
     let mut targets = Vec::new();
     let mut tgt_ports = Vec::new();
@@ -549,37 +670,13 @@ fn route_one(
         checkpoints: &checkpoints,
         through,
     };
-    // Budget: a search that drags on (most often to avoid crossings) is run again without the
-    // crossing penalty, which is fast; the result stays deterministic.
-    let budget = Params {
-        max_expansions: params.max_expansions.min(BUDGET),
-        ..params.clone()
+    let f = search_within_budget(&q, params, ws)?;
+    let mut pts = if let Some(port) = src_ports.get(f.source) {
+        vec![port.on_border]
+    } else {
+        let b = &tree[f.source - src_ports.len()];
+        b.prefix[..b.prefix.len() - 1].to_vec()
     };
-    let q = Query {
-        params: &budget,
-        ..q
-    };
-    let f = match search(&q, ws) {
-        Outcome::Found(f) => f,
-        Outcome::NoPath => return None,
-        Outcome::Exhausted => {
-            let relaxed = Params {
-                crossing_penalty: 0.0,
-                ..params.clone()
-            };
-            match search(
-                &Query {
-                    params: &relaxed,
-                    ..q
-                },
-                ws,
-            ) {
-                Outcome::Found(f) => f,
-                _ => return None,
-            }
-        }
-    };
-    let mut pts = vec![src_ports[f.source].on_border];
     pts.extend(f.nodes.iter().map(|&(i, j)| (scene.xs[i], scene.ys[j])));
     pts.push(tgt_ports[f.target].on_border);
     merge(&mut pts);
@@ -597,6 +694,43 @@ fn route_one(
     Some(pts)
 }
 
+/// Budget: a search that drags on (most often to avoid crossings) is run again without the
+/// crossing penalty, which is fast; the result stays deterministic.
+fn search_within_budget(
+    q: &Query,
+    params: &Params,
+    ws: &mut Workspace,
+) -> Option<crate::search::Found> {
+    let budget = Params {
+        max_expansions: params.max_expansions.min(BUDGET),
+        ..params.clone()
+    };
+    let q = Query {
+        params: &budget,
+        ..*q
+    };
+    match search(&q, ws) {
+        Outcome::Found(f) => Some(f),
+        Outcome::NoPath => None,
+        Outcome::Exhausted => {
+            let relaxed = Params {
+                crossing_penalty: 0.0,
+                ..params.clone()
+            };
+            match search(
+                &Query {
+                    params: &relaxed,
+                    ..q
+                },
+                ws,
+            ) {
+                Outcome::Found(f) => Some(f),
+                _ => None,
+            }
+        }
+    }
+}
+
 fn on_path(p: &[Point], c: Point) -> bool {
     p.windows(2).any(|w| {
         let (a, b) = (w[0], w[1]);
@@ -607,7 +741,8 @@ fn on_path(p: &[Point], c: Point) -> bool {
 }
 
 /// Records the nodes a route goes through (for the crossing penalty).
-fn record(scene: &Scene, pts: &[Point], through: &mut [(u32, u32)]) {
+fn record(scene: &Scene, pts: &[Point], through: &mut [(u32, u32)], by: i32) {
+    let add = |v: &mut u32| *v = v.saturating_add_signed(by);
     for w in pts.windows(2) {
         let (a, b) = (w[0], w[1]);
         if (a.1 - b.1).abs() < 1e-9 {
@@ -619,7 +754,7 @@ fn record(scene: &Scene, pts: &[Point], through: &mut [(u32, u32)]) {
                     break;
                 }
                 if let Some(id) = scene.id(i, j) {
-                    through[id as usize].0 += 1;
+                    add(&mut through[id as usize].0);
                 }
             }
         } else if (a.0 - b.0).abs() < 1e-9 {
@@ -631,7 +766,7 @@ fn record(scene: &Scene, pts: &[Point], through: &mut [(u32, u32)]) {
                     break;
                 }
                 if let Some(id) = scene.id(i, j) {
-                    through[id as usize].1 += 1;
+                    add(&mut through[id as usize].1);
                 }
             }
         }

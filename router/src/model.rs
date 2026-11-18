@@ -98,6 +98,10 @@ pub struct Connector {
     /// Hyperedge (R-18): the connectors of one group, leaving one shape, share a port and are not
     /// spread apart: their common part reads as a single trunk.
     pub group: Option<String>,
+    /// When the connector is shown, in a diagram drawn in steps: (first step, last step). Two
+    /// connectors whose lives never meet are never seen together, so they do not share the ports
+    /// of a side: each is placed as if the other were absent. `None`: always shown.
+    pub life: Option<(f64, f64)>,
 }
 
 impl Connector {
@@ -112,6 +116,7 @@ impl Connector {
             ignore: Vec::new(),
             hint: None,
             group: None,
+            life: None,
         }
     }
 }
@@ -149,6 +154,19 @@ pub struct Params {
     /// Largest gap between the ports of one side when the side has room (a side of length `l`
     /// with `n` ports: `l / (n + 1)`, at most this). 0 = always `ideal_nudging` apart (default).
     pub port_spread: f64,
+    /// The regions' frames bound the corridors a segment is centred in, as shapes do: a line in
+    /// the gap between two zones stays in that gap (the grid proof of concept). Off by default.
+    pub region_walls: bool,
+    /// Rounds of rip-up and reroute after the first: every searched route is routed again with
+    /// all the others in place (crossings then count against every line). 0 by default.
+    pub reroute: usize,
+    /// The last pass (`unlay`) also takes two routes that cross, not only two drawn on one line,
+    /// and tries moving one's middle segment to the other side of the other's. Off by default.
+    pub untangle: bool,
+    /// A connector of a group (R-18) may leave the routes of the group already drawn anywhere
+    /// along them, not only at the source: its branch splits off the trunk as late as its own way
+    /// allows (the trunk is drawn once, so running along it costs nothing). Off by default.
+    pub late_split: bool,
 }
 
 impl Default for Params {
@@ -166,6 +184,10 @@ impl Default for Params {
             flow: None,
             flow_penalty: 0.0,
             port_spread: 0.0,
+            region_walls: false,
+            reroute: 0,
+            untangle: false,
+            late_split: false,
         }
     }
 }
@@ -206,11 +228,11 @@ impl std::fmt::Display for Reason {
         match self {
             Reason::NonFiniteRect => write!(f, "non-finite rectangle"),
             Reason::DuplicateId => write!(f, "duplicate identifier, ignored"),
-            Reason::NotAShape(id) => write!(f, "« {id} » is a region, not a shape"),
-            Reason::UnknownShape(id) => write!(f, "unknown shape « {id} »"),
+            Reason::NotAShape(id) => write!(f, "`{id}` is a region, not a shape"),
+            Reason::UnknownShape(id) => write!(f, "unknown shape `{id}`"),
             Reason::NonFiniteEnd => write!(f, "non-finite end point"),
             Reason::EndInsideObstacle => write!(f, "free end point inside an obstacle"),
-            Reason::NoClearSide(id) => write!(f, "no side of « {id} » is clear"),
+            Reason::NoClearSide(id) => write!(f, "no side of `{id}` is clear"),
             Reason::NoPath => write!(f, "no path"),
         }
     }

@@ -6,7 +6,7 @@
 //! [`detect`] (the user's operating-system language).
 //!
 //! Messages are written at the place where they are produced, in every language, with `tr!`:
-//! `tr!("unknown tag « {name} »", "balise « {name} » inconnue")`. Both strings are checked at
+//! ``tr!("unknown tag `{name}`", "balise « {name} » inconnue")``. Both strings are checked at
 //! compile time like `format!` strings (inline `{name}` captures work in both).
 
 use std::sync::atomic::{AtomicU8, Ordering};

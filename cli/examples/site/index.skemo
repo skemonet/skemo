@@ -1,0 +1,19 @@
+//- System context: who uses the web shop and what it depends on
+diagram(dir="down")
+  title Web shop: system context
+    | Click a card with a zoom glyph to open its view
+
+  card#shopper.person(icon="user") Shopper
+    | Buys products online
+    to(shop) browses, orders
+  card#staff.person(icon="user") Back-office staff
+    | Manages the catalogue
+    to(shop) manages
+
+  card#shop.system(icon="store" href="shop/containers.skemo") Web shop
+    | Catalogue, cart, orders
+    to(pay) charges
+    to(mail).async sends e-mails
+
+  card#pay.external(icon="credit-card") Payment provider
+  card#mail.external(icon="mail") E-mail service

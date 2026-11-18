@@ -2,7 +2,7 @@
 //! connectors, with what a diagram drawn in steps lets each arrow ignore.
 
 use super::Mode;
-use super::groups::{auto_buses, auto_forks};
+use super::groups::{auto_buses, auto_forks, auto_joins, keep_crowds};
 use super::sides::{back_channel, corner_back, crossable, edge_sides, fan_in, straight_back};
 use crate::layout::{Box2, Placement};
 use skemo_lang::{Kind, Model};
@@ -36,29 +36,31 @@ pub fn router_scene(
             Kind::Zone => Obstacle::region(n.id.clone(), r),
         });
     }
-    if mode == Mode::Graph {
-        obstacles.extend(title_obstacles(model, boxes, titles));
+    // a title over a card is ignored by that card's own arrows only (`title_obstacles`)
+    let mut over_cards: Vec<(String, Vec<String>)> = Vec::new();
+    if mode.automatic() {
+        let (t, over) = title_obstacles(model, boxes, titles);
+        obstacles.extend(t);
+        over_cards = over;
     }
     // extra-cost bands (crossable by all, costly to run along: `region_cost`)
     for (id, b) in soft {
         obstacles.push(Obstacle::region(id.clone(), Rect::new(b.x, b.y, b.w, b.h)));
         all_zones.push(id.clone());
     }
-    let forks = if mode == Mode::Graph {
-        auto_forks(model, boxes)
-    } else {
-        BTreeMap::new()
-    };
-    let buses = auto_buses(model, boxes, &forks);
+    let (all_forks, forks, joins) = auto_fans(model, boxes, mode);
+    // buses read every fork, merged or not: a bus is no crowd rule's business
+    let buses = auto_buses(model, boxes, &all_forks);
     let mut conns = Vec::new();
     for e in &model.edges {
         if !boxes.contains_key(&e.from) || !boxes.contains_key(&e.to) {
             continue;
         }
         let (s1, s2, back, mindmap_group) = edge_sides(model, boxes, e, mode, &buses);
-        // a named join (D-050) is routed from its target, so that the arrows into one card share
-        // a trunk like a fork out of it; `finish` turns the route round
-        let (a, b) = if fan_in(e) {
+        // a join (named, D-050, or automatic, D-091) is routed from its target, so that the
+        // arrows into one card share a trunk like a fork out of it; `finish` turns the route round
+        let turned = fan_in(e) || joins.contains_key(&e.id);
+        let (a, b) = if turned {
             ((&e.to, s2), (&e.from, s1))
         } else {
             ((&e.from, s1), (&e.to, s2))
@@ -81,7 +83,7 @@ pub fn router_scene(
             .into_iter()
             .map(|[x, y]| (x, y))
             .collect();
-        c.pass_through = if mode == Mode::Graph {
+        c.pass_through = if mode.automatic() {
             crossable(model, e)
         } else {
             all_zones.clone()
@@ -89,7 +91,7 @@ pub fn router_scene(
         c.hint = elk
             .routes
             .get(&e.id)
-            .filter(|_| !back && !fan_in(e))
+            .filter(|_| !back && !turned)
             .map(|(p, _)| p.clone());
         // hyperedge (`join="trunk"`): the arrows of one `to(a b c)` share a trunk; a named join, the
         // arrows into one card that carry it (D-050)
@@ -104,6 +106,7 @@ pub fn router_scene(
                 }
             })
             .or(mindmap_group)
+            .or_else(|| joins.get(&e.id).cloned())
             .or_else(|| buses.get(&e.id).map(|b| b.group.clone()))
             .or_else(|| forks.get(&e.id).cloned());
         if let Some(b) = buses.get(&e.id) {
@@ -120,8 +123,24 @@ pub fn router_scene(
         }
         conns.push(c);
     }
+    ignore_titles_over_ends(&over_cards, &mut conns);
     step_ignores(model, &obstacles, &mut conns);
     (obstacles, conns)
+}
+
+/// Edge id → group of an automatic fork or join.
+type Fans = BTreeMap<String, String>;
+
+/// Automatic forks and joins (D-047, D-091), in graph mode only: every fork, then those drawn
+/// merged and the joins (D-093).
+fn auto_fans(model: &Model, boxes: &BTreeMap<String, Box2>, mode: Mode) -> (Fans, Fans, Fans) {
+    if !mode.automatic() {
+        return (BTreeMap::new(), BTreeMap::new(), BTreeMap::new());
+    }
+    let forks = auto_forks(model, boxes);
+    let joins = auto_joins(model, boxes, &forks);
+    let (kept_forks, kept_joins) = keep_crowds(model, boxes, &forks, &joins);
+    (forks, kept_forks, kept_joins)
 }
 
 /// In a diagram drawn in steps, an arrow is routed among what is shown at the same time as it
@@ -153,6 +172,7 @@ fn step_ignores(model: &Model, obstacles: &[Obstacle], conns: &mut [Connector]) 
         let Some((a, z)) = own(&c.id) else {
             continue;
         };
+        c.life = Some((a, z));
         let apart = |id: &str| life(id).is_some_and(|(b, y)| y < a || z < b);
         for n in model.nodes.iter().filter(|n| apart(&n.id)) {
             if n.kind == Kind::Card {
@@ -170,33 +190,63 @@ fn step_ignores(model: &Model, obstacles: &[Obstacle], conns: &mut [Connector]) 
         }
     }
 }
-/// Zone titles as shapes, except those overlapping a card.
+/// The arrows of a card a zone title overlaps ignore that title (`title_obstacles`).
+fn ignore_titles_over_ends(over_cards: &[(String, Vec<String>)], conns: &mut [Connector]) {
+    for c in conns {
+        let ends = [&c.from, &c.to].map(|e| match e {
+            End::Shape { id, .. } => Some(id.clone()),
+            End::Point { .. } => None,
+        });
+        for (title, cards) in over_cards {
+            if ends.iter().flatten().any(|id| cards.contains(id)) {
+                c.ignore.push(title.clone());
+            }
+        }
+    }
+}
+
+/// Zone titles as shapes, with the cards each one overlaps (a theme moving a title, zones over
+/// one another): those cards' own arrows ignore it, so that no end of theirs lies inside an
+/// obstacle, while every other arrow still goes round it. Left out altogether, such a title let
+/// any line run across it.
 fn title_obstacles(
     model: &Model,
     boxes: &BTreeMap<String, Box2>,
     titles: &[(String, Box2)],
-) -> Vec<Obstacle> {
-    let cards: Vec<&Box2> = model
+) -> (Vec<Obstacle>, Vec<(String, Vec<String>)>) {
+    let cards: Vec<(&str, &Box2)> = model
         .nodes
         .iter()
         .filter(|n| n.kind == Kind::Card)
-        .filter_map(|n| boxes.get(&n.id))
+        .filter_map(|n| boxes.get(&n.id).map(|b| (n.id.as_str(), b)))
         .collect();
     let hits = |a: &Box2, b: &Box2| {
         a.x < b.right() && b.x < a.right() && a.y < b.bottom() && b.y < a.bottom()
     };
-    // a zone may have two boxes (its title and its tag): one obstacle each
-    titles
+    let mut over = Vec::new();
+    // a zone may have several boxes (its title, its description lines, its tag pill last, as
+    // `labels::zone_titles` lists them): one obstacle each; only the pill is a tag
+    let obstacles = titles
         .iter()
         .enumerate()
-        .filter(|(_, (_, t))| !cards.iter().any(|c| hits(c, t)))
         .map(|(k, (id, t))| {
-            let tag = k > 0 && titles[k - 1].0 == *id;
-            let oid = if tag {
+            let more = k > 0 && titles[k - 1].0 == *id;
+            let last = titles.get(k + 1).is_none_or(|(next, _)| next != id);
+            let tag = more && last && model.node(id).is_some_and(|n| n.tag.is_some());
+            // every box its own id: the router keeps one shape per id
+            let oid = if more {
                 format!("\u{0}title|{id}|{k}")
             } else {
                 format!("\u{0}title|{id}")
             };
+            let under: Vec<String> = cards
+                .iter()
+                .filter(|(_, c)| hits(c, t))
+                .map(|(c, _)| (*c).to_string())
+                .collect();
+            if !under.is_empty() {
+                over.push((oid.clone(), under));
+            }
             // a line may pass `TAG_CLEAR` from a zone's tag pill, closer than from a card (D-057):
             // the router keeps its margin round every shape, so the pill's box is shrunk by the
             // difference
@@ -209,7 +259,8 @@ fn title_obstacles(
             let (x, y) = (t.x + (t.w - w) / 2.0, t.y + (t.h - h) / 2.0);
             Obstacle::shape(oid, Rect::new(x, y, w, h))
         })
-        .collect()
+        .collect();
+    (obstacles, over)
 }
 
 /// Room kept between a line and a zone's tag pill (px), less than round a card: the pill is a small

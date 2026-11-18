@@ -58,7 +58,48 @@ description: Ce que signale skemo lint : ligne, colonne, un repère sous le faut
     point cardinal sur un élément qui n’est pas au premier niveau</td></tr>
   <tr><td><code>docked-arrow</code> <em>(préversion)</em></td><td>une flèche entre un élément ancré (<code>at="s"</code>…) et le reste du
     dessin : non dessinée</td></tr>
+  <tr><td><code>part-class</code></td><td>une classe nommée comme une partie que skemo dessine (<code>.title</code>, <code>.label</code>…)
+    ou <code>.stage</code>, la classe du dessin entier : une règle dessus styliserait bien plus que cet élément ; nommez les classes
+    d’après ce qu’elles signifient (<code>.step</code>)</td></tr>
+  <tr><td><code>empty-diagram</code></td><td>ni carte, ni zone, ni ligne : un fichier vide, ou un <code>diagram</code> seul (rendu
+    quand même)</td></tr>
+  <tr><td><code>site-missing-diagram</code>, <code>site-missing-file</code> <em>(préversion)</em></td><td><code>skemo site</code> : un lien vers un schéma <code>.skemo</code>, ou vers un fichier, absent du dossier (le lien reste tel qu’écrit ; un fichier n’est pas copié)</td></tr>
 </table>
-<p>Le moteur ajoute quelques avertissements à lui : deux cartes épinglées qui se chevauchent (les deux sont nommées), un marqueur
-  d’animation plus tôt que son parent ne le permet, une carte de carte mentale que la racine n’atteint pas, un contraste sous le
-  seuil avec <code>--contrast</code>.</p>
+
+<h3>Avertissements des étapes</h3>
+<table>
+  <tr><th>Code</th><th>Cause</th></tr>
+  <tr><td><code>step-gap</code></td><td>un clic entre 1 et la dernière étape ne change rien : <code>@1</code>, <code>@2</code>, puis
+    <code>@9</code> laisse les clics 3 à 8 vides dans une présentation. <code>@2.5</code> entre 2 et 3 convient</td></tr>
+  <tr><td><code>no-step-after</code></td><td><code>@1-3</code> et aucune étape après 3 : la disparition n’est jamais vue</td></tr>
+  <tr><td><code>step-before-parent</code>, <code>until-after-parent</code></td><td>un marqueur plus tôt (ou une fin plus tard) que sa
+    carte ou sa zone ne le permet : celui du parent est gardé</td></tr>
+  <tr><td><code>focus-outside</code>, <code>highlight-outside</code></td><td>une mise en valeur ou une mise en évidence pendant que
+    l’élément est caché</td></tr>
+</table>
+
+<h3>Avertissements du dessin</h3>
+<table>
+  <tr><th>Code</th><th>Cause</th></tr>
+  <tr><td><code>overlap</code></td><td>deux cartes épinglées (<code>at=</code>) qui se chevauchent : les deux sont nommées</td></tr>
+  <tr><td><code>wrap-hides-cards</code></td><td>avec <code>wrap</code>, des cartes sont derrière d’autres et des flèches les
+    contournent</td></tr>
+  <tr><td><code>mindmap-unlinked</code></td><td>une carte de carte mentale que la racine n’atteint pas (placée dessous)</td></tr>
+  <tr><td><code>image-missing</code>, <code>font-missing</code></td><td>une icône image non fournie ; une police demandée par la feuille
+    de style et indisponible (Inter est utilisée)</td></tr>
+  <tr><td><code>unknown-layout</code>, <code>curve-ignored</code>, <code>fit</code></td><td>un <code>layout</code> inconnu ;
+    <code>--curve</code> hors d’une carte mentale ; le conseil de <code>diagram(fit=…)</code></td></tr>
+  <tr><td><code>unroutable</code>, <code>waypoint-unreachable</code>, <code>side-ignored</code></td><td>une flèche que le routeur n’a pas
+    pu tracer, un point <code>via</code> qu’il n’a pas pu atteindre, un <code>side</code> qu’il n’a pas pu utiliser</td></tr>
+</table>
+
+<h3>Avertissements des feuilles de style</h3>
+<p>Ils pointent la ligne du fichier <code>.css</code>.</p>
+<table>
+  <tr><th>Code</th><th>Cause</th></tr>
+  <tr><td><code>css-property</code></td><td>une faute de frappe sur une propriété que skemo ou CSS connaît : <code>colr</code>,
+    <code>--lable</code> (le message propose le bon nom). Vos propres variables et tout CSS valide sont laissés tranquilles</td></tr>
+  <tr><td><code>css-syntax</code></td><td>une <code>{</code> jamais fermée, une <code>}</code> sans <code>{</code>, une déclaration hors
+    d’une règle ou sans <code>:</code></td></tr>
+</table>
+<p>Avec <code>--contrast</code>, un contraste sous le seuil est signalé aussi.</p>

@@ -1,6 +1,8 @@
 //! End-to-end edge cases: empty diagrams, pinned zones, animation warnings.
 
-use skemo_engine::{Options, from_source, html, svg};
+use skemo_engine::{Options, html, svg};
+mod elk;
+use elk::from_source;
 
 fn build(src: &str) -> skemo_engine::Diagram {
     from_source(src, &Options::default()).unwrap().0

@@ -140,7 +140,78 @@ fn port_groups(
                 });
         }
     }
-    groups
+    by_life(groups, routes, conns)
+}
+
+/// Anchoring (D-091): slots placed so that a line to a card alone on its facing side runs
+/// straight into that card's middle. Off (user, 2026-11-06: every line in the middle of its
+/// side, spread evenly and symmetrically, rather than aligned on the cards in front).
+const ANCHOR: bool = false;
+
+/// The lines leave from the middle half of a side (D-092), as a hand drawing does: a quarter of
+/// the side is kept clear at each end. Within the room clear of the shapes in front
+/// (`spread_room`). When the ports do not fit there at `port_spacing`, the middle part widens
+/// evenly just enough to hold them (a card a little lower keeps nearly the same gaps, instead
+/// of jumping to the whole side); when even the room cannot hold them, that room as it is.
+fn middle_half(
+    (lo, hi, margin): (f64, f64, f64),
+    (side_lo, side_hi): (f64, f64),
+    n: usize,
+    params: &Params,
+) -> (f64, f64, f64) {
+    let quarter = (side_hi - side_lo) / 4.0;
+    let (a, b) = (
+        (lo + margin).max(side_lo + quarter),
+        (hi - margin).min(side_hi - quarter),
+    );
+    let need = (n as f64 - 1.0) * params.port_spacing;
+    if b - a >= need {
+        return (a, b, 0.0);
+    }
+    let (room_lo, room_hi) = (lo + margin, hi - margin);
+    if room_hi - room_lo < need {
+        return (lo, hi, margin);
+    }
+    // widen around the middle part's centre, shifted back inside the room if it overflows
+    let mid = f64::midpoint(a, b);
+    let mut wa = mid - need / 2.0;
+    wa = wa.max(room_lo).min(room_hi - need);
+    (wa, wa + need, 0.0)
+}
+
+/// The ports of a side split by the connectors' lives (`Connector::life`): ports of connectors
+/// never shown together form separate groups, as if they stood on different sides.
+fn by_life(
+    groups: BTreeMap<(String, u8), Vec<PortRef>>,
+    routes: &[Route],
+    conns: &BTreeMap<&str, &Connector>,
+) -> BTreeMap<(String, u8), Vec<PortRef>> {
+    let life = |p: &PortRef| {
+        conns
+            .get(routes[p.route].id.as_str())
+            .and_then(|c| c.life)
+            .unwrap_or((f64::NEG_INFINITY, f64::INFINITY))
+    };
+    let mut out = BTreeMap::new();
+    for ((id, side), mut ports) in groups {
+        ports.sort_by(|a, b| life(a).0.total_cmp(&life(b).0));
+        // sweep by start: a port starting after every earlier one has ended opens a new era
+        let (mut era, mut end) = (0, f64::NEG_INFINITY);
+        for p in ports {
+            let (a, z) = life(&p);
+            if a > end && end > f64::NEG_INFINITY {
+                era += 1;
+            }
+            end = end.max(z);
+            let key = if era == 0 {
+                id.clone()
+            } else {
+                format!("{id}\u{0}{era}")
+            };
+            out.entry((key, side)).or_insert_with(Vec::new).push(p);
+        }
+    }
+    out
 }
 
 /// End segment of a route at one of its ports: (orientation is vertical, line coordinate, extent).
@@ -204,7 +275,16 @@ fn separate_end_overlaps(
                 let overlap = sa.0 == sb.0
                     && (sa.1 - sb.1).abs() < 1.0
                     && sa.3.min(sb.3) - sa.2.max(sb.2) > 1.0;
-                (a.route != b.route && !same_group && overlap).then(|| {
+                // two arrows never shown together may share a port (`Connector::life`)
+                let life = |p: &PortRef| {
+                    conns
+                        .get(routes[p.route].id.as_str())
+                        .and_then(|c| c.life)
+                        .unwrap_or((f64::NEG_INFINITY, f64::INFINITY))
+                };
+                let (la, lb) = (life(a), life(b));
+                let together = la.0 <= lb.1 && lb.0 <= la.1;
+                (a.route != b.route && !same_group && overlap && together).then(|| {
                     // move the arrival if one of them is one, else the later route
                     if !a.at_start && b.at_start {
                         (ports[i].0, *a)
@@ -244,6 +324,14 @@ fn separate_end_overlaps(
                 && t <= hi - margin
                 && others.iter().all(|o| (o - t).abs() >= step - EPS)
         };
+        // nor through a shape: the leg that moves with the port can be long (the private map's
+        // `index`, a line moved into the card beside its straight run)
+        let hit_now = shapes_hit(pts, shapes);
+        let clear = |t: f64| {
+            let mut moved = pts.clone();
+            move_port(&mut moved, p.at_start, p.side, t);
+            shapes_hit(&moved, shapes) <= hit_now
+        };
         let target = (1..64)
             .flat_map(|k| {
                 [
@@ -251,7 +339,7 @@ fn separate_end_overlaps(
                     cur - away * step * f64::from(k),
                 ]
             })
-            .find(|t| free(*t));
+            .find(|t| free(*t) && clear(*t));
         let Some(t) = target else { return };
         let (route, at_start, side) = (p.route, p.at_start, p.side);
         move_port(&mut routes[route].points, at_start, side, t);
@@ -293,6 +381,8 @@ fn spread_ports(
         } else {
             (rect.y0(), rect.y1())
         };
+        let mid = (lo + hi) / 2.0;
+        let (side_lo, side_hi) = (lo, hi);
         let margin = ((hi - lo) / 4.0).min(params.port_spacing.max(6.0));
         let group_of = |i: usize| {
             conns
@@ -318,7 +408,21 @@ fn spread_ports(
             // rather than spread into a neighbour (a card 20 px beside)
             continue;
         };
-        let targets = even_targets(slotted.len(), lo, hi, margin, params);
+        let (lo, hi, margin) =
+            middle_half((lo, hi, margin), (side_lo, side_hi), slotted.len(), params);
+        let targets = ANCHOR
+            .then(|| {
+                anchored_targets(
+                    routes,
+                    (&ports, &slotted),
+                    &lone,
+                    (lo, hi, margin),
+                    mid,
+                    params,
+                )
+            })
+            .flatten()
+            .unwrap_or_else(|| even_targets(slotted.len(), (lo, hi, margin), mid, params));
         let assigned: Vec<(usize, f64)> = slotted
             .iter()
             .zip(&targets)
@@ -327,23 +431,54 @@ fn spread_ports(
         for (i, target) in assigned {
             let pr = &ports[i];
             let pts = &mut routes[pr.route].points;
-            // a straight line whose other end is alone on its side: both ends move
-            if pts.len() == 2
-                && let Some(far) = lone.get(&(pr.route, !pr.at_start))
-            {
-                let (flo, fhi) = if horizontal_side(side) {
-                    (far.x0(), far.x1())
-                } else {
-                    (far.y0(), far.y1())
-                };
-                if target > flo + margin && target < fhi - margin {
-                    for q in pts.iter_mut() {
-                        set_along(q, side, target);
-                    }
-                    continue;
-                }
-            }
             move_port(pts, pr.at_start, side, target);
+        }
+    }
+    centre_lone_ends(routes, &lone, &bundled, shapes, conns);
+}
+
+/// An end alone on its side goes to its middle
+/// (D-091, D-093): every line lands in the middle of a side, bending if it must; a move that
+/// would cross a shape does not happen (R-02).
+fn centre_lone_ends(
+    routes: &mut [Route],
+    lone: &BTreeMap<(usize, bool), Rect>,
+    bundled: &std::collections::BTreeSet<usize>,
+    shapes: &BTreeMap<&str, Rect>,
+    conns: &BTreeMap<&str, &Connector>,
+) {
+    for (&(route, at_start), rect) in lone {
+        if bundled.contains(&route) {
+            continue;
+        }
+        let pts = &routes[route].points;
+        if pts.len() < 2 {
+            continue;
+        }
+        let end = if at_start { pts[0] } else { pts[pts.len() - 1] };
+        let Some(side) = side_of(rect, end) else {
+            continue;
+        };
+        let (lo, hi, v) = if horizontal_side(side) {
+            (rect.x0(), rect.x1(), end.0)
+        } else {
+            (rect.y0(), rect.y1(), end.1)
+        };
+        let mid = f64::midpoint(lo, hi);
+        if (v - mid).abs() < 0.5 {
+            continue;
+        }
+        let mut moved = pts.clone();
+        move_port(&mut moved, at_start, side, mid);
+        // no segment through a shape (its own ends included, R-02), but what the connector
+        // ignores (a card of another step)
+        let conn = conns.get(routes[route].id.as_str());
+        let free = |id: &str| conn.is_some_and(|c| c.ignore.iter().any(|p| p == id));
+        let hits = shapes
+            .iter()
+            .any(|(id, r)| !free(id) && moved.windows(2).any(|w| segment_hits(w[0], w[1], r)));
+        if !hits {
+            routes[route].points = moved;
         }
     }
 }
@@ -426,37 +561,23 @@ fn uncross_ports(
     shapes: &BTreeMap<&str, Rect>,
     groups_of: &[Option<String>],
 ) {
-    // bounding boxes: two routes whose boxes do not meet cannot cross
-    let bbox = |pts: &[Point]| {
-        pts.iter().fold(
-            (
-                f64::INFINITY,
-                f64::INFINITY,
-                f64::NEG_INFINITY,
-                f64::NEG_INFINITY,
-            ),
-            |(x0, y0, x1, y1), p| (x0.min(p.0), y0.min(p.1), x1.max(p.0), y1.max(p.1)),
-        )
-    };
-    let total = |routes: &[Route], ri: usize| -> usize {
-        let a = bbox(&routes[ri].points);
-        routes
-            .iter()
-            .enumerate()
-            .filter(|(j, _)| *j != ri)
-            .filter(|(_, r)| {
-                let b = bbox(&r.points);
-                a.0 <= b.2 && b.0 <= a.2 && a.1 <= b.3 && b.1 <= a.3
-            })
-            .map(|(_, r)| crossings(&routes[ri].points, &r.points))
-            .sum()
-    };
+    let total = |routes: &[Route], ri: usize| tangles(routes, conns, groups_of, ri);
     for ports in port_groups(routes, conns, shapes).into_values() {
-        // a hyperedge's ports stay; the others of the side may still swap (a swap is kept only if
-        // it removes crossings, the grouped routes' included)
+        // the shared end of a group (a fork's start, a join's arrival: two of its routes on this
+        // side) stays; a branch's own end moves like any other (a swap is kept only if it removes
+        // crossings, the grouped routes' included)
+        let shared = |p: &PortRef| {
+            groups_of[p.route].as_ref().is_some_and(|g| {
+                ports
+                    .iter()
+                    .any(|q| q.route != p.route && groups_of[q.route].as_ref() == Some(g))
+            })
+        };
+        let keep: Vec<bool> = ports.iter().map(|p| !shared(p)).collect();
         let ports: Vec<PortRef> = ports
             .into_iter()
-            .filter(|p| groups_of[p.route].is_none())
+            .zip(keep)
+            .filter_map(|(p, k)| k.then_some(p))
             .collect();
         if ports.len() < 2 {
             continue;
@@ -495,11 +616,12 @@ fn uncross_ports(
             for (ports, turns) in [(true, false), (false, true), (true, true)] {
                 routes[a.route].points = pa.clone();
                 routes[b.route].points = pb.clone();
-                if ports {
-                    move_port(&mut routes[a.route].points, a.at_start, side, tb);
-                    move_port(&mut routes[b.route].points, b.at_start, side, ta);
+                if ports && !swap_ports(routes, (a, b), (ta, tb), shapes) {
+                    continue;
                 }
-                if turns && !swap_turns(routes, a, b, shapes) {
+                // a grouped route's turn is its group's shared line: only its port may move
+                let grouped = groups_of[a.route].is_some() || groups_of[b.route].is_some();
+                if turns && (grouped || !swap_turns(routes, a, b, shapes)) {
                     continue;
                 }
                 let n = total(routes, a.route) + total(routes, b.route);
@@ -521,10 +643,48 @@ fn uncross_ports(
     }
 }
 
+/// Swaps the ports of `a` and `b` (at `ta` and `tb` along their side); `false` when a moved end
+/// would then cross a shape (a port moved under a neighbouring card drew its line through it).
+fn swap_ports(
+    routes: &mut [Route],
+    (a, b): (&PortRef, &PortRef),
+    (ta, tb): (f64, f64),
+    shapes: &BTreeMap<&str, Rect>,
+) -> bool {
+    let (pa, pb) = (
+        routes[a.route].points.clone(),
+        routes[b.route].points.clone(),
+    );
+    move_port(&mut routes[a.route].points, a.at_start, a.side, tb);
+    move_port(&mut routes[b.route].points, b.at_start, b.side, ta);
+    // every segment, not only the end's: the run that moves with a port can be long (a repeated
+    // point hid it from `end_clear`, and a whole leg moved through a card: the private map's
+    // `hypershift`)
+    let through = |pts: &[Point]| shapes_hit(pts, shapes);
+    end_clear(&routes[a.route].points, a.at_start, shapes)
+        && end_clear(&routes[b.route].points, b.at_start, shapes)
+        && through(&routes[a.route].points) <= through(&pa)
+        && through(&routes[b.route].points) <= through(&pb)
+}
+
+/// The shapes a route passes through, its own end shapes left out.
+fn shapes_hit(pts: &[Point], shapes: &BTreeMap<&str, Rect>) -> usize {
+    let n = pts.len();
+    if n < 2 {
+        return 0;
+    }
+    shapes
+        .values()
+        .filter(|r| !clear_between(pts, (0, n - 1), &BTreeMap::from([("", **r)])))
+        .count()
+}
+
 /// Index of the first bend after the port and of the corner after it, when the route leaves the
-/// port straight then turns (at least three points).
+/// port straight then turns, and turns again before its other end (at least four points): with
+/// three, the corner after the turn is the other end, and moving it took the arrow off its card
+/// (bug 14 of the private corpus: an arrow ending on the corner of the card below its target).
 fn first_turn(pts: &[Point], at_start: bool) -> Option<(usize, usize)> {
-    if pts.len() < 3 {
+    if pts.len() < 4 {
         return None;
     }
     Some(if at_start {
@@ -571,24 +731,48 @@ fn swap_turns(
     set(&mut nb, b1, b2, la);
     // only the segments that moved: around the two corners of the turn
     let clear = |pts: &[Point], i: usize, j: usize| {
-        let (s, e) = (pts[0], pts[pts.len() - 1]);
         let lo = i.min(j).saturating_sub(1);
         let hi = (i.max(j) + 1).min(pts.len() - 1);
-        // a shape holding an end inside (a region around it) is crossed anyway; the end shapes
-        // themselves, whose borders carry the ports, are not
-        shapes.values().all(|r| {
-            let own = |p: Point| {
-                p.0 > r.x + EPS && p.0 < r.x + r.w - EPS && p.1 > r.y + EPS && p.1 < r.y + r.h - EPS
-            };
-            own(s) || own(e) || (lo..hi).all(|k| !segment_hits(pts[k], pts[k + 1], r))
-        })
+        clear_between(pts, (lo, hi), shapes)
     };
     if !clear(&na, a1, a2) || !clear(&nb, b1, b2) {
+        return false;
+    }
+    // a "turn" whose next corner is only a stub in line with it (the end): moving the leg would
+    // leave that stub on a slant
+    if !crate::hint::is_orthogonal(&na) || !crate::hint::is_orthogonal(&nb) {
         return false;
     }
     routes[a.route].points = na;
     routes[b.route].points = nb;
     true
+}
+
+/// Segments `lo..hi` of a route cross no shape. A shape holding an end inside (a region around
+/// it) is crossed anyway; the end shapes themselves, whose borders carry the ports, are not.
+fn clear_between(pts: &[Point], (lo, hi): (usize, usize), shapes: &BTreeMap<&str, Rect>) -> bool {
+    let (s, e) = (pts[0], pts[pts.len() - 1]);
+    shapes.values().all(|r| {
+        let own = |p: Point| {
+            p.0 > r.x + EPS && p.0 < r.x + r.w - EPS && p.1 > r.y + EPS && p.1 < r.y + r.h - EPS
+        };
+        own(s) || own(e) || (lo..hi).all(|k| !segment_hits(pts[k], pts[k + 1], r))
+    })
+}
+
+/// The segments a port's move changed (the end's leg and the one after its first turn) cross no
+/// shape.
+fn end_clear(pts: &[Point], at_start: bool, shapes: &BTreeMap<&str, Rect>) -> bool {
+    let n = pts.len();
+    if n < 2 {
+        return true;
+    }
+    let (lo, hi) = if at_start {
+        (0, 2.min(n - 1))
+    } else {
+        (n.saturating_sub(3), n - 1)
+    };
+    clear_between(pts, (lo, hi), shapes)
 }
 
 /// Does the axis-aligned segment `p`–`q` pass through the inside of `r`?
@@ -598,14 +782,31 @@ fn segment_hits(p: Point, q: Point, r: &Rect) -> bool {
     x1 > r.x + EPS && x0 < r.x + r.w - EPS && y1 > r.y + EPS && y0 < r.y + r.h - EPS
 }
 
-/// Ports spread evenly around the middle of side `[lo, hi]`.
 /// How far the end segment at a port runs before its first turn (the whole route if straight).
+/// A point in line with the end (where the port's stub ends) is no turn: the depth stopped there
+/// left a zone title just beyond the stub out of the strip, and ports spread under it. In line
+/// within `IN_LINE`: the graph's points are rounded to 1e-4, a port is not.
 fn first_turn_depth(pts: &[Point], at_start: bool) -> Option<f64> {
-    let (a, b) = if at_start {
-        (*pts.first()?, *pts.get(1)?)
-    } else {
-        (*pts.last()?, *pts.get(pts.len().checked_sub(2)?)?)
+    const IN_LINE: f64 = 0.01;
+    let at = |k: usize| {
+        if at_start {
+            pts.get(k)
+        } else {
+            pts.len().checked_sub(k + 1).and_then(|i| pts.get(i))
+        }
     };
+    let a = *at(0)?;
+    let mut b = *at(1)?;
+    let vertical = (a.0 - b.0).abs() <= (a.1 - b.1).abs();
+    let mut k = 2;
+    while let Some(q) = at(k) {
+        let off = if vertical { q.0 - a.0 } else { q.1 - a.1 };
+        if off.abs() > IN_LINE {
+            break;
+        }
+        b = *q;
+        k += 1;
+    }
     Some((a.0 - b.0).abs() + (a.1 - b.1).abs())
 }
 
@@ -625,8 +826,13 @@ fn spread_room(
 ) -> Option<(f64, f64, f64)> {
     let b = params.shape_buffer;
     for pad in [b, b / 2.0, b / 4.0] {
-        let Some((a, b)) = clear_part(shapes, strip, (lo, hi), margin, pad) else {
-            return Some((lo, hi, margin));
+        let (a, b) = match clear_part(shapes, strip, (lo, hi), margin, pad) {
+            Clear::Whole => return Some((lo, hi, margin)),
+            // shapes all along the side: no part is clear at this margin (it was taken for a
+            // side with nothing in front, and the ports spread over the shapes: the private map's
+            // `mce/installation`, a line through the card beside its straight run)
+            Clear::None => continue,
+            Clear::Part(a, b) => (a, b),
         };
         // the side's own ends keep `margin`; a shape's edge is already `pad` away
         let a = if a <= lo + EPS { a + margin } else { a };
@@ -638,13 +844,23 @@ fn spread_room(
     None
 }
 
+/// What of a side is clear of the shapes in front of it.
+enum Clear {
+    /// No shape stands in front.
+    Whole,
+    /// Shapes stand all along it.
+    None,
+    /// The widest clear part.
+    Part(f64, f64),
+}
+
 fn clear_part(
     shapes: &BTreeMap<&str, Rect>,
     (rect, side, depth): (&Rect, Side, f64),
     (lo, hi): (f64, f64),
     margin: f64,
     pad: f64,
-) -> Option<(f64, f64)> {
+) -> Clear {
     let v = side.outward().vector();
     let edge = side.point(rect, 0.0);
     // the strip in front of the side, `depth` deep
@@ -668,7 +884,7 @@ fn clear_part(
         })
         .collect();
     if blocked.is_empty() {
-        return None;
+        return Clear::Whole;
     }
     blocked.sort_by(|a, b| a.0.total_cmp(&b.0));
     // the free stretches between the blocked ones, inside the side's margins
@@ -687,7 +903,7 @@ fn clear_part(
     free.into_iter()
         .filter(|(a, b)| b > a)
         .max_by(|x, y| (x.1 - x.0).total_cmp(&(y.1 - y.0)))
-        .map(|(a, b)| {
+        .map_or(Clear::None, |(a, b)| {
             let a = if a <= lo + margin + EPS {
                 a - margin
             } else {
@@ -698,19 +914,91 @@ fn clear_part(
             } else {
                 b
             };
-            (a, b)
+            Clear::Part(a, b)
         })
 }
 
-fn even_targets(n: usize, lo: f64, hi: f64, margin: f64, params: &Params) -> Vec<f64> {
+/// Targets of the slots of a side when they are anchored (D-091, D-092): a line whose other end
+/// is alone on its side, facing this one, is drawn from the middle of that other side, so its
+/// slot sits there, and the side's slots are spread evenly and symmetrically around the side's
+/// middle with the spacing that puts that slot there (two ports: mirror images). Several anchors
+/// must agree on that spacing (two cards each centred in their half of a wide card). `None`
+/// without an anchor, with anchors that disagree, or when the spacing would be too tight or leave
+/// the side.
+fn anchored_targets(
+    routes: &[Route],
+    (ports, slotted): (&[PortRef], &[Vec<usize>]),
+    lone: &BTreeMap<(usize, bool), Rect>,
+    (lo, hi, margin): (f64, f64, f64),
+    mid: f64,
+    params: &Params,
+) -> Option<Vec<f64>> {
+    let n = slotted.len() as f64;
+    let spacings: Vec<f64> = slotted
+        .iter()
+        .enumerate()
+        .filter_map(|(k, members)| {
+            members.iter().find_map(|&i| {
+                let pr = &ports[i];
+                let far = lone.get(&(pr.route, !pr.at_start))?;
+                let c = if horizontal_side(pr.side) {
+                    far.center().0
+                } else {
+                    far.center().1
+                };
+                // a straight line, or a card that faces the side
+                let facing = c >= lo + margin - 0.5 && c <= hi - margin + 0.5;
+                if routes[pr.route].points.len() != 2 && !facing {
+                    return None;
+                }
+                let rank = k as f64 - (n - 1.0) / 2.0;
+                (rank.abs() >= EPS).then(|| (c - mid) / rank)
+            })
+        })
+        .collect();
+    let s = *spacings.first()?;
+    if spacings.iter().any(|t| (t - s).abs() > 1.0) {
+        return None;
+    }
+    // the slots keep the order that avoids crossings
+    let half = (n - 1.0) / 2.0 * s;
+    let fits = s >= params.port_spacing
+        && mid - half >= lo + margin - 0.5
+        && mid + half <= hi - margin + 0.5;
+    fits.then(|| {
+        (0..slotted.len())
+            .map(|j| mid + (j as f64 - (n - 1.0) / 2.0) * s)
+            .collect()
+    })
+}
+
+fn even_targets(
+    n: usize,
+    (lo, hi, margin): (f64, f64, f64),
+    mid: f64,
+    params: &Params,
+) -> Vec<f64> {
     let n = n as f64;
     let mut s = params.ideal_nudging.max(params.port_spacing);
-    // wider apart on a roomy side, up to `port_spread`: arrows read as distinct, not as a cable
-    s = s.max(params.port_spread.min((hi - lo) / (n + 1.0)));
+    // wider apart on a roomy side, up to `port_spread`: arrows read as distinct, not as a cable;
+    // the room is already the middle of the side (`middle_half`)
+    s = s.max(
+        params
+            .port_spread
+            .min((hi - lo - 2.0 * margin) / (n - 1.0).max(1.0)),
+    );
     if (n - 1.0) * s > (hi - lo) - 2.0 * margin {
         s = (((hi - lo) - 2.0 * margin) / (n - 1.0)).max(0.0);
     }
-    let center = (lo + hi) / 2.0;
+    // centred on the side's middle, slid only as far as the clear part requires: a shape in
+    // front of one end of the side does not pull the ports off the middle
+    let half = (n - 1.0) * s / 2.0;
+    let (a, b) = (lo + margin + half, hi - margin - half);
+    let center = if a <= b {
+        mid.clamp(a, b)
+    } else {
+        (lo + hi) / 2.0
+    };
     (0..n as usize)
         .map(|k| center + (k as f64 - (n - 1.0) / 2.0) * s)
         .collect()
@@ -813,10 +1101,20 @@ fn segments(routes: &[Route], vertical: bool, ends: bool) -> Vec<Seg> {
         } else {
             (1..p.len() - 2).collect()
         };
+        // a middle segment in line with an end one (a stub left apart from the stretch it
+        // continues) is that end's line: it moves with it or not at all (moved alone, the stub was
+        // left on a slant)
+        let in_line = |i: usize, j: usize| {
+            let (a, b, c) = (p[i], p[i + 1], p[j + 1]);
+            ((a.0 - b.0).abs() < EPS && (b.0 - c.0).abs() < EPS)
+                || ((a.1 - b.1).abs() < EPS && (b.1 - c.1).abs() < EPS)
+        };
         for k in ks {
             let (a, b) = (p[k], p[k + 1]);
             let is_v = (a.0 - b.0).abs() < EPS && (a.1 - b.1).abs() > EPS;
             let is_h = (a.1 - b.1).abs() < EPS && (a.0 - b.0).abs() > EPS;
+            let fixed =
+                ends || (k == 1 && in_line(0, 1)) || (k + 3 == p.len() && in_line(k, k + 1));
             if vertical && is_v {
                 out.push(Seg {
                     route: ri,
@@ -825,7 +1123,7 @@ fn segments(routes: &[Route], vertical: bool, ends: bool) -> Vec<Seg> {
                     coord: a.0,
                     lo: a.1.min(b.1),
                     hi: a.1.max(b.1),
-                    fixed: ends,
+                    fixed,
                 });
             } else if !vertical && is_h {
                 out.push(Seg {
@@ -835,7 +1133,7 @@ fn segments(routes: &[Route], vertical: bool, ends: bool) -> Vec<Seg> {
                     coord: a.1,
                     lo: a.0.min(b.0),
                     hi: a.0.max(b.0),
-                    fixed: ends,
+                    fixed,
                 });
             }
         }
@@ -867,6 +1165,11 @@ fn seg_key(routes: &[Route], s: &Seg) -> (i32, f64) {
 
 /// Croisements stricts entre deux polylignes orthogonales.
 fn crossings(a: &[Point], b: &[Point]) -> usize {
+    // collinear points merged first: a line crossing a route exactly where its stub ends would
+    // fall between two segments and go uncounted (seen under a card, 2026-11-09)
+    let (mut a, mut b) = (a.to_vec(), b.to_vec());
+    crate::simplify::merge(&mut a);
+    crate::simplify::merge(&mut b);
     let mut n = 0;
     for w1 in a.windows(2) {
         for w2 in b.windows(2) {
@@ -886,6 +1189,125 @@ fn crossings(a: &[Point], b: &[Point]) -> usize {
         }
     }
     n
+}
+
+/// The crossings of route `ri` with the others, and its lines drawn on an unrelated route's line
+/// (bug 22 of the private corpus: a swap that laid one arrow on another's line counted one
+/// crossing fewer and was kept); an overlay hides which arrow goes where, so it weighs more than
+/// any crossing a swap may remove.
+fn tangles(
+    routes: &[Route],
+    conns: &BTreeMap<&str, &Connector>,
+    groups_of: &[Option<String>],
+    ri: usize,
+) -> usize {
+    tangles_over(routes, conns, groups_of, ri, 4.0)
+}
+
+/// `tangles` with overlays counted from `min` px on one line.
+fn tangles_over(
+    routes: &[Route],
+    conns: &BTreeMap<&str, &Connector>,
+    groups_of: &[Option<String>],
+    ri: usize,
+    min: f64,
+) -> usize {
+    // bounding boxes: two routes whose boxes do not meet cannot cross
+    let bbox = |pts: &[Point]| {
+        pts.iter().fold(
+            (
+                f64::INFINITY,
+                f64::INFINITY,
+                f64::NEG_INFINITY,
+                f64::NEG_INFINITY,
+            ),
+            |(x0, y0, x1, y1), p| (x0.min(p.0), y0.min(p.1), x1.max(p.0), y1.max(p.1)),
+        )
+    };
+    let a = bbox(&routes[ri].points);
+    routes
+        .iter()
+        .enumerate()
+        .filter(|(j, _)| *j != ri)
+        .filter(|(_, r)| {
+            let b = bbox(&r.points);
+            a.0 <= b.2 && b.0 <= a.2 && a.1 <= b.3 && b.1 <= a.3
+        })
+        .map(|(j, r)| {
+            let laid = if related(routes, conns, groups_of, ri, j) {
+                0
+            } else {
+                overlays_over(&routes[ri].points, &r.points, min)
+            };
+            crossings(&routes[ri].points, &r.points) + OVERLAY_WEIGHT * laid
+        })
+        .sum()
+}
+
+/// What one overlay weighs against crossings in `uncross_ports`.
+const OVERLAY_WEIGHT: usize = 100;
+
+/// Two routes that may share a line: one connector's, a hyperedge group's, or two sharing an end
+/// shape (a fork, a join, an arrow and its way back).
+fn related(
+    routes: &[Route],
+    conns: &BTreeMap<&str, &Connector>,
+    groups_of: &[Option<String>],
+    i: usize,
+    j: usize,
+) -> bool {
+    if i == j || (groups_of[i].is_some() && groups_of[i] == groups_of[j]) {
+        return true;
+    }
+    let shapes_of = |k: usize| -> Vec<&str> {
+        conns
+            .get(routes[k].id.as_str())
+            .map(|c| {
+                [&c.from, &c.to]
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        End::Shape { id, .. } => Some(id.as_str()),
+                        End::Point { .. } => None,
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
+    let a = shapes_of(i);
+    shapes_of(j).iter().any(|s| a.contains(s))
+}
+
+/// Runs of `a` and `b` drawn on one line: parallel within 1.5 px over more than `min` px (4 px:
+/// the engine's `overlay` property).
+fn overlays_over(a: &[Point], b: &[Point], min: f64) -> usize {
+    let runs = |pts: &[Point]| -> Vec<(bool, f64, f64, f64)> {
+        pts.windows(2)
+            .filter_map(|w| {
+                let (p, q) = (w[0], w[1]);
+                if (p.0 - q.0).abs() < 0.5 && (p.1 - q.1).abs() > EPS {
+                    Some((true, p.0, p.1.min(q.1), p.1.max(q.1)))
+                } else if (p.1 - q.1).abs() < 0.5 && (p.0 - q.0).abs() > EPS {
+                    Some((false, p.1, p.0.min(q.0), p.0.max(q.0)))
+                } else {
+                    None
+                }
+            })
+            .collect()
+    };
+    let (mut a, mut b) = (a.to_vec(), b.to_vec());
+    merge(&mut a);
+    merge(&mut b);
+    let rb = runs(&b);
+    runs(&a)
+        .iter()
+        .map(|x| {
+            rb.iter()
+                .filter(|y| {
+                    x.0 == y.0 && (x.1 - y.1).abs() < 1.5 && x.3.min(y.3) - x.2.max(y.2) > min
+                })
+                .count()
+        })
+        .sum()
 }
 
 /// Route with segment `s` moved by `d`.
@@ -959,17 +1381,39 @@ fn find(p: &mut [usize], i: usize) -> usize {
     r
 }
 
+/// How far out a U along the drawing's flow may move from where the router set it, and whether
+/// that holds for horizontal segments (a left-to-right drawing); `None` without a flow
+/// (`center_segments`).
+type Reach = Option<(f64, bool)>;
+
 /// Free middle segments: centred in the corridor the shapes on either side bound. A route going
 /// round an obstacle no longer hugs the margin of the shape it aims at: the bend sits in the
-/// middle of the free space, as a draughtsman would put it. Segments that carry a waypoint, whose
-/// corridor is bounded on one side only, or whose move would cross a shape, stay. The result
-/// depends only on the shapes bounding the corridor (stability, D-031).
+/// middle of the free space, as a draughtsman would put it; but a U (both bends turning the same
+/// way) running along the drawing's flow moves out no further than `reach` from where the router
+/// set it, beside the shape it goes round (twice the margin; `reach`: that distance, and whether it
+/// holds for horizontal segments, `None` without a flow): in a column's open corridor the middle sent the bend hundreds of pixels
+/// away, round a card standing between the route's ends (bug 19 of the private corpus). Across
+/// the flow the gaps between rows bound the move, and the engine centres those segments with the
+/// zone frames in view (`route::center_in_gaps`). Segments that carry a waypoint, whose corridor is bounded on one side only, or
+/// whose move would cross a shape, stay. The result depends only on the shapes bounding the
+/// corridor (stability, D-031).
 fn center_segments(
     routes: &mut [Route],
     conns: &BTreeMap<&str, &Connector>,
     shapes: &BTreeMap<&str, Rect>,
+    walls: &[Rect],
+    reach: Reach,
 ) {
     let mut grouped: BTreeMap<String, Vec<usize>> = BTreeMap::new();
+    // routes a group's line may push across it: neither grouped nor held by waypoints
+    let movable: Vec<bool> = routes
+        .iter()
+        .map(|r| {
+            conns
+                .get(r.id.as_str())
+                .is_none_or(|c| c.group.is_none() && c.checkpoints.is_empty())
+        })
+        .collect();
     for (i, r) in routes.iter_mut().enumerate() {
         let conn = conns.get(r.id.as_str());
         if let Some(g) = conn.and_then(|c| c.group.clone()) {
@@ -979,59 +1423,62 @@ fn center_segments(
         let checkpoints: &[Point] = conn.map_or(&[], |c| &c.checkpoints);
         let n = r.points.len();
         for k in 1..n.saturating_sub(2) {
-            if let Some(moved) = center_segment(&r.points, k, checkpoints, shapes, None) {
+            if let Some(moved) =
+                center_segment(&r.points, k, checkpoints, (shapes, walls), (None, reach))
+            {
                 r.points[k] = moved[1];
                 r.points[k + 1] = moved[2];
             }
         }
     }
     for members in grouped.values() {
-        center_group(routes, members, shapes);
+        center_group(routes, members, (shapes, walls), &movable, reach);
     }
 }
 
-/// The branches of a hyperedge (R-18) are centred together: segments of the group that are
-/// collinear and touch (the trunk splitting left and right) take the middle of the corridor along
-/// their joint extent, all of them or none, so that the split stays at one point.
-fn center_group(routes: &mut [Route], members: &[usize], shapes: &BTreeMap<&str, Rect>) {
+/// The branches of a hyperedge (R-18) are centred together. First, the segments of the group
+/// that are parallel and touch (the trunk splitting left and right, the collectors of a join
+/// coming from cards at different depths) take one line, the middle of the corridor they all
+/// share: fewer junctions. When no such line is free, the segments already on one line take the
+/// middle of the corridor along their joint extent, all of them or none, so that the split stays
+/// at one point.
+fn center_group(
+    routes: &mut [Route],
+    members: &[usize],
+    (shapes, walls): (&BTreeMap<&str, Rect>, &[Rect]),
+    movable: &[bool],
+    reach: Reach,
+) {
     for &i in members {
         for k in 1..routes[i].points.len().saturating_sub(2) {
-            let (a, b) = (routes[i].points[k], routes[i].points[k + 1]);
-            let horizontal = (a.1 - b.1).abs() < EPS;
-            let pos = if horizontal { a.1 } else { a.0 };
-            let ext = |p: Point, q: Point| {
-                if horizontal {
-                    (p.0.min(q.0), p.0.max(q.0))
-                } else {
-                    (p.1.min(q.1), p.1.max(q.1))
-                }
-            };
-            let (mut lo, mut hi) = ext(a, b);
-            let mut sib: Vec<(usize, usize)> = Vec::new();
-            for &j in members {
-                let pts = &routes[j].points;
-                for m in 1..pts.len().saturating_sub(2) {
-                    let (p, q) = (pts[m], pts[m + 1]);
-                    let same = if horizontal {
-                        (p.1 - q.1).abs() < EPS && (p.1 - pos).abs() < 1.0
-                    } else {
-                        (p.0 - q.0).abs() < EPS && (p.0 - pos).abs() < 1.0
-                    };
-                    let (l, h) = ext(p, q);
-                    if same && l <= hi + 1.0 && h >= lo - 1.0 {
-                        sib.push((j, m));
-                        lo = lo.min(l);
-                        hi = hi.max(h);
-                    }
-                }
+            // a branch leaving along a sibling's first or last stretch (a late split,
+            // `Params::late_split`) shares a line held by that sibling's port: it stays on it
+            if on_an_end(routes, members, (i, k)) {
+                continue;
             }
-            let span = Some((lo, hi));
+            let (sib, span) = siblings(routes, members, (i, k), false);
+            let shared = shared_line(routes, &sib, shapes, span)
+                .and_then(|moved| clear_of_others(routes, members, &sib, &moved, shapes, movable));
+            if let Some(changed) = shared {
+                for (j, pts) in changed {
+                    routes[j].points = pts;
+                }
+                continue;
+            }
+            let (sib, span) = siblings(routes, members, (i, k), true);
             let moved: Option<Vec<_>> = sib
                 .iter()
-                .map(|&(j, m)| center_segment(&routes[j].points, m, &[], shapes, span))
+                .map(|&(j, m)| {
+                    center_segment(
+                        &routes[j].points,
+                        m,
+                        &[],
+                        (shapes, walls),
+                        (Some(span), reach),
+                    )
+                })
                 .collect();
-            let Some(moved) = moved else { continue };
-            for (&(j, m), mv) in sib.iter().zip(moved) {
+            for (&(j, m), mv) in sib.iter().zip(moved.unwrap_or_default()) {
                 routes[j].points[m] = mv[1];
                 routes[j].points[m + 1] = mv[2];
             }
@@ -1039,20 +1486,269 @@ fn center_group(routes: &mut [Route], members: &[usize], shapes: &BTreeMap<&str,
     }
 }
 
+/// Does segment `k` of route `i` run on the first or last stretch of another route of the group
+/// (on one line, over more than a pixel)?
+fn on_an_end(routes: &[Route], members: &[usize], (i, k): (usize, usize)) -> bool {
+    let (a, b) = (routes[i].points[k], routes[i].points[k + 1]);
+    let horizontal = (a.1 - b.1).abs() < EPS;
+    let (pos, lo, hi) = if horizontal {
+        (a.1, a.0.min(b.0), a.0.max(b.0))
+    } else {
+        (a.0, a.1.min(b.1), a.1.max(b.1))
+    };
+    members.iter().filter(|&&j| j != i).any(|&j| {
+        let pts = &routes[j].points;
+        let n = pts.len();
+        n >= 2
+            && [(pts[0], pts[1]), (pts[n - 2], pts[n - 1])]
+                .iter()
+                .any(|&(p, q)| {
+                    let (at, l, h) = if horizontal {
+                        (p.1, p.0.min(q.0), p.0.max(q.0))
+                    } else {
+                        (p.0, p.1.min(q.1), p.1.max(q.1))
+                    };
+                    let parallel = if horizontal {
+                        (p.1 - q.1).abs() < EPS
+                    } else {
+                        (p.0 - q.0).abs() < EPS
+                    };
+                    parallel && (at - pos).abs() < 1.0 && h.min(hi) - l.max(lo) > 1.0
+                })
+    })
+}
+
+/// The group's routes with segments `sib` moved (`moved`), plus the other routes that would then
+/// run along one of them, each stepped across the group's new line; `None` if one of those cannot
+/// step aside (the group then keeps its lines apart). Route index → new points.
+fn clear_of_others(
+    routes: &[Route],
+    members: &[usize],
+    sib: &[(usize, usize)],
+    moved: &[[Point; 4]],
+    shapes: &BTreeMap<&str, Rect>,
+    movable: &[bool],
+) -> Option<Vec<(usize, Vec<Point>)>> {
+    let mut changed: BTreeMap<usize, Vec<Point>> = BTreeMap::new();
+    for (&(j, m), mv) in sib.iter().zip(moved) {
+        let pts = changed.entry(j).or_insert_with(|| routes[j].points.clone());
+        pts[m] = mv[1];
+        pts[m + 1] = mv[2];
+    }
+    let (a, b) = (moved[0][1], moved[0][2]);
+    let horizontal = (a.1 - b.1).abs() < EPS;
+    let line = if horizontal { a.1 } else { a.0 };
+    let mine: Vec<Vec<Point>> = members
+        .iter()
+        .map(|&j| changed.get(&j).unwrap_or(&routes[j].points).clone())
+        .collect();
+    for (o, r) in routes.iter().enumerate() {
+        if members.contains(&o) || !mine.iter().any(|p| runs_along(p, &r.points)) {
+            continue;
+        }
+        if !movable[o] {
+            return None;
+        }
+        let stepped = step_across(&r.points, horizontal, line, shapes)?;
+        if mine.iter().any(|p| runs_along(p, &stepped)) {
+            return None;
+        }
+        changed.insert(o, stepped);
+    }
+    Some(changed.into_iter().collect())
+}
+
+/// Do two routes run along each other somewhere (parallel segments less than 2 px apart over
+/// more than 1 px)?
+fn runs_along(a: &[Point], b: &[Point]) -> bool {
+    let segs =
+        |p: &[Point]| -> Vec<(Point, Point)> { p.windows(2).map(|w| (w[0], w[1])).collect() };
+    segs(a).iter().any(|&(p, q)| {
+        segs(b).iter().any(|&(u, v)| {
+            let (h1, h2) = ((p.1 - q.1).abs() < EPS, (u.1 - v.1).abs() < EPS);
+            let (v1, v2) = ((p.0 - q.0).abs() < EPS, (u.0 - v.0).abs() < EPS);
+            let (near, l1, h1e, l2, h2e) = if h1 && h2 && !(v1 || v2) {
+                (
+                    (p.1 - u.1).abs() < 2.0,
+                    p.0.min(q.0),
+                    p.0.max(q.0),
+                    u.0.min(v.0),
+                    u.0.max(v.0),
+                )
+            } else if v1 && v2 && !(h1 || h2) {
+                (
+                    (p.0 - u.0).abs() < 2.0,
+                    p.1.min(q.1),
+                    p.1.max(q.1),
+                    u.1.min(v.1),
+                    u.1.max(v.1),
+                )
+            } else {
+                return false;
+            };
+            near && h1e.min(h2e) - l1.max(l2) > 1.0
+        })
+    })
+}
+
+/// Route `pts` with its middle segments parallel to a group's line (at `line`) whose neighbours
+/// cross that line moved to the far side, half-way between the line and the next shape: the
+/// route steps aside where it met the group, instead of running along one of its branches.
+fn step_across(
+    pts: &[Point],
+    horizontal: bool,
+    line: f64,
+    shapes: &BTreeMap<&str, Rect>,
+) -> Option<Vec<Point>> {
+    let coord = |p: Point| if horizontal { p.1 } else { p.0 };
+    let along = |p: Point| if horizontal { p.0 } else { p.1 };
+    let mut out = pts.to_vec();
+    let mut any = false;
+    for k in 1..pts.len().saturating_sub(2) {
+        let (a, b) = (out[k], out[k + 1]);
+        if (coord(a) - coord(b)).abs() > EPS {
+            continue; // not parallel to the line
+        }
+        let pos = coord(a);
+        // the side of the line its ends come from
+        let ends = [coord(out[k - 1]), coord(out[k + 2])];
+        let Some(&far) = ends.iter().find(|&&c| (c - line) * (pos - line) < 0.0) else {
+            continue;
+        };
+        let (lo, hi) = (along(a).min(along(b)), along(a).max(along(b)));
+        let up = far > line;
+        let bound = shapes
+            .values()
+            .filter_map(|r| {
+                let (s0, s1, e0, e1) = if horizontal {
+                    (r.x0(), r.x1(), r.y0(), r.y1())
+                } else {
+                    (r.y0(), r.y1(), r.x0(), r.x1())
+                };
+                (s1 > lo + EPS && s0 < hi - EPS).then_some(if up { e0 } else { e1 })
+            })
+            .filter(|&e| if up { e >= line } else { e <= line })
+            .fold(far, |m, e| if up { m.min(e) } else { m.max(e) });
+        let mv = segment_at(&out, k, (line + bound) / 2.0, shapes)?;
+        out[k] = mv[1];
+        out[k + 1] = mv[2];
+        any = true;
+    }
+    any.then_some(out)
+}
+
+/// The middle segments of a group's routes parallel to segment `k` of route `i` that touch it,
+/// directly or through one another (`collinear`: on its line only), and their joint extent.
+fn siblings(
+    routes: &[Route],
+    members: &[usize],
+    (i, k): (usize, usize),
+    collinear: bool,
+) -> (Vec<(usize, usize)>, (f64, f64)) {
+    let (a, b) = (routes[i].points[k], routes[i].points[k + 1]);
+    let horizontal = (a.1 - b.1).abs() < EPS;
+    let pos = if horizontal { a.1 } else { a.0 };
+    let ext = |p: Point, q: Point| {
+        if horizontal {
+            (p.0.min(q.0), p.0.max(q.0))
+        } else {
+            (p.1.min(q.1), p.1.max(q.1))
+        }
+    };
+    let (mut lo, mut hi) = ext(a, b);
+    let mut sib: Vec<(usize, usize)> = Vec::new();
+    for &j in members {
+        let pts = &routes[j].points;
+        for m in 1..pts.len().saturating_sub(2) {
+            let (p, q) = (pts[m], pts[m + 1]);
+            let at = if horizontal { p.1 } else { p.0 };
+            let parallel = if horizontal {
+                (p.1 - q.1).abs() < EPS
+            } else {
+                (p.0 - q.0).abs() < EPS
+            };
+            let (l, h) = ext(p, q);
+            if parallel && (!collinear || (at - pos).abs() < 1.0) && l <= hi + 1.0 && h >= lo - 1.0
+            {
+                sib.push((j, m));
+                lo = lo.min(l);
+                hi = hi.max(h);
+            }
+        }
+    }
+    (sib, (lo, hi))
+}
+
+/// The segments `sib` all moved onto one line, the middle of the corridor they share over
+/// `span`; `None` if they share none or one of them cannot move there.
+fn shared_line(
+    routes: &[Route],
+    sib: &[(usize, usize)],
+    shapes: &BTreeMap<&str, Rect>,
+    span: (f64, f64),
+) -> Option<Vec<[Point; 4]>> {
+    let (mut before, mut after) = (f64::NEG_INFINITY, f64::INFINITY);
+    for &(j, m) in sib {
+        let (b, a) = corridor(&routes[j].points, m, (shapes, &[]), Some(span))?;
+        before = before.max(b);
+        after = after.min(a);
+    }
+    if before >= after {
+        return None;
+    }
+    sib.iter()
+        .map(|&(j, m)| segment_at(&routes[j].points, m, (before + after) / 2.0, shapes))
+        .collect()
+}
+
 /// Segment `k` (`pts[k]`–`pts[k + 1]`) moved to the middle of its corridor (the four points
-/// `k - 1` to `k + 2`), or `None` if there is no reason to or it cannot move. `span` replaces the
-/// segment's own extent to find the corridor (the joint extent of a hyperedge's branches).
+/// `k - 1` to `k + 2`), but in a U along the flow no further out than `reach` from where it stands,
+/// or `None` if there is no reason to or it cannot move. `span` replaces the segment's own extent to find the
+/// corridor (the joint extent of a hyperedge's branches).
 fn center_segment(
     pts: &[Point],
     k: usize,
     checkpoints: &[Point],
-    shapes: &BTreeMap<&str, Rect>,
-    span: Option<(f64, f64)>,
+    (shapes, walls): (&BTreeMap<&str, Rect>, &[Rect]),
+    (span, reach): (Option<(f64, f64)>, Reach),
 ) -> Option<[Point; 4]> {
+    let (a, b) = (pts[k], pts[k + 1]);
+    if checkpoints.iter().any(|&c| on_segment(a, b, c)) {
+        return None;
+    }
+    let (before, after) = corridor(pts, k, (shapes, walls), span)?;
+    let horizontal = (a.1 - b.1).abs() < EPS;
+    let coord = |p: Point| if horizontal { p.1 } else { p.0 };
+    let (pos, prev, next) = (coord(a), coord(pts[k - 1]), coord(pts[k + 2]));
+    let mid = (before + after) / 2.0;
+    // the bends on either side turn the same way (a U round the shape on their side): moving the
+    // segment away from them lengthens the route by twice the move, so it goes out no further than
+    // `reach` from where the router set it; in a Z the move costs nothing and the middle stays
+    let u = (prev - pos) * (next - pos) > 0.0;
+    let along = reach.is_some_and(|(_, flat)| flat == horizontal);
+    let reach = reach.map_or(f64::INFINITY, |(r, _)| r);
+    let aim = if along && u && (mid - pos) * (prev - pos) < 0.0 {
+        mid.clamp(pos - reach, pos + reach)
+    } else {
+        mid
+    };
+    segment_at(pts, k, aim, shapes)
+}
+
+/// The corridor of segment `k` across its direction: the nearest shape edges on either side over
+/// its extent (or `span`); `None` if the segment is not orthogonal or the corridor is open.
+/// `walls` (the regions' frames, `Params::region_walls`) bound it as shapes do, except one the
+/// segment runs inside.
+fn corridor(
+    pts: &[Point],
+    k: usize,
+    (shapes, walls): (&BTreeMap<&str, Rect>, &[Rect]),
+    span: Option<(f64, f64)>,
+) -> Option<(f64, f64)> {
     let (a, b) = (pts[k], pts[k + 1]);
     let horizontal = (a.1 - b.1).abs() < EPS && (a.0 - b.0).abs() > EPS;
     let vertical = (a.0 - b.0).abs() < EPS && (a.1 - b.1).abs() > EPS;
-    if !(horizontal || vertical) || checkpoints.iter().any(|&c| on_segment(a, b, c)) {
+    if !(horizontal || vertical) {
         return None;
     }
     // the segment is seen as "horizontal" in a possibly transposed frame
@@ -1063,7 +1759,7 @@ fn center_segment(
     };
     let (lo_span, hi_span) = span.unwrap_or((lo_span, hi_span));
     let (mut before, mut after) = (f64::NEG_INFINITY, f64::INFINITY);
-    for r in shapes.values() {
+    for r in shapes.values().chain(walls) {
         let (s0, s1, e0, e1) = if horizontal {
             (r.x0(), r.x1(), r.y0(), r.y1())
         } else {
@@ -1078,17 +1774,33 @@ fn center_segment(
             after = after.min(e0);
         }
     }
-    if !(before.is_finite() && after.is_finite()) {
-        return None;
-    }
+    (before.is_finite() && after.is_finite()).then_some((before, after))
+}
+
+/// Segment `k` moved across to `mid` (the four points `k - 1` to `k + 2`), or `None` if its
+/// neighbours would turn round or the move would cross a shape.
+fn segment_at(
+    pts: &[Point],
+    k: usize,
+    mid: f64,
+    shapes: &BTreeMap<&str, Rect>,
+) -> Option<[Point; 4]> {
+    let (a, b) = (pts[k], pts[k + 1]);
+    let horizontal = (a.1 - b.1).abs() < EPS && (a.0 - b.0).abs() > EPS;
+    let pos = if horizontal { a.1 } else { a.0 };
     let mut moved = [pts[k - 1], pts[k], pts[k + 1], pts[k + 2]];
-    let mid = (before + after) / 2.0;
     if (mid - pos).abs() < EPS {
         return Some(moved); // already in the middle
     }
     // the (perpendicular) neighbours keep their direction: a segment is never turned round
     let coord = |p: Point| if horizontal { p.1 } else { p.0 };
     let (prev, next) = (coord(pts[k - 1]), coord(pts[k + 2]));
+    // a neighbour on the segment's own line is no bend but its continuation (a port's stub):
+    // the segment cannot leave it without slanting. The graph's coordinates are rounded
+    // (`scene::snap`) while a port is not, so "on the line" is within half a pixel
+    if (pos - prev).abs() < 0.5 || (pos - next).abs() < 0.5 {
+        return None;
+    }
     if (pos - prev) * (mid - prev) <= EPS || (pos - next) * (mid - next) <= EPS {
         return None;
     }
@@ -1167,7 +1879,6 @@ fn spread(
     (segs, members): (&[Seg], &[usize]),
     groups: &[Option<String>],
 ) {
-    let margin = (params.shape_buffer / 2.0).max(4.0);
     let vertical = segs[members[0]].vertical;
     // insertion sort: the "before" relation is not necessarily transitive
     let mut ordered: Vec<usize> = Vec::with_capacity(members.len());
@@ -1197,33 +1908,60 @@ fn spread(
         .fold(f64::NEG_INFINITY, f64::max);
     let n = slotted.len() as f64;
     // the slot that stays: the fixed one, else the middle of the cluster
-    let (anchor, coord) = match fixed.first() {
+    let (anchor, mut coord) = match fixed.first() {
         Some(&f) => (f as f64, segs[slotted[f][0]].coord),
         None => ((n - 1.0) / 2.0, segs[firsts[0]].coord),
     };
     let (left, right) = channel(shapes, vertical, coord, lo, hi);
-    let mut s = params.ideal_nudging;
-    for (room, slots_beyond) in [
-        (coord - left - margin, anchor),
-        (right - coord - margin, n - 1.0 - anchor),
-    ] {
-        if slots_beyond > 0.0 && slots_beyond * s > room {
-            s = (room / slots_beyond).max(0.0);
+    let mut s: f64 = params.ideal_nudging;
+    // the lines keep the router's whole margin from the shapes when the channel holds them so
+    // spaced, half of it only when it is narrow (a line 7 px from a card ran along it)
+    let half = (params.shape_buffer / 2.0).max(4.0);
+    let whole = params.shape_buffer.max(half);
+    let fits = right - left - 2.0 * whole >= (n - 1.0) * s;
+    let margin = if fits { whole } else { half };
+    // a cluster with no fixed segment moves as a whole inside its channel, as near its line as
+    // its spread allows: centred on a line near one side, it shrank its spacing to that side's room
+    // (ten lines 1.75 px apart beside a column of cards, the private map's `inscription`); a
+    // channel open on one side bounds it on the other alone
+    if fixed.is_empty() && n > 1.0 && (left.is_finite() || right.is_finite()) {
+        let span = right - left - 2.0 * margin;
+        s = s.min((span / (n - 1.0)).max(0.0));
+        let half = (n - 1.0) * s / 2.0;
+        let (lo_c, hi_c) = (left + margin + half, right - margin - half);
+        if lo_c <= hi_c {
+            coord = coord.clamp(lo_c, hi_c);
         }
     }
-    for (k, slot) in slotted.iter().enumerate() {
-        let d = (k as f64 - anchor) * s;
-        if d.abs() < EPS {
-            continue;
+    // each side of the anchor its own spacing: the room of the narrower side no longer squeezes
+    // the lines on the other
+    // the lines past the anchor on a side keep the margin chosen when they fit so spaced, else
+    // half of it, and narrow their spacing to that room
+    let side = |edge: f64, slots_beyond: f64| {
+        if slots_beyond <= 0.0 || slots_beyond * s <= edge - margin {
+            s
+        } else {
+            ((edge - half) / slots_beyond).clamp(0.0, s)
         }
+    };
+    let (s_lo, s_hi) = (
+        side(coord - left, anchor),
+        side(right - coord, n - 1.0 - anchor),
+    );
+    for (k, slot) in slotted.iter().enumerate() {
+        let off = k as f64 - anchor;
+        let at = coord + off * if off < 0.0 { s_lo } else { s_hi };
         for &m in slot.iter().filter(|&&m| !segs[m].fixed) {
             let sg = &segs[m];
+            if (at - sg.coord).abs() < EPS {
+                continue;
+            }
             let pts = &mut routes[sg.route].points;
             for idx in [sg.k, sg.k + 1] {
                 if vertical {
-                    pts[idx].0 = sg.coord + d;
+                    pts[idx].0 = at;
                 } else {
-                    pts[idx].1 = sg.coord + d;
+                    pts[idx].1 = at;
                 }
             }
         }
@@ -1234,9 +1972,10 @@ fn spread(
 pub(crate) fn beautify(
     routes: &mut [Route],
     connectors: &[Connector],
-    shapes: &BTreeMap<&str, Rect>,
+    (shapes, regions): (&BTreeMap<&str, Rect>, &[Rect]),
     params: &Params,
 ) {
+    let walls: &[Rect] = if params.region_walls { regions } else { &[] };
     if !(params.ideal_nudging.is_finite() && params.ideal_nudging > 0.0) {
         return;
     }
@@ -1245,22 +1984,269 @@ pub(crate) fn beautify(
         .iter()
         .map(|r| conns.get(r.id.as_str()).and_then(|c| c.group.clone()))
         .collect();
-    spread_ports(routes, &conns, shapes, params);
-    center_segments(routes, &conns, shapes);
+    trace("in", routes);
+    if on("spread-ports") {
+        spread_ports(routes, &conns, shapes, params);
+        trace("spread-ports", routes);
+    }
+    if on("center-segs") {
+        // along the drawing's flow (vertical segments of a top-down drawing): across it, the
+        // gaps between rows bound the move
+        let along = params
+            .flow
+            .map(|f| (2.0 * params.shape_buffer, f.horizontal()));
+        center_segments(routes, &conns, shapes, walls, along);
+        trace("center-segs", routes);
+    }
     // a horizontal segment moved lengthens the vertical ones beside it, which may then lie on
     // another line: the two passes again, until nothing moves (three rounds at most)
-    for _ in 0..3 {
-        let before: Vec<Vec<Point>> = routes.iter().map(|r| r.points.clone()).collect();
-        nudge(routes, shapes, params, true, &groups);
-        nudge(routes, shapes, params, false, &groups);
-        if routes.iter().zip(&before).all(|(r, b)| r.points == *b) {
-            break;
+    if on("nudge") {
+        for _ in 0..3 {
+            let before: Vec<Vec<Point>> = routes.iter().map(|r| r.points.clone()).collect();
+            nudge(routes, shapes, params, true, &groups);
+            nudge(routes, shapes, params, false, &groups);
+            if routes.iter().zip(&before).all(|(r, b)| r.points == *b) {
+                break;
+            }
+        }
+        trace("nudge", routes);
+    }
+    if on("end-overlaps") {
+        separate_end_overlaps(routes, &conns, shapes, params, &groups);
+        trace("end-overlaps", routes);
+    }
+    // a port may need several swaps to reach its place (a branch coming from far beyond its
+    // neighbours): a few passes
+    if on("uncross") {
+        for _ in 0..4 {
+            uncross_ports(routes, &conns, shapes, &groups);
+        }
+        trace("uncross", routes);
+    }
+    if on("unlay") {
+        unlay(routes, &conns, shapes, &groups, params);
+        trace("unlay", routes);
+    }
+    if on("merge") {
+        for r in routes.iter_mut() {
+            merge(&mut r.points);
         }
     }
-    separate_end_overlaps(routes, &conns, shapes, params, &groups);
-    uncross_ports(routes, &conns, shapes, &groups);
-    for r in routes.iter_mut() {
-        merge(&mut r.points);
+}
+
+/// Last, two unrelated routes still drawn on one line: two of their middle segments, parallel and
+/// near each other, trade places when that leaves fewer tangles (crossings, overlays weighing
+/// more) and no line through a shape. Two arrows leaving facing sides of two cards side by side
+/// went down the gap between them in the wrong order, their ends' legs laid on each other (the
+/// private map's current `hive/installation`).
+fn unlay(
+    routes: &mut [Route],
+    conns: &BTreeMap<&str, &Connector>,
+    shapes: &BTreeMap<&str, Rect>,
+    groups_of: &[Option<String>],
+    params: &Params,
+) {
+    let near = 2.0 * params.ideal_nudging.max(params.shape_buffer);
+    for i in 0..routes.len() {
+        for j in i + 1..routes.len() {
+            // any length on one line: two ends' legs a few pixels on each other are spread
+            // further later (`breathe`) and become a plain overlay
+            const TOUCH: f64 = 0.5;
+            // `Params::untangle`: two routes that cross, not only two on one line
+            if related(routes, conns, groups_of, i, j)
+                || (!params.untangle
+                    && overlays_over(&routes[i].points, &routes[j].points, TOUCH) == 0)
+            {
+                continue;
+            }
+            let score = |routes: &[Route]| {
+                tangles_over(routes, conns, groups_of, i, TOUCH)
+                    + tangles_over(routes, conns, groups_of, j, TOUCH)
+            };
+            let before = score(routes);
+            if before == 0 {
+                continue;
+            }
+            let (pi, pj) = (routes[i].points.clone(), routes[j].points.clone());
+            let mut best: Option<(usize, Vec<Point>, Vec<Point>)> = None;
+            for (ni, nj) in trades(&pi, &pj, near, params.untangle) {
+                if shapes_hit(&ni, shapes) > shapes_hit(&pi, shapes)
+                    || shapes_hit(&nj, shapes) > shapes_hit(&pj, shapes)
+                {
+                    continue;
+                }
+                routes[i].points = ni.clone();
+                routes[j].points = nj.clone();
+                let after = score(routes);
+                routes[i].points = pi.clone();
+                routes[j].points = pj.clone();
+                if after < before && best.as_ref().is_none_or(|b| after < b.0) {
+                    best = Some((after, ni, nj));
+                }
+            }
+            if let Some((_, ni, nj)) = best {
+                routes[i].points = ni;
+                routes[j].points = nj;
+            }
+        }
+    }
+}
+
+/// A segment of a route: its index, whether it is upright, its position across, its extent along.
+type Leg = (usize, bool, f64, f64, f64);
+
+/// The orthogonal segments of `pts`: its middle ones, or (`all`) its first and last too.
+fn legs(pts: &[Point], all: bool) -> Vec<Leg> {
+    if pts.len() < if all { 2 } else { 4 } {
+        return Vec::new();
+    }
+    let range = if all {
+        0..pts.len() - 1
+    } else {
+        1..pts.len() - 2
+    };
+    range
+        .filter_map(|k| {
+            let (a, b) = (pts[k], pts[k + 1]);
+            if (a.0 - b.0).abs() < EPS && (a.1 - b.1).abs() > EPS {
+                Some((k, true, a.0, a.1.min(b.1), a.1.max(b.1)))
+            } else if (a.1 - b.1).abs() < EPS && (a.0 - b.0).abs() > EPS {
+                Some((k, false, a.1, a.0.min(b.0), a.0.max(b.0)))
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+/// Two parallel segments a few pixels apart that face each other over some length.
+fn facing(a: &Leg, b: &Leg, near: f64) -> bool {
+    a.1 == b.1
+        && (a.2 - b.2).abs() <= near
+        && (a.2 - b.2).abs() >= EPS
+        && a.4.min(b.4) - a.3.max(b.3) > 0.0
+}
+
+/// The new shapes `unlay` tries for two routes: two of their middle segments trading places;
+/// with `untangle`, also a middle segment of one moved to the other side of any segment of the
+/// other (its first or last included: an L leaving a port), as far beyond it as it stood.
+fn trades(pi: &[Point], pj: &[Point], near: f64, untangle: bool) -> Vec<(Vec<Point>, Vec<Point>)> {
+    let mut out = Vec::new();
+    for si in legs(pi, false) {
+        for sj in legs(pj, false) {
+            if !facing(&si, &sj, near) {
+                continue;
+            }
+            let (mut ni, mut nj) = (pi.to_vec(), pj.to_vec());
+            for k in [si.0, si.0 + 1] {
+                if si.1 {
+                    ni[k].0 = sj.2;
+                } else {
+                    ni[k].1 = sj.2;
+                }
+            }
+            for k in [sj.0, sj.0 + 1] {
+                if sj.1 {
+                    nj[k].0 = si.2;
+                } else {
+                    nj[k].1 = si.2;
+                }
+            }
+            out.push((ni, nj));
+        }
+    }
+    if !untangle {
+        return out;
+    }
+    for m in legs(pi, false) {
+        for o in legs(pj, true) {
+            if facing(&m, &o, near)
+                && let Some(ni) = moved_segment(pi, m.0, m.1, 2.0 * o.2 - m.2)
+            {
+                out.push((ni, pj.to_vec()));
+            }
+        }
+    }
+    for m in legs(pj, false) {
+        for o in legs(pi, true) {
+            if facing(&m, &o, near)
+                && let Some(nj) = moved_segment(pj, m.0, m.1, 2.0 * o.2 - m.2)
+            {
+                out.push((pi.to_vec(), nj));
+            }
+        }
+    }
+    out
+}
+
+/// Middle segment `k` of `pts` (upright when `upright`) moved across to `to`; `None` when one of
+/// its neighbours would turn round or shrink under 8 px (a trade of two lines a few pixels apart
+/// never does: their neighbours are long).
+fn moved_segment(pts: &[Point], k: usize, upright: bool, to: f64) -> Option<Vec<Point>> {
+    const LEAST: f64 = 8.0;
+    let coord = |p: Point| if upright { p.0 } else { p.1 };
+    let pos = coord(pts[k]);
+    for n in [pts[k - 1], pts[k + 2]] {
+        let (before, after) = (pos - coord(n), to - coord(n));
+        if before * after <= 0.0 || (after.abs() < LEAST && before.abs() >= LEAST) {
+            return None;
+        }
+    }
+    let mut out = pts.to_vec();
+    for p in &mut out[k..=k + 1] {
+        if upright {
+            p.0 = to;
+        } else {
+            p.1 = to;
+        }
+    }
+    Some(out)
+}
+
+/// `SKEMO_OFF=pass,…` (the engine's `trace` module): is this pass still on? Ablation only.
+fn on(pass: &str) -> bool {
+    use std::sync::OnceLock;
+    static OFF: OnceLock<Vec<String>> = OnceLock::new();
+    !OFF.get_or_init(|| {
+        std::env::var("SKEMO_OFF")
+            .map(|v| {
+                v.split(',')
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect()
+            })
+            .unwrap_or_default()
+    })
+    .iter()
+    .any(|n| n == pass)
+}
+
+/// `SKEMO_TRACE=id,…` (the engine's `trace` module): the named routes after each pass.
+fn trace(stage: &str, routes: &[Route]) {
+    use std::sync::OnceLock;
+    static NAMES: OnceLock<Vec<String>> = OnceLock::new();
+    let names = NAMES.get_or_init(|| {
+        std::env::var("SKEMO_TRACE")
+            .map(|v| {
+                v.split(',')
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect()
+            })
+            .unwrap_or_default()
+    });
+    for r in routes.iter().filter(|r| {
+        names.iter().any(|n| match n.strip_suffix('*') {
+            Some(p) => r.id.starts_with(p),
+            None => r.id == *n,
+        })
+    }) {
+        let pts: Vec<String> = r
+            .points
+            .iter()
+            .map(|p| format!("({:.1}, {:.1})", p.0, p.1))
+            .collect();
+        eprintln!("trace route router/{stage:<12} {}: {}", r.id, pts.join(" "));
     }
 }
 
@@ -1268,9 +2254,159 @@ pub(crate) fn beautify(
 mod tests {
     use super::*;
 
+    #[test]
+    fn the_depth_before_a_turn_skips_a_stub_end() {
+        // the stub's end (rounded to 1e-4) is in line with the port: the first turn is at 901
+        let pts = [
+            (488.0, 826.0),
+            (488.0, 901.0),
+            (1192.9167, 901.0),
+            (1192.9167, 949.0),
+            (1_192.916_666_666_667, 963.0),
+        ];
+        let d = first_turn_depth(&pts, false).unwrap();
+        assert!((d - 62.0).abs() < 0.01, "{d}");
+        assert!((first_turn_depth(&pts, true).unwrap() - 75.0).abs() < 1e-9);
+    }
+
+    /// The private map's `abonnements` under two more pixels of gutter: a route whose "second
+    /// corner" is a stub in line with the leg (its end on the card below). Swapping the levels of
+    /// the first turns would move the leg and leave the stub on a slant: refused.
+    #[test]
+    fn a_turn_swap_never_leaves_a_slant() {
+        let rect = Rect::new(519.0, 280.0, 200.0, 80.0);
+        let route = |id: &str, points: Vec<Point>| Route {
+            id: id.to_string(),
+            points,
+        };
+        let mut routes = vec![
+            route(
+                "a",
+                vec![
+                    (519.0, 300.0),
+                    (428.2, 300.0),
+                    (428.2, 802.0),
+                    (428.2, 816.0),
+                ],
+            ),
+            route(
+                "b",
+                vec![
+                    (519.0, 333.0),
+                    (443.2, 333.0),
+                    (443.2, 700.0),
+                    (300.0, 700.0),
+                ],
+            ),
+        ];
+        let port = |route: usize| PortRef {
+            route,
+            at_start: true,
+            side: Side::Left,
+            rect,
+        };
+        let before = routes.clone();
+        assert!(!swap_turns(
+            &mut routes,
+            &port(0),
+            &port(1),
+            &BTreeMap::new()
+        ));
+        assert_eq!(routes[0].points, before[0].points);
+        assert!(orthogonal(&routes[0].points) && orthogonal(&routes[1].points));
+    }
+
+    /// Two lines on one another beside a column of cards, with room on their other side: spread
+    /// apart, both keep the router's whole margin from the cards (the private map's `produits`: one
+    /// went to 7 px of four cards and ran along them).
+    #[test]
+    fn lines_spread_beside_cards_keep_the_whole_margin() {
+        let card = Rect::new(0.0, 0.0, 280.0, 400.0);
+        let shapes = BTreeMap::from([("card", card)]);
+        let route = |id: &str, y0: f64, y1: f64, x: f64| Route {
+            id: id.to_string(),
+            points: vec![(x, y0), (294.0, y0), (294.0, y1), (x, y1)],
+        };
+        let mut routes = vec![
+            route("a", 50.0, 350.0, 500.0),
+            route("b", 60.0, 340.0, 520.0),
+        ];
+        let params = Params {
+            ideal_nudging: 20.0,
+            ..Params::default()
+        };
+        nudge(&mut routes, &shapes, &params, true, &[None, None]);
+        let xs: Vec<f64> = routes.iter().map(|r| r.points[1].0).collect();
+        assert!(
+            xs.iter().all(|x| *x >= 280.0 + params.shape_buffer - EPS),
+            "{xs:?}"
+        );
+        assert!((xs[0] - xs[1]).abs() >= 20.0 - EPS, "{xs:?}");
+    }
+
     fn orthogonal(p: &[Point]) -> bool {
         p.windows(2)
             .all(|w| (w[0].0 - w[1].0).abs() < EPS || (w[0].1 - w[1].1).abs() < EPS)
+    }
+
+    #[test]
+    fn the_middle_half_widens_evenly_when_the_ports_do_not_fit() {
+        let p = Params::default(); // port_spacing 12
+        // side 0..100: middle half 25..75 holds 5 ports (48)
+        assert_eq!(
+            middle_half((0.0, 100.0, 0.0), (0.0, 100.0), 5, &p),
+            (25.0, 75.0, 0.0)
+        );
+        // side 0..92: middle half 23..69 (46) is short: 22..70, centred, not the whole side
+        assert_eq!(
+            middle_half((0.0, 92.0, 0.0), (0.0, 92.0), 5, &p),
+            (22.0, 70.0, 0.0)
+        );
+        // a room that cannot hold them stays as it is
+        assert_eq!(
+            middle_half((0.0, 40.0, 2.0), (0.0, 40.0), 5, &p),
+            (0.0, 40.0, 2.0)
+        );
+        // widened inside the room clear of the shapes in front (here 30..92)
+        let (a, b, _) = middle_half((30.0, 92.0, 0.0), (0.0, 92.0), 5, &p);
+        assert!((a, b) == (30.0, 78.0), "{a} {b}");
+    }
+
+    /// A port is not rounded, the graph's points are (`scene::snap`): a stub 0.00001 px off the
+    /// segment's line still continues it, and the segment never leaves it (it would slant; seen on
+    /// a 50-card map, 2026-11-09).
+    #[test]
+    fn a_segment_never_leaves_the_stub_of_its_port() {
+        let pts = vec![
+            (1_732.785_714_285_714_2, 415.0),
+            (1732.7857, 429.0),
+            (1732.7857, 808.0),
+            (1181.69, 808.0),
+            (1181.69, 822.0),
+        ];
+        assert!(segment_at(&pts, 1, 1600.0, &BTreeMap::new()).is_none());
+        // at the other end too
+        let rev: Vec<Point> = pts.iter().rev().copied().collect();
+        assert!(segment_at(&rev, 2, 1600.0, &BTreeMap::new()).is_none());
+    }
+
+    /// A line crossing a route exactly where its stub ends is a crossing (two arrows leaving the
+    /// bottom of a card in the wrong order, 2026-11-09).
+    #[test]
+    fn a_crossing_at_the_end_of_a_stub_counts() {
+        let stub = [
+            (1190.0, 915.0),
+            (1190.0, 929.0),
+            (1190.0, 949.0),
+            (936.0, 949.0),
+        ];
+        let across = [
+            (1148.0, 915.0),
+            (1148.0, 929.0),
+            (1200.0, 929.0),
+            (1200.0, 963.0),
+        ];
+        assert_eq!(crossings(&stub, &across), 1);
     }
 
     #[test]

@@ -715,6 +715,29 @@ impl Scene {
         false
     }
 
+    /// Does the orthogonal segment `a-b` run inside the margin of an active shape other than
+    /// `ends` (the shapes it leaves from and arrives at)?
+    pub fn in_margin(&self, a: Point, b: Point, active: &[bool], ends: &[usize]) -> bool {
+        let (i0, j0, i1, j1) =
+            self.buckets
+                .range(a.0.min(b.0), a.1.min(b.1), a.0.max(b.0), a.1.max(b.1));
+        for j in j0..=j1 {
+            for i in i0..=i1 {
+                for &k in &self.buckets.cells[j * self.buckets.nx + i] {
+                    let k = k as usize;
+                    if active[k]
+                        && self.items[k].kind == ObstacleKind::Shape
+                        && !ends.contains(&k)
+                        && self.items[k].soft.hit_by_segment(a, b)
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
+    }
+
     /// Is `p` strictly inside an active obstacle?
     pub fn inside(&self, p: Point, active: &[bool]) -> bool {
         let (i, j, _, _) = self.buckets.range(p.0, p.1, p.0, p.1);

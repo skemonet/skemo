@@ -124,6 +124,7 @@ pub fn arrange(model: &Model, placement: &mut Placement) {
         .collect();
     stacks.sort_by_key(|s| std::cmp::Reverse(depth(model, s)));
     for s in stacks {
+        let room = placement.boxes.get(s).copied();
         let mut kids: Vec<&str> = model
             .children(Some(s))
             .filter(|c| placement.boxes.contains_key(&c.id))
@@ -195,6 +196,86 @@ pub fn arrange(model: &Model, placement: &mut Placement) {
         placement
             .boxes
             .insert(s.to_string(), ax.join((start.0, size.0), (start.1, size.1)));
+        if let Some(room) = room {
+            push_followers(model, placement, s, room);
+        }
+    }
+}
+
+/// A stack laid longer along the flow than the room the layout gave it pushes on what follows
+/// it, in its container and then in each container up, only as far as keeps `GAP` before it: a
+/// card written after a nested stack was drawn inside it. Each
+/// container's box grows with what it holds, its margin at the end kept. Not with `dir` up or
+/// left (the flow runs backwards; left as it was).
+fn push_followers(model: &Model, placement: &mut Placement, s: &str, room: Box2) {
+    let ax = Axes::of(model);
+    if ax.reverse {
+        return;
+    }
+    let along = |d: f64| if ax.across { (d, 0.0) } else { (0.0, d) };
+    let end = |b: &Box2| ax.flow(b).1;
+    let (mut node, mut old) = (s.to_string(), room);
+    for _ in 0..64 {
+        let Some(new) = placement.boxes.get(&node).copied() else {
+            return;
+        };
+        if end(&new) <= end(&old) + 0.5 {
+            return;
+        }
+        let parent = model.node(&node).and_then(|n| n.parent.clone());
+        let sibling_ends = |p: &Placement, own: Box2| {
+            model
+                .children(parent.as_deref())
+                .filter_map(|c| {
+                    if c.id == node {
+                        Some(own)
+                    } else {
+                        p.boxes.get(&c.id).copied()
+                    }
+                })
+                .map(|b| end(&b))
+                .fold(f64::NEG_INFINITY, f64::max)
+        };
+        let content_before = sibling_ends(placement, old);
+        let followers: Vec<String> = model
+            .children(parent.as_deref())
+            .filter(|c| c.id != node)
+            .filter(|c| {
+                placement
+                    .boxes
+                    .get(&c.id)
+                    .is_some_and(|b| ax.flow(b).0 >= end(&old) - 1.0)
+            })
+            .map(|c| c.id.clone())
+            .collect();
+        let first = followers
+            .iter()
+            .filter_map(|f| placement.boxes.get(f))
+            .map(|b| ax.flow(b).0)
+            .fold(f64::INFINITY, f64::min);
+        let d = end(&new) + GAP - first;
+        if first.is_finite() && d > 0.5 {
+            for f in &followers {
+                shift(model, placement, f, along(d));
+            }
+        }
+        let Some(p) = parent.clone() else {
+            return;
+        };
+        let Some(pb) = placement.boxes.get(&p).copied() else {
+            return;
+        };
+        // the container keeps its margin after its content
+        let margin = end(&pb) - content_before;
+        let grown = sibling_ends(placement, new) + margin;
+        if grown <= end(&pb) + 0.5 {
+            return;
+        }
+        let ((f0, _), cross) = ax.split(&pb);
+        placement
+            .boxes
+            .insert(p.clone(), ax.join((f0, grown - f0), cross));
+        (node, old) = (p, pb);
     }
 }
 
@@ -296,6 +377,13 @@ pub fn stretch(
             fill(model, placement, sizes, &n.id, (lo + inset, hi - inset));
             continue;
         }
+        let wide = own_row(
+            model,
+            n,
+            wide,
+            &others,
+            crate::layout::layer_spacing(model, sizes),
+        );
         placement.boxes.insert(n.id.clone(), wide);
         if let Some(s) = sizes.cards.get_mut(&n.id) {
             s.w = wide.w;
@@ -304,8 +392,47 @@ pub fn stretch(
     }
 }
 
+/// A wide card on a row of its own (bug 1): ELK puts a card with no arrow on the first row, beside
+/// the others; stretched there it lay over them. Where it would, it goes after the other nodes of
+/// its group if written after them all, else before them, `gap` apart (ELK's room between rows).
+fn own_row(model: &Model, n: &skemo_lang::Node, wide: Box2, others: &[Box2], gap: f64) -> Box2 {
+    let ax = Axes::of(model);
+    let ((f, fs), across) = ax.split(&wide);
+    let met: Vec<(f64, f64)> = others
+        .iter()
+        .map(|o| ax.split(o).0)
+        .filter(|(of, ofs)| *of < f + fs && f < of + ofs)
+        .collect();
+    if met.is_empty() {
+        return wide;
+    }
+    let rank = |id: &str| model.nodes.iter().position(|m| m.id == id);
+    let last = model
+        .children(n.parent.as_deref())
+        .filter(|c| c.id != n.id)
+        .all(|c| rank(&c.id) < rank(&n.id));
+    let f = if last {
+        others
+            .iter()
+            .map(|o| {
+                let (of, ofs) = ax.split(o).0;
+                of + ofs
+            })
+            .fold(f64::MIN, f64::max)
+            + gap
+    } else {
+        others
+            .iter()
+            .map(|o| ax.split(o).0.0)
+            .fold(f64::MAX, f64::min)
+            - gap
+            - fs
+    };
+    ax.join((f, fs), across)
+}
+
 /// The cards of a zone, on one row, spread over `(lo, hi)` across `dir`: equal widths (even, so
-/// that a pinned card keeps its straight arrows), `ROW_GAP` apart.
+/// that a card in the middle keeps its straight arrows), `ROW_GAP` apart.
 fn fill(
     model: &Model,
     placement: &mut Placement,
@@ -316,7 +443,7 @@ fn fill(
     let ax = Axes::of(model);
     let mut cards: Vec<(String, Box2)> = model
         .children(Some(zone))
-        .filter(|c| c.kind == Kind::Card && c.at.is_none())
+        .filter(|c| c.kind == Kind::Card)
         .filter_map(|c| placement.boxes.get(&c.id).map(|b| (c.id.clone(), *b)))
         .collect();
     if cards.is_empty() {
@@ -385,7 +512,8 @@ fn column_needs<'a>(model: &'a Model, placement: &Placement) -> BTreeMap<&'a str
 
 /// Arrows to or from a wide card run straight (D-050): from the middle of the other card's
 /// facing side to the bar, when the other card stands over the bar (10 px from its ends) and no
-/// card lies between them.
+/// card lies between them. Only between two layers of a stack (user, 2026-11-06); elsewhere an
+/// arrow lands in the middle of the bar, as on any card.
 pub fn plug(model: &Model, boxes: &BTreeMap<String, Box2>, routes: &mut BTreeMap<String, Points>) {
     let ax = Axes::of(model);
     for e in &model.edges {
@@ -397,6 +525,9 @@ pub fn plug(model: &Model, boxes: &BTreeMap<String, Box2>, routes: &mut BTreeMap
             } else {
                 continue;
             };
+        if across_stack(model, e).is_none() {
+            continue;
+        }
         let (Some(w), Some(o)) = (boxes.get(wide), boxes.get(other)) else {
             continue;
         };

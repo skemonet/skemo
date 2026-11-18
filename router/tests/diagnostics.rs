@@ -130,7 +130,7 @@ fn reasons_have_neutral_english_texts() {
     assert_eq!(Reason::NoPath.to_string(), "no path");
     assert_eq!(
         Reason::NoClearSide("a".into()).to_string(),
-        "no side of « a » is clear"
+        "no side of `a` is clear"
     );
     let obs = shapes();
     let missing = Connector::new("x->y", End::shape("nope"), End::shape("b"));

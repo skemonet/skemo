@@ -184,6 +184,20 @@ fn set_shelf(
             (&frames, elk),
             (false, (wide + GAP - slack).max(0.0)),
         );
+        // a column longer than the content lengthens the zone along the flow too: what follows it
+        // moves on (the zone below was covered)
+        let long = sizes_of.iter().map(|b| ax.flow_len(b)).sum::<f64>()
+            + GAP * (sizes_of.len() as f64 - 1.0);
+        if long > f1 - f0 + 0.5 {
+            make_room(
+                model,
+                ax,
+                z,
+                shelf,
+                (&frames, elk),
+                (true, long - (f1 - f0)),
+            );
+        }
         let span = s1 + GAP;
         let mut at = if ax.reverse { f1 } else { f0 };
         for (id, b) in shelf.iter().zip(&sizes_of) {

@@ -1,8 +1,10 @@
 //! Tidy layered drawings (D-047): rows as far apart in zones as outside, parents centred on their
-//! children, arrows that leave and enter in the drawing's direction, forks, buses, junctions,
+//! children, arrows that leave and enter in the drawing's direction, forks only for crowds (D-093), buses, junctions,
 //! no two arrows sharing a line, stroke widths as the theme says.
 
-use skemo_engine::{Options, from_source, svg};
+use skemo_engine::{Options, svg};
+mod elk;
+use elk::from_source;
 
 fn build(src: &str) -> skemo_engine::Diagram {
     from_source(src, &Options::default()).unwrap().0
@@ -70,11 +72,12 @@ fn arrows_leave_downwards_and_enter_from_above() {
 }
 
 #[test]
-fn a_card_forks_to_its_children_entering_them_in_the_middle() {
+fn two_arrows_out_of_a_card_stay_apart_and_enter_their_children_in_the_middle() {
+    // a side with four connectors or fewer is no crowd: no fork (D-093); an end alone on its
+    // side lands in its middle (D-091)
     let d = build(TREE);
     let (r1, r2) = (&d.routes["sa->a1"], &d.routes["sa->a2"]);
-    assert_eq!(r1[0], r2[0], "one trunk");
-    assert_eq!(r1[1], r2[1], "split at one point");
+    assert_ne!(r1[0], r2[0], "two ports");
     for (r, t) in [(r1, "a1"), (r2, "a2")] {
         assert!(
             (r.last().unwrap().0 - cx(&d, t)).abs() < 1.0,
@@ -105,8 +108,10 @@ fn every_one_to_every_one_is_a_bus() {
         assert!(top < y1 && y1 < bottom, "{id} through the bar");
     }
     let svg = svg::render(&d);
-    assert!(
-        svg.matches("class=\"junction\"").count() >= 4,
+    // junctions are rounded bends, without dots (D-093)
+    assert_eq!(
+        svg.matches("class=\"junction\"").count(),
+        0,
         "junction dots"
     );
 }

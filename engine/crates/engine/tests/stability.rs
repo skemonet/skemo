@@ -1,7 +1,9 @@
 //! Stability (D-031): pinning a card in its place changes nothing else, and the drag preview is
 //! identical to the full computation after the drop (idempotence on reopening).
 
-use skemo_engine::diagram::{Options, from_source};
+use skemo_engine::diagram::Options;
+mod elk;
+use elk::from_source;
 use skemo_engine::session::Session;
 use std::path::Path;
 
@@ -48,7 +50,8 @@ fn pin_in_place_changes_nothing() {
             .filter(|n| n.kind == skemo_lang::Kind::Card)
         {
             let b = base.boxes[&card.id];
-            let edited = skemo_lang::edit::move_card(&src, &card.id, b.x, b.y).unwrap();
+            let edited =
+                skemo_lang::edit::move_card(&elk::graph(&src), &card.id, b.x, b.y).unwrap();
             let (after, _) = from_source(&edited, &opts).unwrap();
             for (id, a) in &base.boxes {
                 let c = after.boxes[id];
@@ -78,7 +81,7 @@ fn pin_in_place_changes_nothing() {
 fn drag_preview_equals_reload() {
     for (name, css) in CASES {
         let (src, opts) = load(name, *css);
-        let mut s = Session::new(&src, opts.clone()).unwrap();
+        let mut s = Session::new(&elk::graph(&src), opts.clone()).unwrap();
         let cards: Vec<String> = s
             .diagram
             .model

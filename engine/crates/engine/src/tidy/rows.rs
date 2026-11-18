@@ -111,9 +111,7 @@ fn pushed_aside(
     let (Some(pn), Some(kn)) = (model.node(p), model.node(k)) else {
         return false;
     };
-    let plain = |n: &skemo_lang::Node| {
-        n.kind == Kind::Card && n.at.is_none() && !super::geom::in_grid(model, &n.id)
-    };
+    let plain = |n: &skemo_lang::Node| n.kind == Kind::Card && !super::geom::in_grid(model, &n.id);
     let stacked = kn
         .parent
         .as_deref()
@@ -356,7 +354,7 @@ pub fn row_isolated(model: &Model, boxes: &mut Boxes) {
     let linked = |id: &str| model.edges.iter().any(|e| e.from == id || e.to == id);
     let lone: Vec<(&str, Box2)> = model
         .children(None)
-        .filter(|n| n.kind == Kind::Card && n.at.is_none() && !linked(&n.id))
+        .filter(|n| n.kind == Kind::Card && !linked(&n.id))
         .filter_map(|n| boxes.get(&n.id).map(|b| (n.id.as_str(), *b)))
         .collect();
     if lone.len() < 2 {

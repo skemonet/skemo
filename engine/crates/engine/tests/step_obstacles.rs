@@ -14,11 +14,22 @@ const SRC: &str = "diagram(dir=\"down\")
   card#ic(at=\"-60,110\" size=\"520,50\") Ingress controller @3
 ";
 
+/// Does a route pass through a box?
+fn crosses(r: &[(f64, f64)], b: skemo_engine::layout::Box2) -> bool {
+    r.windows(2).any(|s| {
+        let (x0, x1) = (s[0].0.min(s[1].0), s[0].0.max(s[1].0));
+        let (y0, y1) = (s[0].1.min(s[1].1), s[0].1.max(s[1].1));
+        x0 < b.right() && x1 > b.x && y0 < b.bottom() && y1 > b.y
+    })
+}
+
 #[test]
 fn an_arrow_crosses_the_room_of_a_card_not_yet_shown() {
     let d = from_source(SRC, &Options::default()).unwrap().0;
     let r = &d.routes["a->b"];
-    assert_eq!(r.len(), 2, "straight down, through the room of ic: {r:?}");
+    // through the room of ic, from the middle of a to the middle of b (D-093), not round it
+    assert!(crosses(r, d.boxes["ic"]), "through the room of ic: {r:?}");
+    assert!(r.len() <= 4, "no detour: {r:?}");
 }
 
 #[test]
@@ -40,7 +51,8 @@ fn an_arrow_of_one_step_crosses_a_card_of_the_next() {
     let src = SRC.replace("to(b) @1-2", "to(b).dashed @2-2");
     let d = from_source(&src, &Options::default()).unwrap().0;
     let r = &d.routes["a->b"];
-    assert_eq!(r.len(), 2, "straight down, through the room of ic: {r:?}");
+    assert!(crosses(r, d.boxes["ic"]), "through the room of ic: {r:?}");
+    assert!(r.len() <= 4, "no detour: {r:?}");
 }
 
 /// The card in a zone of its own (as a slide generator writes rows): the zone shows nothing before its
@@ -53,7 +65,8 @@ fn a_zone_whose_cards_come_later_is_crossed() {
     );
     let d = from_source(&src, &Options::default()).unwrap().0;
     let r = &d.routes["a->b"];
-    assert_eq!(r.len(), 2, "straight down, through the room of ic: {r:?}");
+    assert!(crosses(r, d.boxes["ic"]), "through the room of ic: {r:?}");
+    assert!(r.len() <= 4, "no detour: {r:?}");
 }
 
 /// The same generator's second report (its Ingress slides, `tests/data/step-ports.skemo`): `w1` is not face to

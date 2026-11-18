@@ -52,7 +52,7 @@ description: Directions, rangées, colonnes, piles et positions épinglées : co
   alignent toujours ce qu’elles relient (chaque service sous ses pods) ; une flèche qui remonte la pile sort par le haut et entre
   par le bas. Une zone <code>.bare</code> sans titre regroupe des cartes sans rien dessiner (les trois nœuds). Une carte n’appartient
   qu’à un groupe : zones et piles forment un arbre. Les zones d’un stack partagent une largeur, comme des couches. Une carte d’une
-  zone dont toutes les flèches quittent la zone, sans aucune entrante, se place sur la première rangée de la zone. Les classes
+  zone dont toutes les flèches quittent la zone, sans aucune entrante, se place sur la première rangée de la zone. Des cartes posées sur une carte étirée se partagent sa largeur à parts égales, chacune centrée dans sa part. Les classes
   <code>.col-w1</code>, <code>.col-w2</code>… alignent chaque service et ses pods au-dessus du nœud qui les héberge, d’une zone à
   l’autre ; la zone <code>.wide</code> des nœuds les répartit sur toute la largeur et donne leur place aux colonnes : chaque nœud est
   aussi large que le plus large groupe de sa colonne, si bien que deux pods ne chevauchent jamais deux nœuds.</p>

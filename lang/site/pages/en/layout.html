@@ -50,7 +50,7 @@ description: Directions, rows, columns, stacks and pinned positions: how skemo l
   link (each service sits under its pods); one going back up the stack leaves by the top and enters by the bottom. A
   <code>.bare</code> zone without a title groups cards without drawing anything (the three nodes). A card belongs to one group
   only: zones and stacks form a tree. The zones of a stack share one width, like layers. A card of a zone whose arrows all
-  leave the zone, with none coming in, sits on the zone's first row. Classes <code>.col-w1</code>, <code>.col-w2</code>… line up each service and its pods over
+  leave the zone, with none coming in, sits on the zone's first row. Cards standing on a stretched card split its width evenly, each centred in its share. Classes <code>.col-w1</code>, <code>.col-w2</code>… line up each service and its pods over
   the worker that hosts them, across zones; the workers' <code>.wide</code> zone spreads them over the full width and gives the
   columns their place: each worker is as wide as the widest group of its column, so two pods never straddle two workers.</p>
 

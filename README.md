@@ -27,7 +27,7 @@ HTML animated step by step, GIF or animated PNG**. The layout and the arrows are
 curl -fsSL https://skemo.net/install.sh | sh     # latest release into ~/.local/bin, SHA-256 checked
 ```
 
-Or take a binary from the [releases](https://github.com/skemonet/skemo/releases) (Linux x86_64 and ARM, macOS ARM, Windows), or build it
+Or take a binary from the [releases](https://github.com/skemonet/skemo/releases) (Linux x86_64 and ARM, macOS ARM and Intel, Windows), or build it
 (Rust 1.85 or later, [rustup.rs](https://rustup.rs)):
 
 ```bash

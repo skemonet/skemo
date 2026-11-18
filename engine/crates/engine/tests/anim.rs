@@ -111,3 +111,42 @@ fn animation_expected() {
         assert_eq!(foc, w2, "focus at state {}", s.raw);
     }
 }
+
+/// Highlights (SK-4 of glitu, D-090): their own attribute, the appearance effect kept, their steps
+/// counted, on any element (a line, an arrow, a card without `#id`).
+#[test]
+fn highlights_have_their_own_attribute_and_count_as_steps() {
+    let src = "diagram\n  card#a A @1:up @3:halo\n    | line @4-5:chase\n    to(b) @2:magnify\n  card B @6:halo @7:magnify\n  card#b C\n";
+    let (d, warnings) = skemo_engine::from_source(src, &Default::default()).unwrap();
+    assert!(
+        warnings.is_empty() && d.anim.warnings.is_empty(),
+        "{warnings:?} {:?}",
+        d.anim.warnings
+    );
+    let svg = skemo_engine::svg::render(&d);
+    assert!(
+        svg.contains(r#"data-id="a" data-step="1" data-fx="up" data-highlight="halo:3""#),
+        "{svg}"
+    );
+    assert!(svg.contains(r#"data-highlight="chase:4-5""#));
+    assert!(svg.contains(r#"data-highlight="magnify:2""#));
+    assert!(svg.contains(r#"data-highlight="halo:6 magnify:7""#));
+    let states: Vec<&str> = d.anim.states.iter().map(|s| s.raw.as_str()).collect();
+    assert_eq!(states, ["0", "1", "2", "3", "4", "5", "6", "7"]);
+    let html = skemo_engine::html::render(&d, &Default::default());
+    assert!(html.contains(r#"data-highlight="halo:3""#));
+}
+
+#[test]
+fn a_highlight_outside_the_visibility_is_a_warning() {
+    let doc = skemo_lang::parse("diagram\n  card#a A @3-4 @6:halo\n  card#b B @1\n");
+    assert!(!doc.has_errors());
+    let a = resolve(&doc.model);
+    assert!(
+        a.warnings
+            .iter()
+            .any(|w| w.code == "highlight-outside" && w.element == "a"),
+        "{:?}",
+        a.warnings
+    );
+}

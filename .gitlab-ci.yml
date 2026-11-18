@@ -37,7 +37,7 @@ security:
   script:
     - tools/ci.sh security
 
-# The four binaries, one after the other (the CI's memory is shared between jobs).
+# The five binaries, one after the other (the CI's memory is shared between jobs).
 build:
   stage: build
   image: localhost/ci/rust:1.99.1-4
@@ -56,6 +56,7 @@ build:
       x86_64-unknown-linux-musl skemo-linux-x86_64 skemo
       aarch64-unknown-linux-musl skemo-linux-arm64 skemo
       aarch64-apple-darwin skemo-macos-arm64 skemo
+      x86_64-apple-darwin skemo-macos-x86_64 skemo
       x86_64-pc-windows-gnu skemo-windows-x86_64.exe skemo.exe
       EOF
     - ls -l dist && sha256sum dist/*

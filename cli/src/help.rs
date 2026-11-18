@@ -21,6 +21,32 @@ const FR: &[(&str, &str, &str)] = &[
         "licences",
         "Afficher les licences des polices, icônes et bibliothèques incluses",
     ),
+    (
+        "",
+        "diagnostics",
+        "Messages sur la sortie d'erreur : text, ou json (un objet JSON par ligne, pour les outils)",
+    ),
+    (
+        "",
+        "allow",
+        "Écarter les avertissements de ce code : ni affichés, ni comptés par --deny-warnings (répétable, ou CODE,CODE)",
+    ),
+    (
+        "capabilities",
+        "",
+        "Ce que ce binaire sait faire, pour les outils qui le lancent : version, conventions SVG, fonctions",
+    ),
+    ("capabilities", "format", "text ou json"),
+    (
+        "render",
+        "batch",
+        "Lire des demandes sur l'entrée standard, un objet JSON par ligne, et répondre à chacune par une ligne sur la sortie standard (SVG seulement)",
+    ),
+    (
+        "render",
+        "root",
+        "Dossier où sont lus les fichiers du schéma (images, diagram(css=…)), et nulle part ailleurs (défaut : le dossier du schéma ; le dossier courant pour -)",
+    ),
     ("init", "", "Créer un schéma d'exemple pour démarrer"),
     ("init", "file", "Schéma à créer (défaut : diagram.skemo)"),
     (
@@ -137,7 +163,7 @@ const FR: &[(&str, &str, &str)] = &[
     (
         "render",
         "theme",
-        "light, dark, print ou auto ; remplace diagram(theme=…)",
+        "light, dark, print ou auto (auto : HTML seulement, clair ailleurs) ; remplace diagram(theme=…)",
     ),
     (
         "render",
@@ -203,6 +229,46 @@ const FR: &[(&str, &str, &str)] = &[
         "stdout",
         "N'écrire que la source, sur la sortie standard",
     ),
+    (
+        "site",
+        "",
+        "Faire un site d'un dossier de schémas : un clic sur une carte liée à un autre .skemo l'ouvre",
+    ),
+    (
+        "site",
+        "dir",
+        "Dossier de schémas (fichiers .skemo, lus aussi dans ses sous-dossiers)",
+    ),
+    (
+        "site",
+        "output",
+        "Dossier où écrire le site (créé s'il manque ; les fichiers de même nom sont remplacés)",
+    ),
+    (
+        "site",
+        "title",
+        "Titre du site (défaut : le nom du dossier)",
+    ),
+    (
+        "site",
+        "theme",
+        "light, dark, print ou auto (auto : suit le système du lecteur, avec un bouton) ; remplace diagram(theme=…)",
+    ),
+    (
+        "site",
+        "css",
+        "Feuille de style supplémentaire, appliquée à chaque schéma après la sienne (répétable)",
+    ),
+    (
+        "site",
+        "base_theme",
+        "Feuille de style qui remplace le thème par défaut",
+    ),
+    (
+        "site",
+        "deny_warnings",
+        "Code 1 au moindre avertissement (un lien vers un schéma absent en est un)",
+    ),
     ("layout", "", "Écrire les positions et les tracés en JSON"),
     ("layout", "file", "Schéma"),
     ("layout", "json", "Sortie JSON (le seul format)"),
@@ -214,7 +280,7 @@ const FR: &[(&str, &str, &str)] = &[
     (
         "layout",
         "theme",
-        "light, dark, print ou auto ; remplace diagram(theme=…)",
+        "light, dark, print ou auto (auto : HTML seulement, clair ailleurs) ; remplace diagram(theme=…)",
     ),
     (
         "layout",

@@ -126,6 +126,61 @@ fn place_decor(scene: &Scene, d: &Decor, (x, end): (f64, f64), (top, lh): (f64, 
     }
 }
 
+/// How far a node's text (D-087) is moved down to be centred against an icon taller than it;
+/// 0 for a card, or a node without an icon.
+pub fn node_text_offset(scene: &Scene, card: &CardEl, (w, h): (f64, f64), column: f64) -> f64 {
+    if column <= 0.0 {
+        return 0.0;
+    }
+    let cs = scene.style(card.el);
+    let (pad, bor) = (cs.padding(), border(cs));
+    let content_h = h - bor[0] - pad[0] - bor[2] - pad[2];
+    ((content_h - crate::measure::text_height(scene, card, w, column)) / 2.0).max(0.0)
+}
+
+/// Stroke of a built-in icon, in the units of its 24 px drawing: 2, thinner from 30 px up so that
+/// a large icon (a node's, D-087) keeps a 2.5 px line.
+pub fn icon_stroke(size: f64) -> f64 {
+    2.0 * (30.0 / size).min(1.0)
+}
+
+/// The icon of a title without a band: before its first line (at `x`, on the line at `top`), or a
+/// node's, in its column (D-087).
+fn title_icon(
+    scene: &Scene,
+    card: &CardEl,
+    (d, cb, h): (&Decor, &CardBox, f64),
+    (x, top, lh): (f64, f64, f64),
+) -> Option<IconBox> {
+    if card.column {
+        let content_h = h - cb.bor[0] - cb.pad[0] - cb.bor[2] - cb.pad[2];
+        node_icon(scene, card, d, (cb.left, content_h))
+    } else {
+        place_decor(scene, d, (x, x), (top, lh)).icon
+    }
+}
+
+/// A node's icon in its column (D-087), left of the text that starts at `left`, centred in the
+/// content's height `content_h`.
+fn node_icon(
+    scene: &Scene,
+    card: &CardEl,
+    d: &Decor,
+    (left, content_h): (f64, f64),
+) -> Option<IconBox> {
+    let cs = scene.style(card.el);
+    let top = border(cs)[0] + cs.padding()[0];
+    let (size, column) = card.node_icon(scene)?;
+    d.icon.as_ref().map(|(el, icon)| IconBox {
+        x: left - column,
+        y: top + (content_h - size) / 2.0,
+        size,
+        el: *el,
+        icon: *icon,
+        is_mark: false,
+    })
+}
+
 #[derive(Debug, Clone)]
 pub struct CardGeom {
     pub deco: DecoGeom,
@@ -165,13 +220,17 @@ struct CardBox {
 pub fn card(scene: &Scene, card: &CardEl, w: f64, h: f64) -> CardGeom {
     let cs = scene.style(card.el);
     let (pad, bor) = (cs.padding(), border(cs));
+    // a node (D-087): the title and the lines start after the icon's column; the icon is as tall
+    // as the content
+    let column = card.node_icon(scene).map_or(0.0, |(_, c)| c);
+    let dy = node_text_offset(scene, card, (w, h), column);
     let cb = CardBox {
-        left: bor[3] + pad[3],
-        avail: w - bor[3] - pad[3] - bor[1] - pad[1],
+        left: bor[3] + pad[3] + column,
+        avail: w - bor[3] - pad[3] - bor[1] - pad[1] - column,
         bor,
         pad,
     };
-    let mut y = bor[0] + pad[0];
+    let mut y = bor[0] + pad[0] + dy;
     let mut deco = DecoGeom::default();
     let head = card
         .header
@@ -401,8 +460,9 @@ fn card_title(
     let badge_w = inline.map_or(0.0, |(_, bc, txt)| {
         tw(bc, txt) + bc.padding()[1] + bc.padding()[3] + bc.margin()[1] + bc.margin()[3]
     });
-    // icon before the first line (if it is not in the band), mark after the last
-    let lead = if card.header.is_some() {
+    // icon before the first line (if it is not in the band, nor in a node's column), mark after
+    // the last
+    let lead = if card.header.is_some() || card.column {
         0.0
     } else {
         scene.icon_lead(&card.decor).0
@@ -459,7 +519,7 @@ fn card_title(
                 mark: None,
                 ..card.decor
             };
-            deco.icon = place_decor(scene, &d, (x, x), (line_top, lh)).icon;
+            deco.icon = title_icon(scene, card, (&d, cb, h), (x, line_top, lh));
             x += lead;
         }
         if k == 0
@@ -790,7 +850,10 @@ fn li_runs(
 }
 
 /// Title of a zone (positioned absolutely by the theme: `left`, `top` or `bottom`, centred if
-/// `text-align: center` with `left: 0; right: 0`).
+/// `text-align: center` with `left: 0; right: 0`). A title wrapped by the layout (D-099) holds
+/// `\n`: its first line carries the icon, the next ones (`more`) start under the text, the last
+/// one carries the mark and the pill (as the HTML flows them), and the description lines follow.
+/// A title ending with `\n` puts its pill alone on the line under its text.
 pub fn zone_title(
     scene: &Scene,
     z: &ZoneEl,
@@ -803,19 +866,35 @@ pub fn zone_title(
     let lh = line_height(c);
     let (lead, _) = scene.icon_lead(&z.decor);
     let (trail, _) = scene.mark_trail(&z.decor);
-    let text_w = tw(c, text);
+    let mut lines: Vec<&str> = text.split('\n').collect();
+    let own_line = lines.len() > 1 && lines.last() == Some(&"");
+    if own_line {
+        lines.pop();
+    }
+    let widths: Vec<f64> = lines.iter().map(|t| tw(c, t)).collect();
+    let (text, text_w) = (lines[0], widths[0]);
+    let n = lines.len();
     // the pill of `tag=` follows the title (D-050), its left margin from the theme
     let pill = z.tag.zip(tag).map(|(el, t)| {
         let gap = scene.style(el).margin()[3];
         (label(scene, el, t, 0.0, 0.0), gap)
     });
     // `.tag-right`: the pill at the end of the row, out of the title's alignment
-    let pill_w = pill
+    let (pill_w, gap) = pill
         .as_ref()
         .filter(|_| !z.tag_right)
-        .map_or(0.0, |(p, gap)| p.w + gap);
-    // the icon and the mark are part of the line for the alignment
-    let width = lead + text_w + trail + pill_w;
+        .map_or((0.0, 0.0), |(p, gap)| (p.w, *gap));
+    // the icon and the mark are part of the line for the alignment; the widest line counts
+    let last_end = lead + widths[n - 1] + trail;
+    let tail = match (own_line, pill_w > 0.0) {
+        (false, true) => last_end + gap + pill_w,
+        (true, true) => last_end.max(lead + pill_w),
+        _ => last_end,
+    };
+    let width = widths[..n - 1]
+        .iter()
+        .map(|w| lead + w)
+        .fold(tail, f64::max);
     let px = |n: &str| {
         c.get(n)
             .and_then(|v| skemo_lang::style::parse_length(v, c.font_size(), None))
@@ -839,41 +918,65 @@ pub fn zone_title(
         width: text_w,
         el: title_el,
     };
-    let deco = place_decor(scene, &z.decor, (x, run.x + text_w), (top, lh));
-    let tag = pill.map(|(p, gap)| {
-        let cx = if z.tag_right {
-            w - r.or(l).unwrap_or(16.0) - p.w / 2.0
-        } else {
-            x + width - pill_w + gap + p.w / 2.0
-        };
-        moved(p, (cx, top + lh / 2.0))
-    });
-    let mut sy = top + lh;
-    let subs = z
-        .subs
+    let more: Vec<Run> = lines[1..]
         .iter()
-        .map(|(el, t)| {
-            let sc = scene.style(*el);
-            let slh = line_height(sc);
-            sy += sc.margin()[0];
-            let r = Run {
-                text: transform(sc, t),
-                x,
-                baseline: baseline(sc, sy, slh),
-                width: tw(sc, t),
-                el: *el,
-            };
-            sy += slh + sc.margin()[2];
-            r
+        .zip(&widths[1..])
+        .enumerate()
+        .map(|(k, (t, &tw))| Run {
+            text: transform(c, t),
+            x: x + lead,
+            baseline: baseline(c, top + lh * (k as f64 + 1.0), lh),
+            width: tw,
+            el: title_el,
         })
         .collect();
+    let last_top = top + lh * (n - 1) as f64;
+    let mut deco = place_decor(scene, &z.decor, (x, x + lead + widths[n - 1]), (top, lh));
+    if let Some(m) = deco.mark.as_mut() {
+        m.y += last_top - top;
+    }
+    let tag = pill.map(|(p, _)| {
+        let (cx, row) = if z.tag_right {
+            (w - r.or(l).unwrap_or(16.0) - p.w / 2.0, top)
+        } else if own_line {
+            (x + lead + p.w / 2.0, last_top + lh)
+        } else {
+            (x + last_end + gap + p.w / 2.0, last_top)
+        };
+        moved(p, (cx, row + lh / 2.0))
+    });
+    let subs = zone_subs(scene, z, x, top + lh * (n + usize::from(own_line)) as f64);
     ZoneTitle {
         run,
+        more,
         deco,
         span: (x, x + width),
         tag,
         subs,
     }
+}
+
+/// A zone's description lines (v0.8), from `x`, the first one's top at `sy`; a line the layout
+/// wrapped (`\n`, D-101) gives a run per line.
+fn zone_subs(scene: &Scene, z: &ZoneEl, x: f64, mut sy: f64) -> Vec<Run> {
+    let mut out = Vec::new();
+    for (el, t) in &z.subs {
+        let sc = scene.style(*el);
+        let slh = line_height(sc);
+        sy += sc.margin()[0];
+        for line in t.split('\n') {
+            out.push(Run {
+                text: transform(sc, line),
+                x,
+                baseline: baseline(sc, sy, slh),
+                width: tw(sc, line),
+                el: *el,
+            });
+            sy += slh;
+        }
+        sy += sc.margin()[2];
+    }
+    out
 }
 
 /// A pill built around `(0, 0)`, moved to be centred on `(cx, cy)`.
@@ -890,6 +993,8 @@ fn moved(mut p: Pill, (cx, cy): (f64, f64)) -> Pill {
 #[derive(Debug, Clone)]
 pub struct ZoneTitle {
     pub run: Run,
+    /// The next lines of a title wrapped by the layout (D-099), in the zone's frame.
+    pub more: Vec<Run>,
     pub deco: DecoGeom,
     pub span: (f64, f64),
     /// The pill of `tag=` (D-050), in the zone's frame.
@@ -932,12 +1037,57 @@ pub fn label(scene: &Scene, el: usize, text: &str, cx: f64, cy: f64) -> Pill {
     }
 }
 
+/// An arrow's label on several lines (the slide engine wraps them at `[label-width]`, L6): the
+/// pill holding them all, its first line as its run, and the lines after it, each centred.
+pub fn label_lines(
+    scene: &Scene,
+    el: usize,
+    lines: &[String],
+    cx: f64,
+    cy: f64,
+) -> (Pill, Vec<Run>) {
+    let c = scene.style(el);
+    let p = c.padding();
+    let lh = line_height(c);
+    let widths: Vec<f64> = lines.iter().map(|l| tw(c, l)).collect();
+    let width = widths.iter().copied().fold(0.0, f64::max);
+    let w = width + p[1] + p[3];
+    let h = lh * lines.len() as f64 + p[0] + p[2];
+    let (x, y) = (cx - w / 2.0, cy - h / 2.0);
+    let mut runs: Vec<Run> = lines
+        .iter()
+        .zip(&widths)
+        .enumerate()
+        .map(|(i, (l, &lw))| Run {
+            text: l.clone(),
+            x: cx - lw / 2.0,
+            baseline: baseline(c, y + p[0] + lh * i as f64, lh),
+            width: lw,
+            el,
+        })
+        .collect();
+    let first = runs.remove(0);
+    (
+        Pill {
+            x,
+            y,
+            w,
+            h,
+            el,
+            run: first,
+        },
+        runs,
+    )
+}
+
 /// The diagram's title (D-050) laid out in a box `w` wide: its text on the left, its pills on the
 /// right of the same line, in the box's frame.
 #[derive(Debug, Clone)]
 pub struct TitleGeom {
     pub run: Run,
     pub pills: Vec<Pill>,
+    /// The icon and link mark of each pill, beside its text.
+    pub decos: Vec<DecoGeom>,
     /// Subtitle lines under the first row (v0.8).
     pub subs: Vec<Run>,
 }
@@ -962,12 +1112,43 @@ fn title_row(scene: &Scene, el: &crate::scene::TitleEl, t: &skemo_lang::Title) -
     let c = scene.style(el.text);
     let mut w = tw(c, &t.text);
     let mut h = line_height(c);
-    for (li, text) in el.lines.iter().zip(&t.lines) {
-        let p = label(scene, *li, text, 0.0, 0.0);
+    for (i, (li, text)) in el.lines.iter().zip(&t.lines).enumerate() {
+        let (p, _) = title_pill(scene, el, i, text, (0.0, 0.0));
         w += scene.style(*li).margin()[3] + p.w;
         h = h.max(p.h);
     }
     (w, h.ceil())
+}
+
+/// The title's pill `i`, its right edge at `right` and centred on `mid`: its text, with its icon
+/// before it and its link mark after it inside the pill.
+fn title_pill(
+    scene: &Scene,
+    el: &crate::scene::TitleEl,
+    i: usize,
+    text: &str,
+    (right, mid): (f64, f64),
+) -> (Pill, DecoGeom) {
+    let li = el.lines[i];
+    let mut p = label(scene, li, text, 0.0, 0.0);
+    let Some(decor) = el.pill_decor.get(i) else {
+        let w = p.w;
+        return (moved(p, (right - w / 2.0, mid)), DecoGeom::default());
+    };
+    let (lead, _) = scene.icon_lead(decor);
+    let (trail, _) = scene.mark_trail(decor);
+    p.w += lead + trail;
+    let w = p.w;
+    let mut p = moved(p, (right - w / 2.0, mid));
+    p.run.x += lead;
+    let c = scene.style(li);
+    let deco = place_decor(
+        scene,
+        decor,
+        (p.x + c.padding()[3], p.run.x + p.run.width),
+        (p.y + c.padding()[0], line_height(c)),
+    );
+    (p, deco)
 }
 
 /// Title laid out in a box `w` wide and `h` high (`title_size`), at the origin.
@@ -1016,17 +1197,19 @@ pub fn title_layout(
         })
         .collect();
     // pills from the right edge, in writing order
-    let mut pills: Vec<Pill> = el
-        .lines
-        .iter()
-        .zip(&t.lines)
-        .map(|(li, text)| label(scene, *li, text, 0.0, 0.0))
-        .collect();
+    let mut placed = Vec::new();
     let mut right = w;
-    for (p, li) in pills.iter_mut().zip(&el.lines).rev() {
-        let at = (right - p.w / 2.0, h / 2.0);
-        *p = moved(p.clone(), at);
+    for (i, (li, text)) in el.lines.iter().zip(&t.lines).enumerate().rev() {
+        let (p, d) = title_pill(scene, el, i, text, (right, h / 2.0));
         right -= p.w + scene.style(*li).margin()[3];
+        placed.push((p, d));
     }
-    TitleGeom { run, pills, subs }
+    placed.reverse();
+    let (pills, decos) = placed.into_iter().unzip();
+    TitleGeom {
+        run,
+        pills,
+        decos,
+        subs,
+    }
 }

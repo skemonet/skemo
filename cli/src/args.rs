@@ -32,8 +32,21 @@ pub struct Cli {
     /// Show the licences of the fonts, icons and libraries included
     #[arg(long, help_heading = GENERIC)]
     pub licences: bool,
+    /// Messages on the standard error: text, or json (one JSON object per line, for tools)
+    #[arg(long, value_enum, value_name = "FORMAT", default_value_t = Diagnostics::Text, global = true, help_heading = GENERIC)]
+    pub diagnostics: Diagnostics,
+    /// Leave out the warnings of this code: not shown, not counted by --deny-warnings (repeatable, or CODE,CODE)
+    #[arg(long, value_name = "CODE", value_delimiter = ',', global = true, help_heading = GENERIC)]
+    pub allow: Vec<String>,
     #[command(subcommand)]
     pub cmd: Option<Cmd>,
+}
+
+/// Form of the messages on the standard error.
+#[derive(Clone, Copy, ValueEnum, PartialEq, Eq, Debug)]
+pub enum Diagnostics {
+    Text,
+    Json,
 }
 
 #[derive(Clone, Copy, ValueEnum, PartialEq, Eq, Debug)]
@@ -84,6 +97,14 @@ pub enum Cmd {
     Extract(ExtractArgs),
     /// Print the positions and routes as JSON
     Layout(LayoutArgs),
+    /// Turn a folder of diagrams into a website: click a card linked to another .skemo to open it
+    Site(SiteArgs),
+    /// What this binary supports, for the tools that run it: version, SVG conventions, features
+    Capabilities {
+        /// text or json
+        #[arg(long, value_enum, value_name = "FORMAT", default_value_t = Diagnostics::Text)]
+        format: Diagnostics,
+    },
     /// List the built-in icons, filtered by a query (for editors and completion; not in the help)
     #[command(hide = true)]
     Icons {
@@ -122,7 +143,10 @@ pub const ANIMATION: &str = "Animation";
 #[derive(Args)]
 pub struct RenderArgs {
     /// Diagram (- reads the standard input)
+    #[arg(required_unless_present = "batch", default_value = "")]
     pub file: String,
+    #[command(flatten)]
+    pub tool: ToolArgs,
     /// Output file; its extension sets the format (default: demo.png beside demo.skemo)
     #[arg(short, long, value_name = "FILE", default_value = "", hide_default_value = true, help_heading = OUTPUT)]
     pub output: String,
@@ -151,7 +175,7 @@ pub struct RenderArgs {
     /// Stylesheet replacing the default theme
     #[arg(long, value_name = "FILE", help_heading = STYLE)]
     pub base_theme: Option<PathBuf>,
-    /// light, dark, print or auto; overrides diagram(theme=…)
+    /// light, dark, print or auto (auto: HTML only, light elsewhere); overrides diagram(theme=…)
     #[arg(long, value_enum, value_name = "THEME", help_heading = STYLE)]
     pub theme: Option<ThemeArg>,
     /// high: darken the texts below the WCAG contrast, layout unchanged (default: standard)
@@ -166,6 +190,19 @@ pub struct RenderArgs {
     pub svg: SvgArgs,
     #[command(flatten)]
     pub anim: AnimArgs,
+}
+
+/// For the tools that run skemo (`cli/SPEC.md` §2).
+#[derive(Args)]
+pub struct ToolArgs {
+    /// Read requests on the standard input, one JSON object per line, and answer each with one
+    /// line on the standard output (SVG only)
+    #[arg(long, conflicts_with_all = ["output", "watch"], help_heading = OUTPUT)]
+    pub batch: bool,
+    /// Folder the diagram's own files (images, diagram(css=…)) are read in, nowhere else
+    /// (default: the diagram's folder; the current one for -)
+    #[arg(long, value_name = "DIR", help_heading = STYLE)]
+    pub root: Option<PathBuf>,
 }
 
 /// Live preview (`--watch`).
@@ -283,12 +320,36 @@ pub struct LayoutArgs {
     /// Extra stylesheet, applied after the diagram's own (repeatable)
     #[arg(long, value_name = "FILE")]
     pub css: Vec<PathBuf>,
-    /// light, dark, print or auto; overrides diagram(theme=…)
+    /// light, dark, print or auto (auto: HTML only, light elsewhere); overrides diagram(theme=…)
     #[arg(long, value_enum, value_name = "THEME")]
     pub theme: Option<ThemeArg>,
     /// Stylesheet replacing the default theme
     #[arg(long, value_name = "FILE")]
     pub base_theme: Option<PathBuf>,
+}
+
+#[derive(Args)]
+pub struct SiteArgs {
+    /// Folder of diagrams (.skemo files, read in its subfolders too)
+    pub dir: PathBuf,
+    /// Folder to write the site to (created if missing; files of the same name are replaced)
+    #[arg(short, long, value_name = "DIR")]
+    pub output: PathBuf,
+    /// Title of the site (default: the folder's name)
+    #[arg(long, value_name = "TEXT")]
+    pub title: Option<String>,
+    /// auto (the default: light and dark, following the reader's system, with a switch), light, dark or print; overrides diagram(theme=…)
+    #[arg(long, value_enum, value_name = "THEME")]
+    pub theme: Option<ThemeArg>,
+    /// Extra stylesheet, applied to every diagram after its own (repeatable)
+    #[arg(long, value_name = "FILE")]
+    pub css: Vec<PathBuf>,
+    /// Stylesheet replacing the default theme
+    #[arg(long, value_name = "FILE")]
+    pub base_theme: Option<PathBuf>,
+    /// Exit with 1 on any warning (a link to a missing diagram is one)
+    #[arg(long)]
+    pub deny_warnings: bool,
 }
 
 #[derive(Args)]
@@ -328,6 +389,8 @@ const KNOWN: &[&str] = &[
     "render",
     "extract",
     "layout",
+    "site",
+    "capabilities",
     "icons",
     "completions",
     // former commands (D-083, D-084): left to clap, which says they do not exist, rather than
@@ -363,7 +426,7 @@ pub fn former_command(args: &[String]) -> Option<String> {
         _ => return None,
     };
     Some(tr!(
-        "« skemo {first} » no longer exists: use « {now} » (skemo --help lists the commands)",
+        "`skemo {first}` no longer exists: use `{now}` (skemo --help lists the commands)",
         "« skemo {first} » n'existe plus : utiliser « {now} » (skemo --help liste les commandes)"
     ))
 }

@@ -46,6 +46,9 @@ pub fn sides(s: Option<&str>) -> (Option<Side>, Option<Side>) {
 pub enum Mode {
     /// Diagram: the zones that hold neither the start nor the arrival are obstacles.
     Graph,
+    /// Grid (`grid`): as [`Mode::Graph`], but no side is chosen for an arrow (the router takes
+    /// the cheapest), and the grid's own rules finish the routes.
+    Grid,
     /// Timeline: crossable lanes, default sides `right-left` within one lane, start `right` towards
     /// another lane (F-TL-5).
     Timeline,
@@ -53,6 +56,14 @@ pub enum Mode {
     Frise,
     /// Mindmap: sides facing outward and towards the centre, trunk shared by the children on one side.
     Mindmap,
+}
+
+impl Mode {
+    /// One of the two automatic engines (graph, grid): zones are obstacles, zone titles too,
+    /// and the finishing passes run.
+    pub fn automatic(self) -> bool {
+        matches!(self, Mode::Graph | Mode::Grid)
+    }
 }
 
 /// Router parameters for a diagram (the prototype's defaults).
@@ -76,8 +87,66 @@ pub fn graph_params(model: &Model) -> Params {
         port_spread: 42.0,
         // parallel lines a fixed gap apart where the corridor has room (D-063)
         ideal_nudging: crate::breathe::LINE_GAP,
+        // a line between two zones stays between them when it is centred (the manual method's
+        // §7: a zone holding neither end is no place for a line)
+        region_walls: !crate::trace::off("graph-walls"),
+        // the branches of a fork leave its trunk as late as their way allows
+        late_split: !crate::trace::off("late-split"),
         ..params()
     }
+}
+
+/// The boxes the arrows see (D-087): a node with an icon takes its arrows at the icon's middle.
+/// Drawn down or up, the node is its icon and its text, beside it, joins the zone titles as an
+/// obstacle; drawn right or left, it is a band at the icon's height from the icon to the end of
+/// the text, so that an arrow leaving on the text's side starts after the text. Other boxes are
+/// kept.
+pub fn anchors(
+    model: &Model,
+    scene: &crate::scene::Scene,
+    boxes: &BTreeMap<String, Box2>,
+    titles: &[(String, Box2)],
+) -> (BTreeMap<String, Box2>, Vec<(String, Box2)>) {
+    let mut out = boxes.clone();
+    let mut obstacles = titles.to_vec();
+    let across = matches!(model.option("dir"), Some("right" | "left"));
+    for n in model.nodes.iter().filter(|n| n.node) {
+        let (Some(card), Some(b)) = (scene.cards.get(&n.id), boxes.get(&n.id)) else {
+            continue;
+        };
+        let cs = scene.style(card.el);
+        let (pad, bor) = (cs.padding(), crate::measure::border(cs));
+        let content_h = b.h - pad[0] - pad[2] - bor[0] - bor[2];
+        let Some((size, column)) = card.node_icon(scene) else {
+            continue;
+        };
+        let x = b.x + bor[3] + pad[3];
+        let icon = Box2 {
+            x,
+            y: b.y + bor[0] + pad[0] + (content_h - size) / 2.0,
+            w: size,
+            h: size,
+        };
+        if across {
+            out.insert(
+                n.id.clone(),
+                Box2 {
+                    w: b.right() - x,
+                    ..icon
+                },
+            );
+            continue;
+        }
+        let text = Box2 {
+            x: x + column,
+            y: b.y,
+            w: b.right() - x - column,
+            h: b.h,
+        };
+        out.insert(n.id.clone(), icon);
+        obstacles.push((n.id.clone(), text));
+    }
+    (out, obstacles)
 }
 
 /// Routes every arrow. Returns the routes, the warnings and the group of each grouped arrow
@@ -92,13 +161,14 @@ pub fn route_all(
     titles: &[(String, Box2)],
 ) -> (
     BTreeMap<String, Points>,
-    Vec<String>,
+    Vec<crate::EngineWarning>,
     BTreeMap<String, String>,
 ) {
     let (obstacles, conns) = router_scene(model, boxes, elk, mode, soft, titles);
     let groups = groups_of(&conns);
     let (routes, diags) = skemo_router::route(&obstacles, &conns, params);
     let raw: BTreeMap<String, Points> = routes.into_iter().map(|r| (r.id, r.points)).collect();
+    crate::trace::routes("router", &raw);
     let out = finish(model, boxes, titles, &groups, &raw, mode);
     (out, warnings_of(diags), groups)
 }
@@ -111,9 +181,15 @@ pub fn groups_of(conns: &[Connector]) -> BTreeMap<String, String> {
         .collect()
 }
 
+/// Small steps straightened by sliding an end off the middle of its side (`straighten_jogs`):
+/// off for now (user, 2026-11-06: every line lands in the middle of a side, a step is the
+/// lesser evil).
+const STRAIGHTEN_JOGS: bool = false;
+
 /// The router's routes as drawn: micro jogs dropped, cross segments centred in their gap,
-/// small jogs straightened (D-049). Shared by the full computation and the editing session, so
-/// that a drag preview is the drawing a reload gives.
+/// small jogs straightened when `STRAIGHTEN_JOGS` (D-049), then the grid's own rules. Shared by
+/// the full computation and the editing session, so that a drag preview is the drawing a reload
+/// gives.
 pub fn finish(
     model: &Model,
     boxes: &BTreeMap<String, Box2>,
@@ -125,9 +201,11 @@ pub fn finish(
     let turned: Vec<&str> = model
         .edges
         .iter()
-        .filter(|e| fan_in(e))
+        // joins, named or automatic, were routed from their target
+        .filter(|e| groups.get(&e.id).is_some_and(|g| groups::turned(g)))
         .map(|e| e.id.as_str())
         .collect();
+    let on = |pass: &str| !crate::trace::off(pass);
     let mut out: BTreeMap<String, Points> = raw
         .iter()
         .map(|(id, p)| {
@@ -135,17 +213,37 @@ pub fn finish(
             if turned.contains(&id.as_str()) {
                 p.reverse();
             }
-            (id.clone(), drop_micro_jogs(p))
+            if on("micro-jogs") {
+                p = drop_micro_jogs(p);
+            }
+            (id.clone(), p)
         })
         .collect();
-    if mode == Mode::Graph {
+    crate::trace::routes("micro-jogs", &out);
+    if mode.automatic() && on("center-gaps") {
         center_in_gaps(model, boxes, titles, groups, &mut out);
+        crate::trace::routes("center-gaps", &out);
     }
-    straighten_jogs(model, boxes, groups, &mut out);
-    if mode == Mode::Graph {
-        crate::breathe::breathe(model, boxes, titles, groups, &mut out);
-        flatten_steps(model, boxes, titles, groups, &mut out);
-        crate::stack::plug(model, boxes, &mut out);
+
+    if STRAIGHTEN_JOGS {
+        straighten_jogs(model, boxes, groups, &mut out);
+    }
+    if mode.automatic() {
+        if on("breathe") {
+            crate::breathe::breathe(model, boxes, titles, groups, &mut out);
+            crate::trace::routes("breathe", &out);
+        }
+        if on("flatten") {
+            flatten_steps(model, boxes, titles, groups, &mut out);
+            crate::trace::routes("flatten", &out);
+        }
+        if on("plug") {
+            crate::stack::plug(model, boxes, &mut out);
+            crate::trace::routes("plug", &out);
+        }
+    }
+    if mode == Mode::Grid {
+        crate::grid::finish(model, boxes, titles, &mut out);
     }
     out
 }
@@ -245,39 +343,50 @@ fn directions_at(p: (f64, f64), segs: &[Segment]) -> [bool; 4] {
 }
 
 /// Warnings (in the current language) of the router's diagnostics.
-pub fn warnings_of(diags: Vec<Diagnostic>) -> Vec<String> {
-    diags
-        .into_iter()
-        .map(|d| match d {
-            Diagnostic::Unroutable { id, reason } => {
-                let reason = reason_text(&reason);
-                tr!(
-                    "arrow « {id} » cannot be routed: {reason}",
-                    "flèche « {id} » impossible à tracer : {reason}"
-                )
-            }
-            Diagnostic::CheckpointUnreachable { id, index } => tr!(
-                "arrow « {id} »: waypoint no. {} is unreachable, ignored",
+pub fn warnings_of(diags: Vec<Diagnostic>) -> Vec<crate::EngineWarning> {
+    diags.into_iter().map(warning_of).collect()
+}
+
+fn warning_of(d: Diagnostic) -> crate::EngineWarning {
+    use crate::EngineWarning as W;
+    match d {
+        Diagnostic::Unroutable { id, reason } => {
+            let reason = reason_text(&reason);
+            let m = tr!(
+                "arrow `{id}` cannot be routed: {reason}",
+                "flèche « {id} » impossible à tracer : {reason}"
+            );
+            W::new("unroutable", m).on(id)
+        }
+        Diagnostic::CheckpointUnreachable { id, index } => {
+            let m = tr!(
+                "arrow `{id}`: waypoint no. {} is unreachable, ignored",
                 "flèche « {id} » : point de passage n° {} inatteignable, ignoré",
                 index + 1
-            ),
-            Diagnostic::SideIgnored { id, at_start } => {
-                tr!(
-                    "arrow « {id} »: the forced side {} is unusable, another side was used",
-                    "flèche « {id} » : côté imposé {} inutilisable, un autre côté a servi",
-                    if at_start {
-                        tr!("at the start", "au départ")
-                    } else {
-                        tr!("at the end", "à l'arrivée")
-                    }
-                )
-            }
-            Diagnostic::InvalidInput { id, reason } => {
-                let reason = reason_text(&reason);
-                tr!("« {id} »: {reason}", "« {id} » : {reason}")
-            }
-        })
-        .collect()
+            );
+            W::new("waypoint-unreachable", m).on(id)
+        }
+        Diagnostic::SideIgnored { id, at_start } => {
+            let end = if at_start {
+                tr!("at the start", "au départ")
+            } else {
+                tr!("at the end", "à l'arrivée")
+            };
+            let m = tr!(
+                "arrow `{id}`: the forced side {end} is unusable, another side was used",
+                "flèche « {id} » : côté imposé {end} inutilisable, un autre côté a servi"
+            );
+            W::new("side-ignored", m).on(id)
+        }
+        Diagnostic::InvalidInput { id, reason } => {
+            let reason = reason_text(&reason);
+            W::new(
+                "route-input",
+                tr!("`{id}`: {reason}", "« {id} » : {reason}"),
+            )
+            .on(id)
+        }
+    }
 }
 
 /// Middle of the longest segment (prototype's `midOfLongest`).
@@ -311,17 +420,17 @@ fn reason_text(r: &skemo_router::Reason) -> String {
             "identifiant en double, ignoré"
         ),
         Reason::NotAShape(id) => tr!(
-            "« {id} » is a region, not a shape",
+            "`{id}` is a region, not a shape",
             "« {id} » est une région, pas une forme"
         ),
-        Reason::UnknownShape(id) => tr!("unknown shape « {id} »", "forme « {id} » inconnue"),
+        Reason::UnknownShape(id) => tr!("unknown shape `{id}`", "forme « {id} » inconnue"),
         Reason::NonFiniteEnd => tr!("non-finite end point", "extrémité non finie"),
         Reason::EndInsideObstacle => tr!(
             "free end point inside an obstacle",
             "extrémité libre à l'intérieur d'un obstacle"
         ),
         Reason::NoClearSide(id) => tr!(
-            "no side of « {id} » is clear",
+            "no side of `{id}` is clear",
             "aucun côté de « {id} » n'est dégagé"
         ),
         Reason::NoPath => tr!("no path", "aucun chemin"),

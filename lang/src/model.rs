@@ -19,6 +19,15 @@ pub struct Focus {
     pub to: Option<Step>,
 }
 
+/// Highlight range (`@3-4:halo`, FORMAT §3.8): an effect the integration plays on the element
+/// during those steps (`halo`, `chase`, `magnify`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Highlight {
+    pub from: Step,
+    pub to: Option<Step>,
+    pub effect: String,
+}
+
 /// Animation markers of an element (FORMAT §3.8), as written (not resolved).
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct Anim {
@@ -26,11 +35,18 @@ pub struct Anim {
     pub until: Option<Step>,
     pub fx: Option<String>,
     pub focus: Vec<Focus>,
+    /// Highlights in writing order. Absent from the JSON when there are none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub highlights: Vec<Highlight>,
 }
 
 impl Anim {
     pub fn is_empty(&self) -> bool {
-        self.start.is_none() && self.until.is_none() && self.fx.is_none() && self.focus.is_empty()
+        self.start.is_none()
+            && self.until.is_none()
+            && self.fx.is_none()
+            && self.focus.is_empty()
+            && self.highlights.is_empty()
     }
 }
 
@@ -136,6 +152,10 @@ pub struct Node {
     /// written, is shown as a `×N` badge. Absent from the JSON for a plain card.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub deck: Option<Deck>,
+    /// `node` (D-087): a card drawn as its icon, with its name and lines beside it and no frame;
+    /// the looks do not apply to it. Absent from the JSON when false.
+    #[serde(default, skip_serializing_if = "is_no")]
+    pub node: bool,
 }
 
 /// A pile of cards (`cards`): how many instances it stands for, if known.
@@ -157,8 +177,16 @@ impl Deck {
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct Title {
     pub text: String,
-    /// Pills on the title row.
+    /// Pills on the title row, as drawn (a link's text without its Markdown).
     pub lines: Vec<String>,
+    /// The classes of each pill besides `pill` (`|.pill.ocp text`: a colour, an icon, styled in
+    /// CSS), when one has some. Absent from the JSON when none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pill_classes: Vec<Vec<String>>,
+    /// The link of each pill written as a Markdown link (`|.pill [text](other.skemo)`), already
+    /// checked, when one has some. Absent from the JSON when none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pill_hrefs: Vec<Option<String>>,
     /// Subtitle lines under the title, emphasis included. Absent from the JSON when none.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub sub: Vec<String>,
@@ -263,4 +291,33 @@ pub(crate) fn number(v: f64) -> Number {
     } else {
         Number::from_f64(v).unwrap_or_else(|| Number::from(0))
     }
+}
+
+/// A link to another diagram (D-097): an `href` whose path, before any `#`, is a relative path to a
+/// `.skemo` file (`network.skemo`, `../shop/api.skemo#db`). Returns the path and the fragment.
+/// `skemo site` turns such links into links between the pages it writes; every output draws them
+/// with a zoom glyph rather than the external-link one.
+///
+/// ```
+/// use skemo_lang::model::diagram_link;
+/// assert_eq!(diagram_link("api.skemo#db"), Some(("api.skemo", Some("db"))));
+/// assert_eq!(diagram_link("../a/B.SKEMO"), Some(("../a/B.SKEMO", None)));
+/// assert_eq!(diagram_link("https://x.org/a.skemo"), None);
+/// assert_eq!(diagram_link("/abs/a.skemo"), None);
+/// assert_eq!(diagram_link("notes.md"), None);
+/// ```
+pub fn diagram_link(href: &str) -> Option<(&str, Option<&str>)> {
+    let (path, fragment) = match href.split_once('#') {
+        Some((p, f)) => (p, Some(f).filter(|f| !f.is_empty())),
+        None => (href, None),
+    };
+    let relative = !path.starts_with(['/', '\\'])
+        && !path.contains([':', '?'])
+        && !path.chars().any(char::is_whitespace);
+    let named = path.len() > ".skemo".len()
+        && path
+            .get(path.len() - ".skemo".len()..)
+            .is_some_and(|e| e.eq_ignore_ascii_case(".skemo"))
+        && !path.ends_with("/.skemo");
+    (relative && named).then_some((path, fragment))
 }

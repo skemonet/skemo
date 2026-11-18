@@ -120,6 +120,14 @@ fn used_fonts(d: &Diagram) -> BTreeSet<&'static str> {
 }
 
 pub(crate) fn font_faces(d: &Diagram) -> String {
+    font_faces_with(d, &mut |_, mime, data| {
+        format!("data:{mime};base64,{}", base64(data))
+    })
+}
+
+/// The `@font-face` rules of the fonts `d` uses, each `src` given by `url(file name, MIME type,
+/// bytes)`: `skemo site` writes every font file once and links to it (D-097).
+pub fn font_faces_with(d: &Diagram, url: &mut dyn FnMut(&str, &str, &[u8]) -> String) -> String {
     let used = used_fonts(d);
     let mut css = String::new();
     let registered = crate::fonts::registered();
@@ -134,10 +142,10 @@ pub(crate) fn font_faces(d: &Diagram) -> String {
         let mime = if otf { "font/otf" } else { "font/ttf" };
         let _ = writeln!(
             css,
-            "@font-face{{font-family:'{}';font-style:{};font-weight:{lo} {hi};font-display:block;src:url(data:{mime};base64,{}) format('{fmt}')}}",
+            "@font-face{{font-family:'{}';font-style:{};font-weight:{lo} {hi};font-display:block;src:url({}) format('{fmt}')}}",
             f.family,
             if f.italic { "italic" } else { "normal" },
-            base64(f.data)
+            url(f.file, mime, f.data)
         );
     }
     css
@@ -170,6 +178,9 @@ fn anim_attrs(d: &Diagram, key: &str) -> String {
             })
             .collect();
         let _ = write!(s, " data-focus=\"{}\"", esc(&f.join(" ")));
+    }
+    if let Some(h) = d.anim.highlight(key) {
+        let _ = write!(s, " data-highlight=\"{}\"", esc(&h));
     }
     if r.is_link && !s.is_empty() {
         let _ = write!(
@@ -408,18 +419,37 @@ fn zone_html(d: &Diagram, node: &skemo_lang::Node, style: &str, body: &mut Strin
         .get(&node.id)
         .map(|z| z.decor)
         .unwrap_or_default();
-    // the pill of `tag=` follows the title (D-050)
+    // the pill of `tag=` follows the title (D-050); alone on the next line when the layout
+    // wrapped the title so (D-099: the text ends with `\n`)
+    let shown = d.scene.zone_text(&node.id, &node.title);
+    let own_line = shown.ends_with('\n') && node.tag.is_some();
     let tag = node
         .tag
         .as_ref()
-        .map(|t| format!("<span class=\"tag\">{}</span>", esc(t)))
+        .map(|t| {
+            if own_line {
+                format!(
+                    "<br><span class=\"tag\" style=\"margin-left:0\">{}</span>",
+                    esc(t)
+                )
+            } else {
+                format!("<span class=\"tag\">{}</span>", esc(t))
+            }
+        })
         .unwrap_or_default();
-    // description lines under the title (v0.8)
+    // description lines under the title (v0.8), wrapped where the layout wrapped them (D-101)
+    let texts: Vec<&str> = d
+        .scene
+        .zones
+        .get(&node.id)
+        .map(|z| z.subs.iter().map(|(_, t)| t.as_str()).collect())
+        .unwrap_or_default();
     let subs: String = node
         .li
         .iter()
         .filter(|l| l.cells.is_empty() && l.rule.is_empty())
-        .map(|l| {
+        .zip(texts)
+        .map(|(l, t)| {
             let cls = std::iter::once("sub".to_string())
                 .chain(l.classes.iter().cloned())
                 .collect::<Vec<_>>()
@@ -427,7 +457,7 @@ fn zone_html(d: &Diagram, node: &skemo_lang::Node, style: &str, body: &mut Strin
             format!(
                 "<div class=\"{}\">{}</div>",
                 esc(&cls),
-                esc(&skemo_lang::inline::plain(&l.text))
+                esc(t).replace('\n', "<br>")
             )
         })
         .collect();
@@ -437,7 +467,12 @@ fn zone_html(d: &Diagram, node: &skemo_lang::Node, style: &str, body: &mut Strin
         esc(&node.id),
         esc(&node.classes.join(" ")),
         anim_attrs(d, &node.id),
-        titled(d, &decor, &esc(&node.title), node.href.as_deref())
+        titled(
+            d,
+            &decor,
+            &esc(shown.trim_end_matches('\n')).replace('\n', "<br>"),
+            node.href.as_deref()
+        )
     );
 }
 
@@ -449,7 +484,26 @@ fn title_html(d: &Diagram, body: &mut String) {
     let lines: String = t
         .lines
         .iter()
-        .map(|l| format!("<li class=\"pill\">{}</li>", esc(l)))
+        .enumerate()
+        .map(|(i, l)| {
+            let cls = std::iter::once("pill")
+                .chain(
+                    t.pill_classes
+                        .get(i)
+                        .into_iter()
+                        .flatten()
+                        .map(String::as_str),
+                )
+                .collect::<Vec<_>>()
+                .join(" ");
+            // the pill's icon and link mark, in an `<a>` for a pill written as a Markdown link
+            let href = t.pill_hrefs.get(i).and_then(Option::as_deref);
+            let inner = match d.scene.title.as_ref().and_then(|el| el.pill_decor.get(i)) {
+                Some(decor) => titled(d, decor, &esc(l), href),
+                None => esc(l),
+            };
+            format!("<li class=\"{}\">{inner}</li>", esc(&cls))
+        })
         .collect();
     let subs: String = t
         .sub
@@ -519,6 +573,41 @@ fn deck_style(
 
 /// Card: classes (type, mode, look), inline style (position, period variables, label), then
 /// header, title and lines.
+/// A node's room for its icon (D-087): the left padding makes its column, the text is centred
+/// against a taller icon and `--icon-top` centres the icon in the content's height, as
+/// `geometry::card` lays them.
+fn node_style(d: &Diagram, c: &crate::scene::CardEl, id: &str, st: &mut String) {
+    let Some((size, column)) = c.node_icon(&d.scene) else {
+        return;
+    };
+    let cs = d.scene.style(c.el);
+    let (pad, bor) = (cs.padding(), crate::measure::border(cs));
+    let (w, h) = d.boxes.get(id).map_or((0.0, 0.0), |b| (b.w, b.h));
+    let content_h = h - pad[0] - pad[2] - bor[0] - bor[2];
+    let dy = crate::geometry::node_text_offset(&d.scene, c, (w, h), column);
+    let _ = write!(
+        st,
+        ";padding-left:{}px;padding-top:{}px;--icon-top:{}px",
+        pad[3] + column,
+        pad[0] + dy,
+        bor[0] + pad[0] + (content_h - size) / 2.0
+    );
+}
+
+/// A node's icon, in its column (D-087), with the same thinner line as the SVG (`icon_stroke`);
+/// nothing for a card.
+fn node_icon_html(d: &Diagram, c: &crate::scene::CardEl) -> String {
+    let (Some((_, i)), Some((size, _))) = (&c.decor.icon, c.node_icon(&d.scene)) else {
+        return String::new();
+    };
+    let stroke = crate::geometry::icon_stroke(size);
+    icon_svg("icon", i, &d.scene.images).replacen(
+        "stroke-width=\"2\"",
+        &format!("stroke-width=\"{stroke}\""),
+        1,
+    )
+}
+
 fn card_html(d: &Diagram, node: &skemo_lang::Node, style: &str, body: &mut String) {
     let Some(c) = d.scene.cards.get(&node.id) else {
         return;
@@ -574,6 +663,12 @@ fn card_html(d: &Diagram, node: &skemo_lang::Node, style: &str, body: &mut Strin
     if node.deck.is_some() {
         ccls.push("deck".into());
     }
+    // a node (D-087): its icon, as tall as the content, in a column of its own, which the left
+    // padding makes room for
+    if node.node {
+        ccls.push("node".into());
+        node_style(d, c, &node.id, &mut st);
+    }
     let extra = node
         .tag
         .as_ref()
@@ -593,13 +688,14 @@ fn card_html(d: &Diagram, node: &skemo_lang::Node, style: &str, body: &mut Strin
     if !c.band() {
         // icon before the title when there is no band; link mark after the title
         let decor = crate::scene::Decor {
-            icon: if c.header.is_some() {
+            icon: if c.header.is_some() || c.column {
                 None
             } else {
                 c.decor.icon
             },
             mark: c.decor.mark,
         };
+        body.push_str(&node_icon_html(d, c));
         if let Some((_, k)) = &c.kind {
             let _ = write!(body, "<div class=\"kind\">{}</div>", esc(k));
         }
@@ -861,8 +957,7 @@ fn edge_html(
         .map(|p| (p.0 + d.frame.ox, p.1 + d.frame.oy))
         .collect();
     let a = arrow(&pts);
-    let sharp =
-        crate::route::junctions_on(&d.routes, &d.edge_groups, &e.id, (d.frame.ox, d.frame.oy));
+    let sharp = crate::arrow::sharp_corners(d, &e.id);
     // a group's shared trunk and its dots are drawn once (D-049)
     let full = crate::arrow::drawn_line(d, &e.id, &a, &pts);
     let (line, own_head) = crate::arrow::unshared(d, e, &full);
@@ -886,9 +981,11 @@ fn edge_html(
     if let Some(h) = &e.href {
         let _ = write!(body, "<a class=\"href\"{}>", href_attrs(h));
     }
+    // crossings: the line is cut there, as passing under the other (D-093)
+    let (mask, cut) = crate::arrow::gap_mask(&crate::svg::prefix(d), &hops).unwrap_or_default();
     let _ = write!(
         body,
-        "<g class=\"{}\" data-id=\"{}\"{}><path class=\"line\" d=\"{}\"{flow}/>{dots}{pulse}<path class=\"head\" d=\"{}\"/><path class=\"tail\" d=\"{}\"/><circle class=\"origin\" cx=\"{}\" cy=\"{}\" r=\"3.5\"/></g>",
+        "<g class=\"{}\" data-id=\"{}\"{}>{mask}<path class=\"line\" d=\"{}\"{cut}{flow}/>{dots}{pulse}<path class=\"head\" d=\"{}\"/><path class=\"tail\" d=\"{}\"/><circle class=\"origin\" cx=\"{}\" cy=\"{}\" r=\"3.5\"/></g>",
         esc(&edge_classes(d, e).join(" ")),
         esc(&e.id),
         anim_attrs(d, &e.id),
@@ -932,17 +1029,30 @@ fn moving(
 fn edge_labels(d: &Diagram, body: &mut String) {
     for e in &d.model.edges {
         if let Some(&(lx, ly)) = d.labels.get(&e.id) {
+            // a label wrapped by the slide engine (L6): its lines, centred, with corners rather
+            // than round ends
+            let (text, extra) = match d.label_lines.get(&e.id) {
+                Some(lines) if lines.len() > 1 => (
+                    lines
+                        .iter()
+                        .map(|l| esc(l))
+                        .collect::<Vec<_>>()
+                        .join("<br>"),
+                    ";text-align:center;border-radius:8px",
+                ),
+                _ => (esc(&e.label), ""),
+            };
             let _ = write!(
                 body,
-                "<div class=\"{}\" style=\"display:contents\"><div class=\"edge-label\" data-for=\"{}\" style=\"left:{}px;top:{}px\"{}>{}</div></div>",
+                "<div class=\"{}\" style=\"display:contents\"><div class=\"edge-label\" data-for=\"{}\" style=\"left:{}px;top:{}px{extra}\"{}>{}</div></div>",
                 esc(&edge_classes(d, e).join(" ")),
                 esc(&e.id),
                 n(lx + d.frame.ox),
                 n(ly + d.frame.oy),
                 anim_attrs(d, &e.id),
                 match &e.href {
-                    Some(h) => format!("<a class=\"href\"{}>{}</a>", href_attrs(h), esc(&e.label)),
-                    None => esc(&e.label),
+                    Some(h) => format!("<a class=\"href\"{}>{}</a>", href_attrs(h), text),
+                    None => text,
                 }
             );
         }

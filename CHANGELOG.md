@@ -5,8 +5,214 @@ and the project uses [Semantic Versioning](https://semver.org/) (pre-1.0: minor 
 
 ## [Unreleased]
 
+## [0.1.0-rc.9] — 2026-11-18
+
+The slide engine becomes the default. `node` draws a thing by its icon; in the slide engine its
+arrows end on the icon, or start after its text level with it.
+
+- **Added**: `node` (D-087), a thing drawn by its icon rather than by a box: the icon on the left, its name and
+  lines beside it, no frame. Nodes mix with cards whatever the look; every node's icon has the same size (32 px),
+  centred on its text, and arrows end on the icon. A node takes what a card takes, except `tag` and `label`.
+- **Changed**: a built-in icon of 30 px or more is drawn with a thinner line (2.5 px).
 - **Changed**: a short address for the installer on Linux and macOS, `curl -fsSL https://skemo.net/install.sh | sh`:
   the site publishes `cli/install.sh` there (the GitHub address keeps working).
+- **The slide engine is the default**: a diagram that names no layout is drawn by the slide engine
+  when it reads all of it; one it does not read yet (nested zones, a pinned card, an empty zone, a
+  zone placed or sized by hand, `wrap`, `stack`, `.wide`, an arrow to a zone) keeps ELK, as does
+  `layout="graph"`. `SKEMO_LAYOUT=graph` or `grid` gives another engine to the diagrams that name
+  none. In the slide engine, sibling groups and the cards of a group keep their writing order (a
+  card outside every zone where it is written), `constraint="false"` arrows play no part in the
+  placement, and a pile takes the room of its cards behind. On the twenty diagrams of the bench:
+  16 hard findings (19 before), 13 drawings without any.
+- **A character the font does not draw** is reported (`missing-glyph`, by the render and by
+  `skemo lint`) instead of left blank in silence.
+- A zone's description lines keep as much room from the frame's right edge as from its left.
+- **Slide engine (experimental)**: `diagram(layout="slide")` places, routes and labels a diagram as
+  one model solved at once (`engine/src/slide`): the groups tiled like a slide layout on a lattice
+  of 10 px, candidate routes for every arrow, the rules between two lines and between labels and
+  lines as conflicts, and a deterministic search of its own (no solver library, the same drawing
+  in WebAssembly); room is made where a line pays for the lack of it. On twenty diagrams of a
+  corpus, judged by the maintainers' independent checker: 19 hard findings where rc.8 has 521, 6
+  crossings where it has 114, 241 bends where it has 410, lines 41 % shorter; 2.6 s median on one
+  core (0.2 to 5 s for the seventeen within a slide's limits, 13 to 16 s for the three past them).
+  Labels wider than 140 px wrap on up to three lines (SVG, HTML, PNG). `SKEMO_LAYOUT=slide` gives it
+  to the diagrams that name no layout; `skemo layout` reports `layout.engine` = `slide`.
+- **Grid engine (experimental)**: `diagram(layout="grid")` lays a diagram out as a grid of zones and
+  cards instead of a layered graph: blocks in rows, an order that shortens the links, gutters that
+  grow for their lines and labels, and its own routing rules. One module (`engine/src/grid`), one
+  pipeline, each rule named and switched off by `SKEMO_OFF` for measuring. `SKEMO_LAYOUT=grid` gives
+  it to the diagrams that name no layout, to measure a whole corpus; the default engine is unchanged.
+  `skemo layout` says which engine placed the drawing (`layout.engine`: `grid` or `elk`).
+- **Grid engine, room made evenly**: what the lines lack (two lines too close, a tail cut short
+  behind a head) and what the labels lack widens the gutters of the whole group that owns the place,
+  the same between all its children, never one gap among the others; a corridor is read place by
+  place, between the two boxes that bound it there. A line that runs through another arrow's label
+  moves to a lane beside it (`grid-label-lanes`). A zone widened for its title keeps its content
+  centred, and a zone's content slides as one when two linked cards line up.
+- **Grid engine, labels**: two labels that lie over one another on lines side by side (two arrows
+  between the same cards, one each way) part: the straight lines move apart along the sides of
+  their cards until each label stands over its own line. What a gap still lacks once widened is
+  asked with 16 px more, so the room is made within the rounds of the layout (labels were left
+  hidden by a line or by another label when the lines moved into the room just made). A label a
+  line still runs through, where every place looked wide enough, asks a lane more of its gap (the
+  line could not stand aside after all), and the round of the room that hides the fewest labels is
+  kept, not merely the last.
+- **Lines** (both engines): the branches of a fork leave its trunk as late as their way allows
+  (`Params::late_split` of the router): a branch may start anywhere along the routes of its group
+  already drawn, not only at the source, so two arrows to neighbouring cards go round an obstacle
+  together and part just above their targets (they parted at the source, one each way round). A
+  join, routed from its target, meets the same way. A segment in line with a route's first or last
+  stretch moves with it or stays (moved alone, it left the stub at the port on a slant).
+- **Graph engine, room between the zones**: the zones' frames bound the corridor a line is centred
+  in, as the grid engine's do (`Params::region_walls`): a line between two zones stays between them
+  (it was centred into a zone holding neither of its ends). The corridors between columns widen for
+  their lines and for the labels on them, as those between rows already did (D-102); a label needs
+  its width there, clear of the frames. A note stays beside its card when a corridor widens.
+- **Grid engine, rows across zones**: zones of cards side by side in one row of the mosaic share the
+  pitch of their rows (the largest of theirs): their rows of cards line up from one frame to the
+  next.
+- **Quality properties**: `through-zone` counts an arrow running through a zone that holds neither of
+  its ends (rank 2, the lines).
+- **Lines** (both engines): lines spread apart beside a card keep the router's whole margin from it
+  when the corridor holds them so (they kept half of it, and a line ran 7 px along a column of
+  cards); a cluster of lines in a corridor open on one side moves away from the side that bounds it.
+- **Lines** (both engines): a zone's description lines are obstacles of their own, with the full
+  margin of a title (they were taken for its tag pill, and an arrow could run through them). A step
+  of less than a pixel at a corner is no longer dropped as a jog (the arrow's first segment was then
+  drawn on a slant), and the router no longer swaps the levels of two turns when one "turn" is only
+  a stub in line with its end (the stub was left on a slant).
+- **Fixed**: a label exactly as wide as the free stretch of its line could crash the layout (bounds
+  of a clamp rounded apart).
+- **Experiments**: `SKEMO_JITTER=px` adds pixels to every gutter of the grid engine, to measure how
+  much of a change of the counts is noise.
+- **Quality properties**: the manual method's line rules are counted: `staircase` (a route stepping
+  along the diagonal), `short-tail` (a head right behind a bend), `port-jog` (a Z between facing
+  sides one port move would straighten), `close-lines` (two parallel lines closer than 6 px), and
+  `uneven-gaps` (a group whose gutters differ along one axis).
+- **Grid engine, stability** (D-031): pinning a card where it stands changes nothing, a card moved by
+  hand keeps the size the grid gave it, and its zones grow to hold it.
+- **Lines**: a step flattened next to an end no longer leaves the arrow's last segment on a slant
+  (the step stays when one of its segments is the arrow's end).
+- **Editing session**: a legend, a note or a link docked around the drawing stays where it is while
+  a card is dragged (it jumped to the origin until the file was written).
+- **Quality properties**: `sparse`, a drawing whose cards cover less than an eighth of its area.
+- **Experiments**: `SKEMO_ELK='{"elk.…": "…"}'` adds ELK options to every diagram (the layout method's trials).
+- **Docking**: a `.wide` card docked above or below the drawing spans the bands' whole width, its text
+  wrapped to it (a note kept its own 280 px under a wider drawing).
+- **`skemo site`**: the pages are light and dark by default (`--theme auto`), following the reader's
+  system with a switch (`--theme light` draws one theme); the side panel's edge is dragged, or moved with
+  the arrow keys, to set its width, kept from page to page; a double-click goes back to the default.
+- **Theme**: a text card (`card.text`) wraps at a reading measure (440 px, about 70 characters) instead
+  of running its paragraph on one line across the image; `.wide` still spans its group.
+- **Quality properties**: `long-line`, a card wider than 600 px that is neither `.wide` nor a table (a
+  paragraph on one line); `sprawl`, cards outside the flow (top level, no arrow, not docked) leaving the
+  image 1.3 times the area of the rest or more.
+- **Layout**: two cards of one column whose rows overlapped are no longer aligned on one edge, one
+  over the other (they touched and overlapped by a pixel).
+- **Quality properties**: `zone-order`, a zone standing before a sibling written before it that it is
+  reached from (D-041, D-086); `card-overlap` counts one pixel, cards standing on whole pixels.
+- **`skemo site`**: a search box at the top of every page (`/`) finds a card in every diagram by its
+  title, category, tag, zone or lines (accents and case ignored) and opens its diagram centred on it; a
+  note is found by the card it annotates too. The index is `assets/search.js`, loaded on first use.
+- **Legends**: the sample of a note, a chip or an information card is that card in small (a note's
+  amber tint and dashes), no longer a grey chip.
+- **Stability** (D-031, D-085): which stacked zones stretch is read on the layout without pins; a
+  card moved by hand no longer lets a zone beside its own stretch, or stops it.
+- **Notes** (D-104): a note set beside its card follows it when a later layout pass moves the card, to
+  the card's nearest free side; with `dir` down or up and no free side, the row opens after its card
+  to make room for it. It no longer stands beyond the row with a link across the drawing.
+- **Quality properties**: `note-far`, a note farther than 48 px from the card it annotates (twice
+  the 24 px FORMAT gives it), its link run across the drawing.
+- **Labels**: a label wider than the gap between its short upright step and a parallel line beside it
+  slides along its own line, clear of the other, instead of lying over it.
+- **Room for the lines** (D-102, layout): a corridor between two rows (two columns in a drawing that
+  flows right) that more arrows run along than it holds grows, and the drawing is routed again: lines
+  keep 20 px apart and 14 px from the cards instead of being squeezed along them and under their
+  labels. Two unrelated arrows are no longer drawn on one line to save a crossing. Pinning a card where
+  it stands still changes nothing.
+- **Arrow labels above every line in SVG and PNG** (SVG conventions 1, an addition): the labels follow
+  the arrows in a group `edge-labels`, each a `<g class="edge-label" data-for="<arrow id>">` carrying
+  its arrow's step attributes, as the frieze's decorations do; a line written later no longer runs over
+  an earlier label. The HTML already drew them this way.
+- **Layout**: a zone title keeps as much room on its right as on its left (its last letter touched the
+  frame); two zones widening toward each other for their titles no longer overlap.
+- **Quality properties** (library, `skemo_engine::quality`): twenty-two checks of a laid-out diagram
+  (arrows leaving or reaching the wrong place, overlapping zones and cards, a zone's title over its
+  frame, text past its card, characters the font lacks, lines through a card or a zone title, labels on
+  a card, on each other or crossed by a line, slanted lines, unrelated lines drawn on one line,
+  crossings that swapping ports or siblings would remove, detours, lines along a box, rows not
+  aligned, writing order, markup in labels, titles wrapped needlessly) and two of stability (what moves when a card is pinned
+  where it stands, or moved by hand), counted over a corpus in a ledger that no change may make worse
+  (`engine/tests/ledger.rs`). `SKEMO_TRACE=id,…` prints an arrow's route after every pass and a card's
+  box after every layout pass; `SKEMO_OFF=pass,…` skips named layout or routing passes (ablation).
+- **Zone titles and triangles** (D-099, layout): a zone title that stands in the way of an arrow
+  entering its first card wraps between its words before the zone widens; a zone widened for its title
+  widens as much on the other side, its cards in its middle; sibling zones of a row keep their titles
+  level. The title no longer widens the zone's first card. The layout keeps the router's margin (14 px)
+  from a zone title, so a line under a long title no longer steps by a few pixels. A triangle `a → b → c`
+  with `a → c` in one column draws `a → c` straight and two mirrored steps through `b` (the README's
+  example).
+- **`--allow <code>`** (D-098, every command): the warnings of that code are neither shown nor counted
+  by `--deny-warnings` (`--allow step-gap`, `--allow a,b`); errors are never left out. For tools whose
+  context makes a warning meaningless: glitu's slides share their clicks between the text and the
+  diagram, so a diagram's steps may skip some (`step-gap`). Feature `allow` in `skemo capabilities`.
+- **`skemo site`** (D-097, preview): a folder of diagrams becomes a website of linked views, to split a
+  system too large for one drawing (context, containers, components). A card, zone or arrow linked to
+  another `.skemo` (`href="shop/api.skemo"`, `href="../ctx.skemo#web"`) opens that diagram's page on a
+  click, zooming into it; a breadcrumb from `index.skemo`, the list of every diagram with a filter, what a
+  view opens and is opened from, pan and zoom, `--theme auto` with a switch, an overview of thumbnails
+  when there is no `index.skemo`. Warnings `site-missing-diagram` and `site-missing-file`. Example in
+  `cli/examples/site/`.
+- A link to another diagram (`href` to a `.skemo` file) draws a magnifier instead of the external-link
+  glyph, of the same size (D-097). In the library: `skemo_lang::model::diagram_link`,
+  `skemo_engine::svg::render_final`, `skemo_engine::html::font_faces_with`, `skemo_engine::fonts::files`.
+
+- **Version 0.1.0-rc.9** in the working tree: `skemo --version` and `skemo capabilities` no longer give
+  the number of the published release, whose command line had none of what follows.
+- **`step-gap`** (D-094): a warning when a click between 1 and the last step changes nothing
+  (`@1`, `@2`, then `@9:halo`), on the marker after the gap; `--deny-warnings` refuses the diagram.
+  Decimal steps (`@2.5`) are no gap.
+- **`empty-diagram`** (D-094): a warning for an empty or blank source, or a bare `diagram`; the empty
+  SVG is still rendered without `--deny-warnings`.
+- **Fixed**: two stylesheets with the same base name (a theme's `skemo.css` and a deck's) overwrote each
+  other in the embedded source and after `skemo extract`; the second is now named `skemo-2.css`, and
+  `extract` never writes the same file twice.
+- **Codes for every warning of the engine**: `unknown-icon`, `image-missing`, `font-missing`,
+  `font-unreadable`, `unknown-layout`, `curve-ignored`, `overlap`, `wrap-hides-cards`,
+  `mindmap-unlinked`, `fit`, and the router's `unroutable`, `waypoint-unreachable`, `side-ignored`,
+  `route-input`, with the line of the element they are about (`--diagnostics json`); no more `engine`.
+  In the library, `Diagram::warnings` holds `EngineWarning { code, element, message }`; the WebAssembly
+  module keeps `warnings` as texts and adds `engine_warnings`.
+- **Stylesheet diagnostics** (D-095): `css-syntax` (a `{` never closed, a `}` without `{`, a declaration
+  outside a rule or without `:`) and `css-property` (a typo of a property skemo or CSS knows: `colr`,
+  `--lable`), at their line in the stylesheet. An author's own variables and valid CSS are left alone.
+- **Fixed**: the variables the documentation sets on `:root` had no effect (`--link-mark`, `--zone-pad`,
+  `--zone-head`, `--bg`, `--surface`, `--ink`, `--muted`, `--line`, `--card-border`, `--radius`…): the
+  theme set them again on `.stage`, `card` or `zone`. The theme now sets them on `:root`, where an
+  author's stylesheet wins (the dark and print themes still redefine the colours). `--radius` now also
+  rounds the cards of the default look and the zones (zones: 4 px more), and a `calc(…)` in
+  `border-radius` is read; the default drawing is unchanged.
+- **Fixed**: the same diagram twice in one page, light and dark (or with other stylesheets), shared the
+  identifiers of its SVG definitions (`sk…-ombre0`), so the second drew the first's shadows; the prefix
+  now also depends on the theme and the stylesheets when they are not the defaults.
+- A class `.stage` on a card or zone gives the warning `part-class`: it is the class of the whole drawing,
+  and the theme's rules on it kept such a zone light in the dark theme.
+- **Changed**: English messages quote names with backticks (`` unknown target `zz` ``); « » stays in
+  French. Diagnostic codes and positions are unchanged.
+- **Highlight markers** (D-090): `@3-4:halo`, `@5:chase`, `@6:magnify` after the other markers of a card, a zone,
+  a line or an arrow, written in `data-highlight="halo:3-4 magnify:6"`; their steps count; not drawn in PNG, GIF,
+  APNG, WebP. Asked by glitu, which wrote them itself.
+- **A contract for the tools that run skemo** (`cli/SPEC.md` §2, D-090): `--diagnostics json` (one JSON object
+  per line on stderr, with stable codes and positions), `--root DIR` (the files a diagram names are read inside
+  it only: no `..`, no link leading out, no special file, at most 1 MiB, the type checked from the content),
+  `skemo capabilities --format json`, `skemo render --batch` (many diagrams in one process), limits on a
+  diagram's size (`too-large`).
+- **SVG conventions, version 1** (`engine/SVG.md`): the attributes and elements an integration may rely on.
+- **Changed**: an image or a stylesheet the diagram names that is missing or refused exits with 1 (the diagram
+  is refused), no longer 2; every such file is reported, not only the first.
+- **Changed**: an image whose content is not what its extension says (a `.svg` holding a PNG) is refused.
+- **Changed**: `-` on a terminal is refused instead of waiting for input.
+
 - **Changed**: zones stacked one under the other take the width of the widest by default (D-085);
   `diagram(zones="fit")` keeps fitted frames, `zones="stretch"` also evens them along `dir` right or left.
 - **Changed**: in the default look, a card without lines keeps its title on the left, like its neighbours.
@@ -94,7 +300,9 @@ The first public version of skemo, as one repository.
   `icons`, `licences`; messages in the system language; release binaries for Linux, macOS and Windows.
 - **Agent skill**: `cli/skill/skemo/`, for AI agents that write diagrams.
 
-[Unreleased]: https://github.com/skemonet/skemo/compare/v0.1.0-rc.7...HEAD
+[Unreleased]: https://github.com/skemonet/skemo/compare/v0.1.0-rc.9...HEAD
+[0.1.0-rc.9]: https://github.com/skemonet/skemo/compare/v0.1.0-rc.8...v0.1.0-rc.9
+[0.1.0-rc.8]: https://github.com/skemonet/skemo/compare/v0.1.0-rc.7...v0.1.0-rc.8
 [0.1.0-rc.7]: https://github.com/skemonet/skemo/compare/v0.1.0-rc.6...v0.1.0-rc.7
 [0.1.0-rc.6]: https://github.com/skemonet/skemo/compare/v0.1.0-rc.3...v0.1.0-rc.6
 [0.1.0-rc.3]: https://github.com/skemonet/skemo/releases/tag/v0.1.0-rc.3

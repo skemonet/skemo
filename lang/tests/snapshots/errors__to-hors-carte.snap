@@ -2,7 +2,7 @@
 source: tests/errors.rs
 expression: out
 ---
-error[to-outside-card]: « to » must be written inside its source card
+error[to-outside-card]: `to` must be written inside its source card
   ┌─ to-hors-carte.skemo:2:3
   │
 2 │   to(a)

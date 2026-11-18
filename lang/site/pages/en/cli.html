@@ -22,7 +22,11 @@ description: Every skemo command and option: render to PNG, SVG, WebP, GIF, APNG
   <tr><td><code>skemo lint f.skemo --fit [16:9] [--fix]</code></td><td>settings (<code>dir</code>, <code>wrap</code>) that
     bring the diagram to a target aspect ratio; <code>--fix</code> applies the best one (<em>preview</em>)</td></tr>
   <tr><td><code>skemo extract image.png [-o folder]</code></td><td>gives back the source and stylesheets embedded in an
-    image rendered by skemo, to edit them (<code>--stdout</code>: the source only)</td></tr>
+    image rendered by skemo, to edit them (<code>--stdout</code>: the source only); two stylesheets of the same name come back as
+    <code>skemo.css</code> and <code>skemo-2.css</code></td></tr>
+  <tr><td><code>skemo site folder -o out</code></td><td>a website from a folder of diagrams: a card linked to another
+    <code>.skemo</code> (<code>href="shop/api.skemo"</code>) opens its page on a click; breadcrumb, list of the diagrams, pan
+    and zoom (<em>preview</em>, see below)</td></tr>
   <tr><td><code>skemo icons [query]</code></td><td>the built-in icons, filtered by name or tag; <code>--json</code> for editors and completion (not listed in <code>--help</code>)</td></tr>
 </table>
 
@@ -34,7 +38,8 @@ description: Every skemo command and option: render to PNG, SVG, WebP, GIF, APNG
     <code>webp</code>, when the extension is not enough</td></tr>
   <tr><td><code>--css FILE</code></td><td>custom stylesheet, after the theme (repeatable)</td></tr>
   <tr><td><code>--base-theme FILE</code></td><td>a theme that replaces the default one</td></tr>
-  <tr><td><code>--theme T</code></td><td><code>light</code> <code>dark</code> <code>print</code> <code>auto</code>, overriding the file</td></tr>
+  <tr><td><code>--theme T</code></td><td><code>light</code> <code>dark</code> <code>print</code> <code>auto</code>, overriding the file (<code>auto</code> follows the
+    reader in HTML only; other formats are drawn light, with a warning)</td></tr>
   <tr><td><code>--scale N</code></td><td>resolution of raster outputs (<code>--scale 2</code> for high-density screens)</td></tr>
   <tr><td><code>--transparent</code></td><td>no background (SVG, PNG, APNG)</td></tr>
   <tr><td><code>--contrast high</code></td><td>texts below the WCAG threshold are darkened or lightened, layout unchanged</td></tr>
@@ -48,9 +53,27 @@ description: Every skemo command and option: render to PNG, SVG, WebP, GIF, APNG
   <tr><td><code>--font-scale K</code></td><td>multiply every text size of the theme (<code>1.4</code> for a slide)</td></tr>
   <tr><td><code>--no-source</code></td><td>do not embed the source and stylesheets in the output (below)</td></tr>
   <tr><td><code>--deny-warnings</code></td><td>fail on any warning (useful in CI)</td></tr>
+  <tr><td><code>--allow CODE</code></td><td>leave out the warnings of that code: not shown, not counted by <code>--deny-warnings</code> (<code>--allow step-gap,overlap</code>)</td></tr>
 </table>
 <p>The input <code>-</code> reads standard input:
   <code>cat f.skemo | skemo render - --format svg -o - &gt; f.svg</code>.</p>
+
+<h2>Running skemo from a tool</h2>
+<p>For a program that runs skemo (a slide tool, a CI, an editor), the command line is a stable contract
+  (<a href="https://github.com/skemonet/skemo/blob/main/cli/SPEC.md">cli/SPEC.md §2</a>):</p>
+<table>
+  <tr><th>Option</th><th>Effect</th></tr>
+  <tr><td>exit codes</td><td><code>0</code> rendered, <code>1</code> the diagram is refused (nothing on the standard output),
+    <code>2</code> misuse, <code>3</code> internal error</td></tr>
+  <tr><td><code>--diagnostics json</code></td><td>one JSON object per line on the standard error: severity, stable code, message,
+    file, line and column</td></tr>
+  <tr><td><code>--root DIR</code></td><td>the images and stylesheets the diagram names are read in this folder only (default: the
+    diagram's)</td></tr>
+  <tr><td><code>skemo render --batch</code></td><td>many diagrams in one process: one JSON request per line in, one answer per
+    line out</td></tr>
+  <tr><td><code>skemo capabilities --format json</code></td><td>version, version of the <a
+    href="https://github.com/skemonet/skemo/blob/main/engine/SVG.md">SVG conventions</a>, features</td></tr>
+</table>
 
 <h2>Images that reopen</h2>
 <p>Like draw.io, every file skemo renders carries its source and its stylesheets (PNG, APNG, SVG, WebP, GIF and HTML),
@@ -59,6 +82,22 @@ description: Every skemo command and option: render to PNG, SVG, WebP, GIF, APNG
 skemo render diagram.png -o new.svg # any command also takes the image instead of the source</code></pre>
 <p>The editor opens such an image directly. The embedded text is readable by anyone who gets the file: render with
   <code>--no-source</code> when the source must not travel with the image.</p>
+
+<h2>A website of linked views</h2>
+<p>A system too large for one drawing reads better as several views: the context, then the containers of one part, then the
+  components of one container. Link a card to the diagram that details it, then turn the folder into a site:</p>
+<pre><code>card#api.app(href="api.skemo") API          # in shop/containers.skemo
+card#db.store(href="containers.skemo#db") DB  # back up, centred on the element
+
+skemo site architecture/ -o public/ --css architecture/c4.css</code></pre>
+<p>Each <code>.skemo</code> becomes a page at the same place (<code>shop/api.html</code>). A link to a diagram shows a magnifier
+  instead of the link glyph; a click zooms into the card and opens its page. <code>index.skemo</code> is the home page (without one,
+  the home page shows a thumbnail of each diagram); the breadcrumb follows the shortest way down from it. A link to a missing
+  diagram is a warning (<code>site-missing-diagram</code>); one refused diagram refuses the site. <code>--css</code> gives a style
+  to every diagram; the pages follow the reader's light or dark system, with a switch (<code>--theme light</code> draws one
+  theme only); the side panel's edge sets its width; <code>--title</code> names the site. The
+  search box at the top (<kbd>/</kbd>) finds a card in every diagram, by its title, category, tag, zone or lines, and opens its
+  page centred on it. The pages need no server and no network.</p>
 
 <h2>Exit codes</h2>
 <table>

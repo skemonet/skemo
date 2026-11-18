@@ -1,6 +1,8 @@
 //! Icons and links (FORMAT §3.2.1): layout, warnings, SVG and HTML outputs.
 
-use skemo_engine::{Options, from_source, html, svg};
+use skemo_engine::{Options, html, svg};
+mod elk;
+use elk::from_source;
 
 const ICONS: &str = include_str!("data/icons.skemo");
 const LINKS: &str = include_str!("data/links.skemo");
@@ -74,7 +76,8 @@ fn svg_draws_icons_and_wraps_links() {
     assert!(s.contains("<a href=\"https://wiki.corp/firewall\">"));
     assert!(s.contains("<a href=\"#fw\">"));
     assert!(s.contains("<a href=\"https://wiki.corp/uplinks\">"));
-    assert_eq!(s.matches("</a>").count(), 5, "card, zone, arrow x3 liens");
+    // three cards, a zone, an arrow and its label (drawn above every line, bug 24)
+    assert_eq!(s.matches("</a>").count(), 6);
     assert!(s.contains("class=\"link-mark\""));
     assert!(s.contains("class=\"icon\""));
     assert!(!s.contains("javascript:"));

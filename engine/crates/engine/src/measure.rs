@@ -19,6 +19,16 @@ pub struct Size {
     pub h: f64,
 }
 
+/// Corridors widened for their lines: where each ends (along its axis) and the room added.
+pub type Widened = Vec<(f64, f64)>;
+
+/// The grid engine's room, made evenly (the manual method's §7): what the gutters of a group gain
+/// along an axis, the same between all its children, or what a zone's padding must be at least
+/// (the same on both sides along x; above its first row along y). By the group (a zone's id; the
+/// empty string: the drawing), the axis (`true`: x) and what grows (`true`: the zone's padding,
+/// `false`: the gutters between its children), in px.
+pub type Spacing = BTreeMap<(String, bool, bool), f64>;
+
 #[derive(Debug, Clone, Default)]
 pub struct Sizes {
     pub cards: BTreeMap<String, Size>,
@@ -26,12 +36,30 @@ pub struct Sizes {
     /// Zones whose title the theme sets below their content (`bottom`, no `top`; `.bare`): their
     /// room is kept below (D-050).
     pub captions_below: std::collections::BTreeSet<String>,
-    /// Right end of a zone's title (its tag pill included) from the zone's left edge, for titles
-    /// at the top left only (D-064): a card linked from above keeps clear of it.
+    /// Right end of a zone's title (its tag pill and description lines included) from the zone's
+    /// left edge, for titles at the top left only (D-064): a card linked from above keeps clear
+    /// of it.
     pub title_ends: BTreeMap<String, f64>,
+    /// The frame width a zone needs to hold its title (as `title_ends`): up to the title's end,
+    /// where the HTML would wrap it (its title box ends at the frame). Only a word or a pill wider
+    /// than the zone widens it, a title wraps first (D-099).
+    pub title_widths: BTreeMap<String, f64>,
     /// Room the description lines of a zone take under its title (FORMAT §3.2.3), added to the
     /// zone's top margin.
     pub zone_heads: BTreeMap<String, f64>,
+    /// Corridors between rows widened for their lines (`corridors`, D-102): where each ends along
+    /// the flow and the room added, read on the layout without pins.
+    pub corridors: Widened,
+    /// The same across the flow (columns between cards and zones side by side, in a drawing laid
+    /// downwards), widened for their lines and the labels on them.
+    pub corridors_across: Widened,
+    /// The grid engine (`grid`): the room made for the lines and the arrow labels, evenly
+    /// (`grid::room`).
+    pub spacing: Spacing,
+    /// The zones the layout without pins stretched (`tidy::stretch_zones`, D-085), for the pinned
+    /// one (D-031): a card moved by hand no longer lets a zone beside it stretch, or stops it.
+    /// `None`: decided on the layout itself.
+    pub stretched: Option<std::collections::BTreeSet<String>>,
 }
 
 pub fn text_style(c: &Computed) -> TextStyle {
@@ -81,7 +109,8 @@ fn ceil(v: f64) -> f64 {
 }
 
 /// Splits `text` into lines in a width `avail`, the first line being reduced by `first_indent`
-/// (inline badge). Breaks at spaces, as the browser.
+/// (inline badge). Breaks at spaces, as the browser, and after the hyphens of a word too wide
+/// for a line (`lines::hyphen_pieces`).
 pub fn break_lines(c: &Computed, text: &str, avail: f64, first_indent: f64) -> Vec<String> {
     let st = text_style(c);
     let text = transform(c, text);
@@ -94,18 +123,26 @@ pub fn break_lines(c: &Computed, text: &str, avail: f64, first_indent: f64) -> V
     for para in text.split('\n') {
         let mut cur = String::new();
         let mut width_left = avail - if lines.is_empty() { first_indent } else { 0.0 };
-        for w in para.split(' ') {
-            let cand = if cur.is_empty() {
-                w.to_string()
+        for (k, w) in para.split(' ').enumerate() {
+            let pieces = if layout_unit(st.width(w)) > avail + 1e-6 {
+                crate::lines::hyphen_pieces(w)
             } else {
-                format!("{cur} {w}")
+                vec![w]
             };
-            if !cur.is_empty() && layout_unit(st.width(&cand)) > width_left + 1e-6 {
-                lines.push(std::mem::take(&mut cur));
-                width_left = avail;
-                cur = w.to_string();
-            } else {
-                cur = cand;
+            for (j, piece) in pieces.into_iter().enumerate() {
+                let sep = if j == 0 && k > 0 { " " } else { "" };
+                let cand = if cur.is_empty() {
+                    piece.to_string()
+                } else {
+                    format!("{cur}{sep}{piece}")
+                };
+                if !cur.is_empty() && layout_unit(st.width(&cand)) > width_left + 1e-6 {
+                    lines.push(std::mem::take(&mut cur));
+                    width_left = avail;
+                    cur = piece.to_string();
+                } else {
+                    cur = cand;
+                }
             }
         }
         lines.push(cur);
@@ -151,10 +188,30 @@ pub fn kind_height(scene: &Scene, kind: Option<&(usize, String)>) -> f64 {
 /// Size of a card. `forced`: imposed width (timeline period: max(bar, natural)), without
 /// `max-width`; the height is then measured at that width.
 pub fn card_size(scene: &Scene, card: &CardEl, forced: Option<f64>) -> Size {
+    // a node (D-087): its icon has a column of its own, and the node is at least as tall as it
+    let icon = card.node_icon(scene).map_or((0.0, 0.0), |(s, c)| (c, s));
+    card_size_at(scene, card, forced, icon).0
+}
+
+/// Height of a node's text (D-087) in a box `w` wide whose icon column is `column` wide: the
+/// text is centred against a taller icon.
+pub fn text_height(scene: &Scene, card: &CardEl, w: f64, column: f64) -> f64 {
+    card_size_at(scene, card, Some(w), (column, 0.0)).1
+}
+
+/// Size of a card whose icon column is `column` wide and holds an icon `icon` tall (a node,
+/// D-087; zeros otherwise), and the height of its text.
+fn card_size_at(
+    scene: &Scene,
+    card: &CardEl,
+    forced: Option<f64>,
+    (column, icon): (f64, f64),
+) -> (Size, f64) {
     let cs = scene.style(card.el);
     let pad = cs.padding();
     let bor = border(cs);
-    let frame_w = pad[1] + pad[3] + bor[1] + bor[3];
+    // a node's icon column (D-087) is part of its frame: the title and the lines start after it
+    let frame_w = pad[1] + pad[3] + bor[1] + bor[3] + column;
     let title = scene.style(card.title);
     let tp = title.padding();
     let title_text = card.title_text.clone();
@@ -167,7 +224,7 @@ pub fn card_size(scene: &Scene, card: &CardEl, forced: Option<f64>) -> Size {
     let (mark_w, _) = scene.mark_trail(&card.decor);
     // icon and link mark in the band, or in the title
     let in_head = card.header.is_some();
-    let title_lead = if in_head { 0.0 } else { icon_w };
+    let title_lead = if in_head || card.column { 0.0 } else { icon_w };
     let title_trail = if card.band() { 0.0 } else { mark_w };
     if let Some(h) = &card.header {
         let w = head_width(scene, h, (icon_w, if h.band { mark_w } else { 0.0 }));
@@ -249,11 +306,15 @@ pub fn card_size(scene: &Scene, card: &CardEl, forced: Option<f64>) -> Size {
     if let Some(u) = card.ul {
         h += list_height(scene, card, u, avail, title.margin()[2]);
     }
-    h += pad[0] + pad[2] + bor[0] + bor[2];
-    Size {
-        w: if forced.is_some() { width } else { ceil(width) },
-        h: ceil(h),
-    }
+    let text_h = h;
+    h = h.max(icon) + pad[0] + pad[2] + bor[0] + bor[2];
+    (
+        Size {
+            w: if forced.is_some() { width } else { ceil(width) },
+            h: ceil(h),
+        },
+        text_h,
+    )
 }
 
 /// Badge drawn on its own line above the title (`card .title::before { display: block }`, used by
@@ -381,21 +442,38 @@ pub fn decks(model: &skemo_lang::Model, sizes: &mut Sizes, sign: f64) {
     }
 }
 
-/// Right end of zone `id`'s title from the zone's left edge, when it does not depend on the
-/// zone's width (a title at the left; a centred or right-aligned one is left out).
+/// Right end of zone `id`'s title from the zone's left edge, its pill and its description lines
+/// included (they are walls for the lines too, D-101), and where the title starts, when they do
+/// not depend on the zone's width (a title at the left; a centred or right-aligned one is left
+/// out).
 fn title_end(
     scene: &Scene,
     model: &skemo_lang::Model,
     id: &str,
     z: &crate::scene::ZoneEl,
-) -> Option<f64> {
+) -> Option<(f64, f64)> {
     let n = model.node(id).filter(|n| !n.title.is_empty())?;
     let end = |w: f64| {
-        let t = crate::geometry::zone_title(scene, z, (&n.title, n.tag.as_deref()), w, 400.0);
-        t.tag.map_or(t.span.1, |p| t.span.1.max(p.x + p.w))
+        let text = scene.zone_text(id, &n.title);
+        let t = crate::geometry::zone_title(scene, z, (text, n.tag.as_deref()), w, 400.0);
+        // `.tag-right`: the pill stands at the row's end, `w - p.x` from the frame's right edge
+        // whatever the width; the title needs that much more, and a gap
+        let tag_end = t.tag.as_ref().map_or(t.span.1, |p| {
+            if z.tag_right {
+                let gap = z
+                    .tag
+                    .map_or(0.0, |el| scene.style(el).margin()[3])
+                    .max(16.0);
+                t.span.1 + gap + (w - p.x)
+            } else {
+                t.span.1.max(p.x + p.w)
+            }
+        });
+        let end = t.subs.iter().map(|r| r.x + r.width).fold(tag_end, f64::max);
+        (end, t.span.0.max(0.0))
     };
-    let e = end(4000.0);
-    ((e - end(8000.0)).abs() < 0.5).then_some(e + 2.0)
+    let (e, start) = end(4000.0);
+    ((e - end(8000.0).0).abs() < 0.5).then_some((e + 2.0, start))
 }
 
 /// Measures every card and every label of the scene.
@@ -414,14 +492,20 @@ pub fn measure(scene: &Scene, model: &skemo_lang::Model) -> Sizes {
     }
     decks(model, &mut out, 1.0);
     for (id, z) in &scene.zones {
-        let extra: f64 = z
-            .subs
-            .iter()
-            .map(|(el, _)| {
-                let c = scene.style(*el);
-                line_height(c) + c.margin()[0] + c.margin()[2]
-            })
-            .sum();
+        // the lines a wrapped title adds under its first (D-099)
+        let wrapped = scene
+            .head_lines
+            .get(id)
+            .map_or(0.0, |&n| n as f64 * line_height(scene.style(z.title)));
+        let extra: f64 = wrapped
+            + z.subs
+                .iter()
+                .map(|(el, t)| {
+                    let c = scene.style(*el);
+                    let lines = t.split('\n').count() as f64;
+                    line_height(c) * lines + c.margin()[0] + c.margin()[2]
+                })
+                .sum::<f64>();
         if extra > 0.0 {
             out.zone_heads.insert(id.clone(), extra.ceil());
         }
@@ -429,8 +513,11 @@ pub fn measure(scene: &Scene, model: &skemo_lang::Model) -> Sizes {
         let set = |n: &str| c.get(n).is_some_and(|v| v.trim() != "auto");
         if set("bottom") && !set("top") {
             out.captions_below.insert(id.clone());
-        } else if let Some(end) = title_end(scene, model, id, z) {
+        } else if let Some((end, start)) = title_end(scene, model, id, z) {
             out.title_ends.insert(id.clone(), end);
+            // the frame keeps as much room right of the title as left of it (bug 23: the last
+            // letter touched the frame)
+            out.title_widths.insert(id.clone(), (end + start).ceil());
         }
     }
     for e in &model.edges {

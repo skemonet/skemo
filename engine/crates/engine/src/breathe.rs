@@ -8,7 +8,8 @@
 //! or to the middle of its corridor when the corridor is narrower than two gaps. It never crosses
 //! a card, a zone title, a frame or another line to get there, never comes closer to a card than
 //! it was or than the router's margin, and never adds a crossing. Segments that run on one line
-//! (a shared trunk) move together.
+//! (a shared trunk) move together. A segment drawn on a frame leaves it for the inside of the
+//! zone, else for its outside.
 
 use crate::layout::Box2;
 use skemo_lang::{Kind, Model};
@@ -71,6 +72,7 @@ fn overlap(a: (f64, f64), b: (f64, f64)) -> f64 {
 
 /// What bounds a segment on one side: where it stands, the gap wanted from it, and whether that
 /// gap is a hard limit (a card) or a wish (a line, a frame).
+#[derive(Clone)]
 struct Bound {
     pos: f64,
     gap: f64,
@@ -82,11 +84,45 @@ struct Scene<'a> {
     /// Cards and zone titles: never crossed
     solids: Vec<Box2>,
     groups: &'a BTreeMap<String, String>,
+    /// When each arrow is shown (first and last step): two lines never shown together keep no
+    /// gap from each other (D-092).
+    lives: BTreeMap<String, (f64, f64)>,
 }
 
 impl Scene<'_> {
     fn same_group(&self, a: &str, b: &str) -> bool {
         a == b || matches!((self.groups.get(a), self.groups.get(b)), (Some(x), Some(y)) if x == y)
+    }
+
+    /// Are two arrows ever shown at the same time?
+    fn together(&self, a: &str, b: &str) -> bool {
+        let always = (f64::NEG_INFINITY, f64::INFINITY);
+        let (x, y) = (
+            self.lives.get(a).copied().unwrap_or(always),
+            self.lives.get(b).copied().unwrap_or(always),
+        );
+        x.0 <= y.1 && y.0 <= x.1
+    }
+
+    /// The segment is drawn on the frame of a zone, over some length: `Some(true)` on the edge
+    /// the zone starts at (its inside is further on), `Some(false)` on the one it ends at.
+    fn on_frame(&self, s: &Seg) -> Option<bool> {
+        self.frames.iter().find_map(|f| {
+            let (along, (a, b)) = if s.horiz {
+                ((f.x, f.right()), (f.y, f.bottom()))
+            } else {
+                ((f.y, f.bottom()), (f.x, f.right()))
+            };
+            if overlap(along, (s.lo, s.hi)) <= OVERLAP {
+                None
+            } else if (a - s.level).abs() <= 0.25 {
+                Some(true)
+            } else if (b - s.level).abs() <= 0.25 {
+                Some(false)
+            } else {
+                None
+            }
+        })
     }
 
     /// Lower and upper bounds of a segment's level, from what runs beside it.
@@ -128,6 +164,7 @@ impl Scene<'_> {
             if !mine
                 && o.horiz == s.horiz
                 && !self.same_group(&o.id, &s.id)
+                && self.together(&o.id, &s.id)
                 && overlap((o.lo, o.hi), span) > OVERLAP
             {
                 put(o.level, LINE_GAP, false);
@@ -260,10 +297,20 @@ fn scene<'a>(
             Kind::Zone => {}
         }
     }
+    let lives = crate::anim::resolve(model)
+        .elements
+        .into_iter()
+        .filter(|(_, r)| r.is_link)
+        .map(|(id, r)| {
+            let until = r.until.as_ref().map_or(f64::INFINITY, |u| u.value);
+            (id, (r.appear.value, until))
+        })
+        .collect();
     Scene {
         frames,
         solids,
         groups,
+        lives,
     }
 }
 
@@ -309,13 +356,38 @@ pub fn breathe(
                 continue;
             }
             let (below, above) = scene.bounds(me, &bundle, &segments(routes));
-            let Some(t) = target(me.level, &below, &above) else {
-                continue;
+            // on a frame (its edge bounds the segment on neither side): the frame is first taken
+            // as standing before the segment, then after it, so that the segment leaves it
+            let frame = Bound {
+                pos: me.level,
+                gap: FRAME_GAP,
+                hard: false,
             };
-            let after = moved(routes, &bundle, t);
-            if acceptable(&scene, routes, &after, &bundle) {
-                *routes = after;
-                changed = true;
+            let with =
+                |v: &[Bound]| -> Vec<Bound> { v.iter().cloned().chain([frame.clone()]).collect() };
+            let on_frame = if crate::trace::off("off-frame") {
+                None
+            } else {
+                scene.on_frame(me)
+            };
+            let targets = match on_frame {
+                None => vec![target(me.level, &below, &above)],
+                Some(true) => vec![
+                    target(me.level, &with(&below), &above),
+                    target(me.level, &below, &with(&above)),
+                ],
+                Some(false) => vec![
+                    target(me.level, &below, &with(&above)),
+                    target(me.level, &with(&below), &above),
+                ],
+            };
+            for t in targets.into_iter().flatten() {
+                let after = moved(routes, &bundle, t);
+                if acceptable(&scene, routes, &after, &bundle) {
+                    *routes = after;
+                    changed = true;
+                    break;
+                }
             }
         }
         if !changed {

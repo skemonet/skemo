@@ -2,7 +2,7 @@
 # Installs the `skemo` binary from a GitHub release (Linux and macOS).
 #   curl -fsSL https://skemo.net/install.sh | sh
 #   (site/build.py publishes this file there)
-#   SKEMO_VERSION=v0.1.0-rc.8 SKEMO_BIN=~/bin sh install.sh
+#   SKEMO_VERSION=v0.1.0-rc.9 SKEMO_BIN=~/bin sh install.sh
 # Variables: SKEMO_VERSION (default: latest release, pre-releases included), SKEMO_BIN (default
 # ~/.local/bin), GITHUB_TOKEN (optional: a higher API rate limit).
 # The binary is checked against the SHA-256 the release's description gives before it is installed.
@@ -20,6 +20,7 @@ case "$(uname -s)-$(uname -m)" in
   Linux-x86_64) asset=skemo-linux-x86_64 target=x86_64-unknown-linux-musl ;;
   Linux-aarch64 | Linux-arm64) asset=skemo-linux-arm64 target=aarch64-unknown-linux-musl ;;
   Darwin-arm64) asset=skemo-macos-arm64 target=aarch64-apple-darwin ;;
+  Darwin-x86_64) asset=skemo-macos-x86_64 target=x86_64-apple-darwin ;;
   *) die "no binary for $(uname -s) $(uname -m) (Windows: download skemo-windows-x86_64.exe from the releases page)" ;;
 esac
 

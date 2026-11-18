@@ -7,12 +7,17 @@ description: Install the skemo binary on Linux, macOS or Windows, write a first 
 <p class="lead">Install the <code>skemo</code> binary, write a file, render it. Two minutes.</p>
 
 <h2>Install</h2>
-<p>On Linux (x86_64, ARM) and macOS (ARM):</p>
+<p id="install">On Linux (x86_64, ARM) and macOS (ARM):</p>
 <pre><code>curl -fsSL https://skemo.net/install.sh | sh</code></pre>
 <p>The script downloads the latest release, checks its SHA-256 and installs it into <code>~/.local/bin</code>
   (<code>SKEMO_BIN</code> changes the folder, <code>SKEMO_VERSION</code> picks a version). On Windows, take
   <code>skemo-windows-x86_64.exe</code> from the releases page. skemo is a single executable: no Node, no browser, no Graphviz; fonts and theme are built in.</p>
 <pre><code>skemo --version</code></pre>
+<p>Each release has one binary per platform, always under the same names, with a <code>SHA256SUMS</code> file
+  beside them: <code>skemo-linux-x86_64</code>, <code>skemo-linux-arm64</code> (static), <code>skemo-macos-arm64</code>,
+  <code>skemo-macos-x86_64</code>, <code>skemo-windows-x86_64.exe</code>, at
+  <code>https://github.com/skemonet/skemo/releases/download/&lt;version&gt;/&lt;name&gt;</code>. This page is also
+  <code>https://skemo.net/install</code>.</p>
 
 <h2>A first diagram</h2>
 <p>Create <code>hello.skemo</code>:</p>

@@ -9,11 +9,24 @@ fn conn(id: &str, from: &str, to: &str) -> Connector {
 }
 
 #[test]
-fn facing_shapes_of_different_heights_get_a_straight_line() {
-    // b is taller and lower: the middles differ by 21 px, the sides overlap
+fn facing_shapes_of_different_heights_meet_in_their_middles() {
+    // b is taller and lower: the middles differ by 18 px; each end lands in the middle of its
+    // side, the line takes a step (D-093: the middle comes before straightness)
     let obstacles = vec![
         Obstacle::shape("a", Rect::new(0.0, 100.0, 120.0, 36.0)),
         Obstacle::shape("b", Rect::new(200.0, 97.0, 120.0, 78.0)),
+    ];
+    let (routes, _) = route(&obstacles, &[conn("e", "a", "b")], &Params::default());
+    let p = &routes[0].points;
+    assert_eq!(p.first(), Some(&(120.0, 118.0)), "{p:?}");
+    assert_eq!(p.last(), Some(&(200.0, 136.0)), "{p:?}");
+}
+
+#[test]
+fn facing_shapes_whose_middles_line_up_get_a_straight_line() {
+    let obstacles = vec![
+        Obstacle::shape("a", Rect::new(0.0, 100.0, 120.0, 36.0)),
+        Obstacle::shape("b", Rect::new(200.0, 79.0, 120.0, 78.0)),
     ];
     let (routes, _) = route(&obstacles, &[conn("e", "a", "b")], &Params::default());
     assert_eq!(routes[0].points, vec![(120.0, 118.0), (200.0, 118.0)]);

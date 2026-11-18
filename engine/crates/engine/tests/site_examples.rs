@@ -1,7 +1,9 @@
 //! Defects seen while drawing the site's examples (2026-11-03, `docs/research/site-examples/` in
 //! the meta repository).
 
-use skemo_engine::{Options, from_source};
+use skemo_engine::Options;
+mod elk;
+use elk::from_source;
 
 fn build(src: &str) -> skemo_engine::Diagram {
     from_source(src, &Options::default()).unwrap().0

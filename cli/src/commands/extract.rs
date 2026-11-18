@@ -4,23 +4,19 @@
 use crate::args::ExtractArgs;
 use crate::common::{Fail, io, write_out};
 use crate::out::Out;
-use skemo_engine::source::{NamedText, extract, safe_name};
+use skemo_engine::source::{NamedText, extract, safe_name, unique_names};
 use skemo_lang::tr;
 use std::path::{Path, PathBuf};
 
 pub fn run(out: &Out, a: &ExtractArgs) -> Result<(), Fail> {
-    let raw = std::fs::read(&a.image).map_err(|e| io(&e)).map_err(|e| {
-        Fail::usage(tr!(
-            "reading « {} »: {e}",
-            "lecture de « {} » : {e}",
-            a.image
-        ))
-    })?;
+    let raw = std::fs::read(&a.image)
+        .map_err(|e| io(&e))
+        .map_err(|e| Fail::usage(tr!("reading `{}`: {e}", "lecture de « {} » : {e}", a.image)))?;
     let b = extract(&raw).ok_or_else(|| {
         Fail(
             1,
             Some(tr!(
-                "« {} » carries no skemo source (rendered with --no-source, or by another tool)",
+                "`{}` carries no skemo source (rendered with --no-source, or by another tool)",
                 "« {} » ne contient pas de source skemo (rendu avec --no-source, ou par un autre outil)",
                 a.image
             )),
@@ -44,8 +40,10 @@ pub fn run(out: &Out, a: &ExtractArgs) -> Result<(), Fail> {
         dir.join(format!("{stem}.skemo")),
         b.source.clone().into_bytes(),
     )];
-    let css = b.css.iter().chain(b.base_theme.iter());
-    for NamedText { name, content } in css {
+    // never the same file twice, even from a bundle written before names were unique
+    let mut css: Vec<NamedText> = b.css.iter().chain(b.base_theme.iter()).cloned().collect();
+    unique_names(&mut css);
+    for NamedText { name, content } in &css {
         if let Some(n) = safe_name(name) {
             files.push((dir.join(n), content.clone().into_bytes()));
         }
@@ -60,7 +58,7 @@ pub fn run(out: &Out, a: &ExtractArgs) -> Result<(), Fail> {
         && let Some((p, _)) = files.iter().find(|(p, _)| p.exists())
     {
         return Err(Fail::usage(tr!(
-            "« {} » exists: give --force to overwrite it, or -o another folder",
+            "`{}` exists: give --force to overwrite it, or -o another folder",
             "« {} » existe : donner --force pour l'écraser, ou -o un autre dossier",
             p.display()
         )));
@@ -70,7 +68,7 @@ pub fn run(out: &Out, a: &ExtractArgs) -> Result<(), Fail> {
         out.note(&p.display().to_string());
     }
     let mut hint = Vec::new();
-    for c in &b.css {
+    for c in css.iter().take(b.css.len()) {
         hint.push(format!("--css {}", c.name));
     }
     if let Some(t) = &b.theme {

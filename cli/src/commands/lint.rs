@@ -3,7 +3,7 @@
 
 use crate::args::{LintArgs, ThemeArg};
 use crate::common::{Fail, Inputs, prepare, read_source, write_out};
-use crate::out::Out;
+use crate::out::{Out, allowed};
 use skemo_lang::tr;
 
 pub fn run(out: &Out, a: &LintArgs) -> Result<(), Fail> {
@@ -29,7 +29,7 @@ pub fn run(out: &Out, a: &LintArgs) -> Result<(), Fail> {
         errors |= doc.has_errors();
         failed |= (a.deny_warnings && unknown)
             || doc.has_errors()
-            || (a.deny_warnings && doc.warnings().next().is_some());
+            || (a.deny_warnings && doc.warnings().any(|w| !allowed(w.code)));
         if !doc.has_errors() {
             failed |= layout_warnings(out, a, f) && a.deny_warnings;
         }
@@ -81,10 +81,12 @@ fn layout_warnings(out: &Out, a: &LintArgs, file: &str) -> bool {
     let Ok((d, _, _)) = prepare(&out.silenced(), inputs) else {
         return false;
     };
-    for w in &d.warnings {
-        out.warn(w);
+    let mut found = false;
+    for w in d.warnings.iter().filter(|w| !allowed(w.code)) {
+        out.warn(&w.message);
+        found = true;
     }
-    !d.warnings.is_empty()
+    found
 }
 
 /// Warns about `icon="…"` outside the built-in set (the engine ignores them when rendering); true
@@ -104,13 +106,16 @@ fn unknown_icons(out: &Out, src: &str, file: &str, doc: &skemo_lang::Document) -
             .get(&n.id)
             .and_then(|l| l.attrs.iter().find(|a| a.name == "icon"))
             .map_or(skemo_lang::diag::Span::default(), |a| a.span);
+        if allowed("unknown-icon") {
+            continue;
+        }
         let mut d = skemo_lang::Diagnostic::warning(
             "unknown-icon",
             span,
-            tr!("unknown icon « {name} »", "icône « {name} » inconnue"),
+            tr!("unknown icon `{name}`", "icône « {name} » inconnue"),
         );
         if let Some(s) = skemo_engine::icons::suggest(name) {
-            d = d.with_help(tr!("did you mean « {s} »?", "vouliez-vous « {s} » ?"));
+            d = d.with_help(tr!("did you mean `{s}`?", "vouliez-vous « {s} » ?"));
         }
         out.diag(src, file, &d);
         found = true;

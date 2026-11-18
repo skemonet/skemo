@@ -213,8 +213,8 @@ mod tests {
             output,
             theme: None,
             out: Out {
-                color: false,
                 quiet: true,
+                ..Out::default()
             },
         }
     }

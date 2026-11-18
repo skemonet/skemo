@@ -43,20 +43,17 @@ pub(super) fn edge(ctx: &mut Ctx, e: &skemo_lang::Edge) {
     );
     // a curved arrow (`--curve: on`) runs to the card itself, without junction dots
     let curved = crate::arrow::curved(d, el.line);
-    let sharp = if curved {
-        Vec::new()
-    } else {
-        crate::route::junctions_on(&d.routes, &d.edge_groups, &e.id, (d.frame.ox, d.frame.oy))
-    };
-    // a group's shared trunk and its dots are drawn once (D-049)
+    let sharp = sharp_of(d, &e.id, curved);
+    // a group's shared trunk and its dots are drawn once (D-049), its dashes in phase (D-093)
+    let full = crate::arrow::drawn_line(d, &e.id, &a, &pts);
     let (line, own_head) = if curved {
         (pts.clone(), true)
     } else {
-        unshared(d, e, &crate::arrow::drawn_line(d, &e.id, &a, &pts))
+        unshared(d, e, &full)
     };
-    let dots = own_dots(d, e, &sharp);
-    let hops = hops_of(d, &e.id, curved);
-    edge_line(ctx, el.line, &line, &pr, &sharp, &dots, &hops);
+    let (dots, hops) = (own_dots(d, e, &sharp), hops_of(d, &e.id, curved));
+    let phase = crate::arrow::dash_phase(d, e, &full, &line);
+    edge_line(ctx, el.line, &line, &pr, (&sharp, &dots, &hops), phase);
     if pr.draw > 0.95 {
         pulse(ctx, &e.id, el.line, &pts, &sharp, &hops);
     }
@@ -104,11 +101,50 @@ pub(super) fn edge(ctx: &mut Ctx, e: &skemo_lang::Edge) {
             paint("fill", oc.color_of("fill").or(Some(oc.color())))
         );
     }
-    if let (Some(&lel), Some(&(lx, ly))) = (d.scene.labels.get(&e.id), d.labels.get(&e.id)) {
-        let p = geometry::label(&d.scene, lel, &e.label, lx + d.frame.ox, ly + d.frame.oy);
-        ctx.out.push_str("<g class=\"edge-label\">");
-        pill(ctx, &p);
-        ctx.out.push_str("</g>");
+    ctx.out.push_str("</g>");
+    super::node::link_close(ctx, e.href.as_deref());
+}
+
+/// An arrow's label, drawn once every arrow is (as the HTML draws them): a line written later
+/// ran over the labels written before it (bug 24). Outside its arrow's group, it carries the
+/// arrow's step attributes and `data-for` (SVG.md, like the frieze's decorations).
+pub(super) fn edge_label(ctx: &mut Ctx, e: &skemo_lang::Edge) {
+    let d = ctx.d;
+    let (Some(&lel), Some(&(lx, ly))) = (d.scene.labels.get(&e.id), d.labels.get(&e.id)) else {
+        return;
+    };
+    // drawn when its arrow is (`edge`)
+    if !d.scene.edges.contains_key(&e.id) || d.routes.get(&e.id).is_none_or(|r| r.len() < 2) {
+        return;
+    }
+    let pr = presence(ctx, &e.id);
+    if pr.opacity <= 0.001 {
+        return;
+    }
+    let (cx, cy) = (lx + d.frame.ox, ly + d.frame.oy);
+    let (p, more) = match d.label_lines.get(&e.id) {
+        Some(lines) if lines.len() > 1 => geometry::label_lines(&d.scene, lel, lines, cx, cy),
+        _ => (geometry::label(&d.scene, lel, &e.label, cx, cy), Vec::new()),
+    };
+    super::node::link_open(ctx, e.href.as_deref());
+    let _ = write!(
+        ctx.out,
+        "<g class=\"edge-label\" data-for=\"{}\"{}{}>",
+        esc(&e.id),
+        anim_attrs(ctx, &e.id),
+        presence_attrs(
+            Presence {
+                dy: 0.0,
+                scale: 1.0,
+                ..pr
+            },
+            0.0,
+            0.0
+        )
+    );
+    super::node::pill_capped(ctx, &p, if more.is_empty() { f64::INFINITY } else { 8.0 });
+    for run in &more {
+        super::node::text(ctx, run, None);
     }
     ctx.out.push_str("</g>");
     super::node::link_close(ctx, e.href.as_deref());
@@ -159,7 +195,19 @@ fn line_path(
     if crate::arrow::curved(d, line_el) && line.len() >= 2 {
         curve_path(line)
     } else {
-        rounded_path_hops(line, 8.0, sharp, hops)
+        rounded_path_hops(line, crate::arrow::CORNER, sharp, hops)
+    }
+}
+
+/// A point of the drawing.
+type Pt = (f64, f64);
+
+/// The sharp corners of an arrow's line (none on a curved line).
+fn sharp_of(d: &Diagram, id: &str, curved: bool) -> Vec<(f64, f64)> {
+    if curved {
+        Vec::new()
+    } else {
+        crate::arrow::sharp_corners(d, id)
     }
 }
 
@@ -179,9 +227,8 @@ fn edge_line(
     line_el: usize,
     line: &[(f64, f64)],
     pr: &Presence,
-    sharp: &[(f64, f64)],
-    dots: &[(f64, f64)],
-    hops: &[(f64, f64)],
+    (sharp, dots, hops): (&[Pt], &[Pt], &[Pt]),
+    phase: f64,
 ) {
     let lc = ctx.d.scene.style(line_el);
     let stroke = lc.color_of("stroke").or_else(|| Some(lc.color()));
@@ -192,11 +239,26 @@ fn edge_line(
         .filter(|w| w.is_finite() && *w >= 0.0)
         .unwrap_or(1.0);
     let mut extra = stroke_motion(ctx, line_el);
+    // the dashes of a grouped arrow fall on those of the trunk it shares (D-093)
+    let period: f64 = {
+        let dashes = crate::motion::dashes(lc);
+        let sum: f64 = dashes.iter().sum();
+        if dashes.len() % 2 == 1 {
+            2.0 * sum
+        } else {
+            sum
+        }
+    };
+    if phase != 0.0 && period > 0.0 && !extra.contains("stroke-dashoffset") {
+        let _ = write!(
+            extra,
+            " stroke-dashoffset=\"{}\"",
+            n(phase.rem_euclid(period))
+        );
+    }
     if pr.draw < 0.999 {
         // progressive drawing (draw effect): only a fraction of the stroke is visible
-        // a bridge is a half circle where the line ran straight across its diameter
-        let bridged = hops.len() as f64 * (std::f64::consts::PI - 2.0) * crate::arrow::HOP;
-        let len = (crate::route::length(line) + bridged).max(1e-9);
+        let len = crate::route::length(line).max(1e-9);
         extra = format!(
             " stroke-dasharray=\"{} {}\" stroke-dashoffset=\"{}\"",
             n(len),
@@ -207,6 +269,11 @@ fn edge_line(
     // `--curve: on` (the mind map's theme, D-048 M1): one smooth curve from end to end, leaving
     // and arriving along the route's first and last segments
     let d = line_path(ctx.d, line_el, line, sharp, hops);
+    // crossings: the line is cut there, as passing under the other (D-093)
+    if let Some((mask, attr)) = crate::arrow::gap_mask(&ctx.prefix, hops) {
+        ctx.out.push_str(&mask);
+        extra.push_str(&attr);
+    }
     let _ = write!(
         ctx.out,
         "<path class=\"line\" d=\"{}\" fill=\"none\"{} stroke-width=\"{}\"{extra}/>",

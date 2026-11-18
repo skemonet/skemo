@@ -139,9 +139,9 @@ pub fn pulse_line(d: &Diagram, id: &str) -> Option<Vec<(f64, f64)>> {
     Some(crate::arrow::drawn_line(d, id, &a, &pts))
 }
 
-/// Length of a drawn line with its bridges (each a half circle instead of its diameter).
-pub fn length(line: &[(f64, f64)], hops: usize) -> f64 {
-    crate::route::length(line) + hops as f64 * (std::f64::consts::PI - 2.0) * crate::arrow::HOP
+/// Length of a drawn line (its crossings cut by a mask, not drawn round: no length added).
+pub fn length(line: &[(f64, f64)], _hops: usize) -> f64 {
+    crate::route::length(line)
 }
 
 /// The loop of the diagram's motion (s): the time the slowest pulse takes to cross its arrow,
