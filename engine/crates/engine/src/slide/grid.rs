@@ -325,10 +325,33 @@ impl Plane {
         hug
     }
 
+    /// A `block` (D-117): the nodes round its cards, a step out, closed to the other lines.
+    fn block_mask(&self, inp: &Input, l: &Lattice, b: usize) -> Option<(Vec<bool>, Vec<bool>)> {
+        let cards: Vec<Rect> = (0..inp.cards.len())
+            .filter(|&c| inp.blocks_of(c).contains(&b))
+            .map(|c| l.card[c])
+            .collect();
+        let x0 = cards.iter().map(|r| r.x).min()? - 1;
+        let y0 = cards.iter().map(|r| r.y).min()? - 1;
+        let x1 = cards.iter().map(|r| r.x + r.w).max()? + 1;
+        let y1 = cards.iter().map(|r| r.y + r.h).max()? + 1;
+        let mut bad = vec![false; self.n()];
+        for yy in y0.max(0)..=y1.min(self.h - 1) {
+            for xx in x0.max(0)..=x1.min(self.w - 1) {
+                bad[self.idx(xx, yy)] = true;
+            }
+        }
+        Some((bad, vec![false; self.n()]))
+    }
+
     /// Per framed panel: the nodes between two of its cards and the others inside it.
     fn frame_masks(&self, inp: &Input, l: &Lattice) -> Vec<Option<(Vec<bool>, Vec<bool>)>> {
         let mut fmask = Vec::new();
         for (i, f) in l.frame.iter().enumerate() {
+            if inp.panels[i].block {
+                fmask.push(self.block_mask(inp, l, i));
+                continue;
+            }
             let Some(f) = f else {
                 fmask.push(None);
                 continue;
@@ -394,7 +417,7 @@ pub(crate) struct Grid {
     /// Per framed panel: the nodes between two of its cards (no line of another group) and the
     /// others inside it (a line of another group pays).
     fmask: Vec<Option<(Vec<bool>, Vec<bool>)>>,
-    foreign: std::cell::RefCell<std::collections::HashMap<Vec<usize>, std::rc::Rc<Vec<u8>>>>,
+    foreign: std::sync::Mutex<std::collections::HashMap<Vec<usize>, std::sync::Arc<Vec<u8>>>>,
 }
 
 impl Grid {
@@ -414,7 +437,7 @@ impl Grid {
             hf,
             vf,
             fmask: pl.frame_masks(inp, l),
-            foreign: std::cell::RefCell::default(),
+            foreign: std::sync::Mutex::default(),
         }
     }
 
@@ -440,12 +463,15 @@ impl Grid {
         }
     }
 
-    pub(crate) fn foreign_cached(&self, mut own: Vec<usize>) -> std::rc::Rc<Vec<u8>> {
+    pub(crate) fn foreign_cached(&self, mut own: Vec<usize>) -> std::sync::Arc<Vec<u8>> {
         own.sort_unstable();
         own.dedup();
-        let mut c = self.foreign.borrow_mut();
+        let mut c = self
+            .foreign
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         c.entry(own.clone())
-            .or_insert_with(|| std::rc::Rc::new(self.foreign(&own)))
+            .or_insert_with(|| std::sync::Arc::new(self.foreign(&own)))
             .clone()
     }
 
@@ -612,7 +638,7 @@ pub(crate) struct Arrow<'g> {
     tb: bool,
     /// The sides written (`side="start-end"`), if any.
     pub want: (Option<Side>, Option<Side>),
-    fr: std::rc::Rc<Vec<u8>>,
+    fr: std::sync::Arc<Vec<u8>>,
     region: (i32, i32, i32, i32),
 }
 
@@ -633,6 +659,9 @@ impl<'g> Arrow<'g> {
         };
         let mut own = held(e.from, e.ends.0);
         own.extend(held(e.to, e.ends.1));
+        // the blocks holding its ends (D-117): it may cross them
+        own.extend(inp.blocks_of(e.from));
+        own.extend(inp.blocks_of(e.to));
         let pad = 30;
         let region = (
             (s.x.min(t.x) - pad).max(0),
@@ -683,6 +712,10 @@ impl<'g> Arrow<'g> {
     /// The search from these states (state, cost).
     /// Costs are counted in quarters, whole numbers, in a queue of buckets (Dial's): every
     /// step costs at most `BUCKETS` quarters (a penalty is capped), so the queue is a ring.
+    /// Taken in the order of the cost so far plus the steps still to go at the least (A*: a step
+    /// costs one at the least, and the routes arrive two steps out of the target), so that the
+    /// search keeps to the way to the target: the same routes as a search all round, found by
+    /// a fraction of the states.
     fn run(&self, starts: &[(usize, f64)], penal: &dyn Fn(usize) -> f64) -> (Vec<f64>, Vec<u32>) {
         const BUCKETS: usize = 4096;
         const MAX_PENAL: f64 = 900.0;
@@ -705,15 +738,24 @@ impl<'g> Arrow<'g> {
                 }
             }
         }
+        let (tx0, ty0) = (self.t.x - 2, self.t.y - 2);
+        let (tx1, ty1) = (self.t.x + self.t.w + 2, self.t.y + self.t.h + 2);
+        let h = |m: usize| -> u32 {
+            let (x, y) = ((m as i32) % g.w, (m as i32) / g.w);
+            let dx = (tx0 - x).max(x - tx1).max(0);
+            let dy = (ty0 - y).max(y - ty1).max(0);
+            4 * (dx + dy) as u32
+        };
         let mut reached = u32::MAX;
         let mut at = u32::MAX;
         for &(st, c) in starts {
             let c = q(c);
             if c < dist[st] {
                 dist[st] = c;
-                ring[c as usize % BUCKETS].push(st as u32);
+                let f = c + h(st / 4);
+                ring[f as usize % BUCKETS].push(st as u32);
                 pending += 1;
-                at = at.min(c);
+                at = at.min(f);
             }
         }
         let slack = q(SLACK);
@@ -724,14 +766,14 @@ impl<'g> Arrow<'g> {
             };
             pending -= 1;
             let st = st as usize;
-            let c = at;
-            if c != dist[st] {
+            let (m0, d) = (st / 4, st % 4);
+            let c = dist[st];
+            if c.saturating_add(h(m0)) != at {
                 continue;
             }
-            if reached != u32::MAX && c > reached + slack {
+            if reached != u32::MAX && at > reached + slack {
                 break;
             }
-            let (m0, d) = (st / 4, st % 4);
             if reached == u32::MAX && arrive[m0] {
                 reached = c;
             }
@@ -750,7 +792,7 @@ impl<'g> Arrow<'g> {
                 if cost < dist[t] {
                     dist[t] = cost;
                     parent[t] = st as u32;
-                    ring[cost as usize % BUCKETS].push(t as u32);
+                    ring[(cost + h(m)) as usize % BUCKETS].push(t as u32);
                     pending += 1;
                 }
             }

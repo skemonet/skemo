@@ -8,7 +8,7 @@
 
 ## 1. Principle
 
-A diagram is a **valid Pug** file, restricted to a subset: **8 tags**, and **lines** written with Pug's text marker `|`. Meaning comes from classes, styled in CSS; the text inside lines follows Markdown (emphasis, tables).
+A diagram is a **valid Pug** file, restricted to a subset: **10 tags**, and **lines** written with Pug's text marker `|`. Meaning comes from classes, styled in CSS; the text inside lines follows Markdown (emphasis, tables).
 
 | Tag | Role | Content |
 |---|---|---|
@@ -17,9 +17,11 @@ A diagram is a **valid Pug** file, restricted to a subset: **8 tags**, and **lin
 | `card#id.type` | a card | text = title · `\|` lines = content lines or table rows · `to(...)` = outgoing arrows |
 | `node#id.type` *(D-087)* | a thing: an icon, its name beside it and lines under the name, no frame | as `card`, without `tag=` and `label=` |
 | `cards#id.type` *(preview, D-062)* | a card drawn as a pile: several instances of one thing | as `card`; `count="N"` adds a `×N` badge |
+| `nodes#id.type` *(preview, D-117)* | a node standing for several instances of one thing: drawn once, no pile | as `node`; `count="N"` adds a `×N` badge on the icon's lower right corner |
 | `zone#id.type` | a group | text = title · `\|` lines = description lines under the title · indented cards or zones |
 | `zones#id.type` *(preview, D-114)* | a zone drawn as a pile: several instances of one group | as `zone`; `count="N"` adds a `×N` badge |
 | `stack` *(preview, D-050)* | an invisible group that lays its children one after the other | indented cards or zones |
+| `block` *(preview, D-117)* | a group drawn as nothing, no frame nor title, that the other lines go round: a container that lays out what it holds (`dir=`, `align=`, `at=` inside it) | indented cards or zones |
 | `to(target).type` | an arrow, written in its source card or zone (a zone's leaves its frame) | text = label (optional) |
 
 | Line | Role |
@@ -47,13 +49,13 @@ diagram(dir="down")
 file        := line*
 line        := indentation (comment | tag | text_line) end_of_line
 indentation := spaces* | tabs*                    ; no mixing within a file
-comment     := "//-" text | "//" text             ; ignored (with their indented block)
-tag         := name (("#" ident) | ("." ident))* attributes? (" " text)?
-name        := "diagram" | "title" | "card" | "cards" | "node" | "zone" | "zones" | "stack" | "to"
-attributes  := "(" attribute ((","|" ")+ attribute)* ")"
+comment     := "//-" text | "//" text             ; ignored (with their indented block; at the root's indentation, the line alone)
+tag         := name (("#" ident) | ("." ident))* attributes? ((" " | tab) text)?   ; a tab separates as a space does
+name        := "diagram" | "title" | "card" | "cards" | "node" | "zone" | "zones" | "stack" | "to" | "tunnel"
+attributes  := "(" attribute ((","|" "|tab)+ attribute)* ")"
 attribute   := ident "=" value | ident            ; a lone ident = flag (arrow target)
 value       := string_in_"_or_' | number
-text_line   := "|" ("." ident)* (" " inline)?     ; a line (§3.2.3)
+text_line   := "|" ("." ident)* ((" " | tab) inline)? ; a line (§3.2.3)
              | "|" cell ("|" cell)* "|" markers?  ; a table row: ends with "|" (§3.2.5)
 cell        := ("." ident)* inline? | "^^" | ""   ; "" (nothing, not even a space) = joined to the cell on its left
 inline      := Markdown emphasis: **bold** *italic* `mono` ==mark== ==.class mark== (§3.2.4)
@@ -95,6 +97,7 @@ Rules:
 | `href="…"` (v0.6) | the card or zone is a link in the HTML and SVG outputs (§3.2.1) |
 | `tag="Owner"` (`card`; `zone` *preview, D-050*) | the card's **chip** (an owner, a module, a port), beside its category (§3.2.6); on a zone, a pill after its title (`zone#pods(tag="172.30.0.0/16") Pods`). *(preview, D-041)* `@` markers at the end of the value animate the chip alone: `tag="8080 @1"` (not in the HTML `classic` look, where the chip is a pseudo-element) |
 | `wrap="N"` (`zone`, *preview, D-041*) | (D-056: when an arrow from outside enters a card beyond the first row, the rows are spread like the diagram's, the rows of sibling `wrap` zones too, and the zone keeps a corridor that other arrows may cross) at most N children per row (per column with `dir` right or left), on a grid, in writing order; the cards of one column of the grid take the width of the widest and are left-aligned, so that a stack reads as a clean column (D-045). A warning names the cards that end up behind others as seen from the node they are linked to (second column with `dir="right"`): their arrows can only go round them (D-044); not with `wrap="1"`, a single file of cards that arrows enter by their free sides (a server and its stack, D-045). *(preview, 2026-10-28, to validate)* A zone without `wrap` that holds only cards, at least four, none with an arrow (an inventory: monitors, secrets, registries) is laid as a grid of ⌈√n⌉ columns rather than one long row; write `wrap=` to choose |
+| `head="left"` (`zone`, *preview, D-117*) | the zone's title and description in a column left of what it holds, instead of a band above it (`w` reads as `left`; `top` or `n` is the default). Also given by the zone's type in CSS: `--head: left`, not passed on to the zones inside. Drawn by the slide engine; the others keep the band above |
 | `at="x,y"` | **pinned position**, top-left corner in px, in the file's frame |
 | `at="s"` (`n` `s` `e` `w` `ne` `nw` `se` `sw`; top-level `card`, `cards`, `node`, `zone`) | *v0.8* **docked**: the element leaves the drawing and goes on that side of it, or in that corner (§3.2.9) |
 | `size="w,h"` | a zone (with `at="x,y"`): **imposed** size, otherwise the zone encloses its children. A card (*preview, editor*): **minimum** size, it takes at least that room and its text may make it larger; written by the editor when a card is resized |
@@ -202,7 +205,7 @@ A line is Pug's text marker `|` followed by a space and its text, indented under
 
 - Classes stick to the `|`: `|.warn db SG has no rule for the lambda SG`. `| .env file` (a space first) is the text ".env file".
 - Animation markers end a line as anywhere (§3.8): `| NodePort @0-2`.
-- Leading and trailing spaces are trimmed. A `|` alone is an empty line (a vertical gap of one line); it also separates two tables that follow each other.
+- The space (or tab) after the `|`, or after its classes, only separates; the spaces after it are text, as in Pug: `|     *via* gw-a` is drawn indented by four spaces (non-breaking: no renderer folds them, no wrap breaks there). Trailing spaces are trimmed, and so are the leading ones of a pill and of a table row. A `|` alone is an empty line (a vertical gap of one line); it also separates two tables that follow each other.
 - **Text or row**: a line that ends with `|` and holds at least two `|` (the opening one and the closing one) is a table row; any other line is text. The rule needs no context: a card may hold text, then a table, then text.
 - Escapes: `\|` a literal `|` (needed only for a line that would otherwise end with `|`), `\*`, `` \` ``, `\==`, `\@`, `\\`.
 - A line has no attributes.
@@ -299,7 +302,7 @@ card.text.wide(at="s")
 
 #### 3.2.9 Docking: `at="s"`, `at="ne"`… *(v0.8)*
 
-`at=` says where an element goes: coordinates pin it in the drawing (`at="120,40"`, §3.4); a **compass point** docks it *outside* the drawing, the way Java's `BorderLayout` and Graphviz's ports name sides: `n`, `s`, `e`, `w` for a side, `ne`, `nw`, `se`, `sw` for a corner.
+`at=` says where an element goes: coordinates pin it in the drawing (`at="120,40"`, §3.4); a **compass point** docks it *outside* the drawing, the way Java's `BorderLayout` and Graphviz's ports name sides: `n`, `s`, `e`, `w` for a side, `ne`, `nw`, `se`, `sw` for a corner. *(preview, D-117)* The sides may be named as `side=` names them: `top`, `bottom`, `left`, `right`, and two of them for a corner (`top-left` is `nw`, `bottom-right` `se`, in either order).
 
 ```
 ┌──────────────────────────────────────┐
@@ -321,7 +324,9 @@ card.text.wide(at="s")
 - **Side columns** hold, beside the drawing, `nw` (or `ne`) at the top, then `w` (or `e`), and `sw` (or `se`) at the bottom, each one under the other in writing order; a column is as wide as its widest element. A legend at `at="ne"` thus stands at the top right, beside the drawing.
 - **Sizes**: the middle row is as tall as the drawing or its tallest side column. Empty bands and columns take no room. Gap: the theme's `--dock-gap` (32 px). The diagram's title stays above everything.
 - **Inside**: a docked zone is laid out on its own, as a small diagram with the diagram's `dir`; its arrows are routed inside it.
-- **Arrows** between a docked element and anything outside it give the warning `docked-arrow` and are not drawn.
+- **Arrows** between a docked element and anything outside it give the warning `docked-arrow` and are not drawn. *(preview, D-117)* The slide engine draws them: a docked element linked to the rest stands on its side of the drawing, in its tiling, and its arrows are routed like the others (no warning then).
+- **Inside a zone or a block** *(preview, D-117)*: `at="n|s|e|w"` on a child docks it on that side of its group, as Java's `BorderLayout`: the north and south bands span the group, the west and east ones the middle, the rest is laid out in the centre; several children on one side follow their writing order; a corner reads as its east or west side. Drawn by the slide engine.
+- **`dir=` and `align=` on a zone, a stack or a block** *(preview, D-117)*: `dir="right|down|left|up"` (or `horizontal`, `vertical`) lays its own cards on one line, then its children, one after the other that way, in writing order; `align="start|center|end"` says where they stand across `dir` when their group is wider (a docked band stands in the middle). Also given by a zone's type in CSS: `--dir`, `--align`.
 - **Modes**: docking works in every layout mode (graph, timeline, frieze, mind map): it happens around the drawing.
 - **Editor**: dragging a docked element writes `at="x,y"`, which brings it back into the drawing.
 
@@ -360,7 +365,7 @@ diagram(dir="right" look="header")
 | `.class` | arrow styles (`.wan`, `.dashed`, `.link`, `.both`…) |
 | text | label |
 | `via="x,y x,y"` | mandatory waypoints, in order, in the file's frame |
-| `side="start-end"` | attachment side: `top` `bottom` `left` `right` (e.g. `left-top`). One half may stay empty: `side="-top"` **[Rust]** |
+| `side="start-end"` | attachment side: `top` `bottom` `left` `right`, or the compass points `n` `s` `w` `e` (e.g. `left-top`, `n-s`: leaves by the top, reaches by the bottom). One half may stay empty: `side="-top"`, `side="-s"` **[Rust]** |
 | `@…` at the end of the line | animation markers (§3.8) |
 | `href="…"` (v0.6) | the arrow (line and label) is a link (§3.2.1) |
 | `join="trunk"` **[Rust]** | **hyperedge**: the arrows of this `to(a b c …)` share one trunk out of the source card, then branch to their targets (organisation-chart style): `to(a b c join="trunk")` |
@@ -375,6 +380,30 @@ An arrow also automatically receives the **`from-<type>` and `to-<type>` classes
 **Hyperedges.** `to(a b c join="trunk")` draws one trunk leaving the source card, which splits towards `a`, `b` and `c`. Each target still has its own arrow (own id `start->a`, own class, label, animation marker), but the arrows leave the **same attachment point** and are **not spread apart** from each other, so that their common part reads as a single line. Only arrows written in the same `to(…)` are joined. Any other name *(preview, D-051)* joins arrows **into** one card instead: they are routed from their target, like a fork out of it, so that they meet before the card and end on one line; the side a trunk leaves by, or its branches come in by, is left to it (the other arrows of those cards use the opposite side). An empty `join=""` is the warning `bad-join`.
 
 Implicit identifier of an arrow: `start->end`. **[Rust]**: in case of a duplicate, `#2`, `#3`, and so on are appended (the prototype overwrites the first arrow).
+
+### 3.3b `tunnel` *(preview, D-116)*
+
+`tunnel` joins two cards with a **tube** that arrows pass through: a VPN between two gateways, a pipe between two sites. It is written like an arrow, inside one of the two cards: `#id`, classes, a label, `@` markers, `href`, `via`, `side`. It has no head, and which of its two cards it is written in does not matter.
+
+An arrow passes through it when it names it: `to(db tunnel="vpn")`. It runs from its source into the near end of the tunnel (the one in the source's zones), along the tunnel on a **lane** of its own inside the tube, and out of the far end to its target: one line, hidden inside the two cards it crosses, with its label, classes, head and motion (a `.pulse` dot runs the whole way). The lanes are 6 px apart, centred on the tunnel's line, and the tube widens by a lane for each arrow past the first. An arrow that starts or ends on one of the tunnel's cards has no leg there.
+
+```pug
+zone#paris Paris site
+  card#app Orders app
+    to(db tunnel="vpn") SQL
+    to(s3 tunnel="vpn") Backups
+  card#gw-a(icon="skemo-vpn") VPN gateway
+    tunnel#vpn(gw-b) IPsec
+zone#lyon Lyon site
+  card#gw-b(icon="skemo-vpn") VPN gateway
+  card#db Database
+  card#s3 Object storage
+```
+
+- The tube is `.edge.tunnel .line` in the theme: a stroke 16 px wide, tinted with the tunnel's colour (`color`, green by default). A class on the tunnel recolours it like an arrow (`tunnel#vpn(gw-b).wan`).
+- Warnings `bad-tunnel`, the arrow then drawn as written: a `tunnel="…"` that names no tunnel of the diagram, `tunnel` without a name (`to(db tunnel)`), `tunnel=` written on a tunnel. A tunnel to a zone is drawn as an arrow (warning `bad-tunnel`). A `tunnel` outside a card is the error `tunnel-outside-card`.
+- `via` and `join` are not read on an arrow through a tunnel; `side="start-end"` gives the side it leaves its source by and the side it reaches its target by.
+- Every layout mode draws it; the slide and graph engines place the two ends between the cards that use them, as for any arrow.
 
 ### 3.4 Inheritance and default rules
 
@@ -598,6 +627,8 @@ The default theme is overridden by a custom CSS, with the normal cascade.
 | `--label` | card type, arrow class | *v0.8* the type's **category** (`"T0"`, `"RDS"`), shown as §3.2.6 says and overridden by `label=`; also the name of a card type or an arrow class in an automatic legend (§3.2.8); absent = no category |
 | `--look` | card type or `.stage` | `band` (default), `header`, `classic`, `eyebrow` (§4.5); `plain` = secondary cards |
 | `--icon` (v0.6) | type | default icon name of the type (`"database"`); `icon=` overrides it |
+| `--head` *(preview, D-117)* | zone type | `left`: as `head="left"` on each zone of the type; the attribute wins |
+| `--side` *(preview, D-117)* | arrow class | as `side=` on each arrow of the class (`n-s`, `-bottom`…); the attribute wins |
 | `--icon-size`, `--icon-color`, `--icon-gap` (v0.6) | type | icon tuning; defaults per look (§3.2.1) |
 | `--link-mark` (v0.6) | `:root` or type | `none` hides the link glyph and frees its space |
 | `--on-c` | type or theme | colour of the text placed on the accent (default: white) |
@@ -674,7 +705,7 @@ These part names (`.head`, `.title`, `.tag`, `.type`, `.kind`, `.count`, `.sub`,
 
 ### 4.3 Provided arrow styles (combinable)
 
-`.dashed` `.dotted` `.thick` `.flow` (animated dashes) `.pulse` (a moving dot) `.both` (double head) `.nohead` (no head) `.dot` (dot at the start) `.link` (attachment: dotted without head, e.g. note → card), plus colour examples `.wan` and `.secure`.
+`.dashed` `.dotted` `.thick` `.flow` (animated dashes) `.pulse` (a moving dot) `.both` (double head) `.nohead` (no head) `.dot` (dot at the start) `.link` (attachment: dotted without head, e.g. note → card), plus colour examples `.wan` and `.secure`. A tunnel carries `.tunnel` (§3.3b).
 
 **Arrows in motion** *(preview, D-079)*: `.flow` and `.pulse` loop for as long as the diagram is shown.
 

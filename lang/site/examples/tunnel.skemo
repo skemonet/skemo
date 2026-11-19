@@ -1,0 +1,13 @@
+diagram(dir="right")
+  zone#paris Paris site
+    card#app(icon="skemo-container") Orders app
+      to(db tunnel="vpn") SQL
+      to(s3 tunnel="vpn") Backups
+      to(web) Health
+    card#gw-a(icon="skemo-vpn") VPN gateway
+      tunnel#vpn(gw-b) IPsec
+  zone#lyon Lyon site
+    card#gw-b(icon="skemo-vpn") VPN gateway
+    card#db(icon="skemo-server") Database
+    card#s3(icon="skemo-object-storage") Object storage
+  card#web(icon="skemo-web") Status page

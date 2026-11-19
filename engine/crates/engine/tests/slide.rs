@@ -247,11 +247,17 @@ fn an_arrow_keeps_its_waypoints_and_its_sides() {
 }
 
 #[test]
-fn an_empty_zone_keeps_a_frame() {
-    let d = slide("diagram\n  zone#z Empty\n  card#a A\n    to(b)\n  card#b B\n");
+fn an_empty_zone_is_drawn_as_a_card() {
+    let d = slide(
+        "diagram\n  zones#z(count=\"3\") Empty\n    | to be filled\n  card#a A\n    to(b)\n  card#b B\n",
+    );
     assert_eq!(d.layout_json()["layout"]["engine"], "slide");
-    let z = d.boxes["z"];
+    let (z, a) = (d.boxes["z"], d.boxes["a"]);
     assert!(z.w > 0.0 && z.h > 0.0, "{z:?}");
+    let node = d.model.node("z").unwrap();
+    assert_eq!(node.kind, skemo_lang::Kind::Card);
+    assert_eq!(node.deck.and_then(|k| k.count), Some(3));
+    assert!(z.w >= a.w, "a card's module: {z:?} {a:?}");
 }
 
 #[test]
@@ -349,4 +355,65 @@ fn the_members_of_a_column_share_an_axis() {
     assert_eq!(d.layout_json()["layout"]["engine"], "slide");
     let (p, u) = (d.boxes["p"], d.boxes["u"]);
     assert!((p.x - u.x).abs() < 0.5, "{p:?} {u:?}");
+}
+
+/// A bare zone's caption stands below its cards: it asks no header of the framed zones (it used to
+/// be counted as a header text, moved down with every header it asked, and tripled them).
+#[test]
+fn a_bare_zone_caption_asks_no_header() {
+    let src = "diagram
+  zone#a.wide A
+    card#x X
+  zone#b.wide.bare B
+    card#y Y
+  zone#c.wide C
+    card#z Z
+";
+    let d = slide(src);
+    for (z, c) in [("a", "x"), ("c", "z")] {
+        let (zb, cb) = (d.boxes[z], d.boxes[c]);
+        assert!(cb.y - zb.y <= 50.0, "{z}: header {} px", cb.y - zb.y);
+    }
+}
+
+/// `head="left"` (D-117): the zone's title and description in a column left of what it holds, the
+/// cards beside them rather than under them.
+#[test]
+fn a_zone_s_head_on_the_left() {
+    let src = "diagram
+  zone#z(head=\"left\") Zone
+    | a description line
+    | another one
+    card#a A
+    card#b B
+";
+    let d = slide(src);
+    let (z, a) = (d.boxes["z"], d.boxes["a"]);
+    assert!(a.y - z.y <= 40.0, "the cards near the top: {z:?} {a:?}");
+    assert!(
+        a.x - z.x >= 100.0,
+        "the cards right of the text: {z:?} {a:?}"
+    );
+}
+
+/// The settings a type gives in CSS (D-117): `--head` on a zone's type, not inherited by the zones
+/// inside it; `--side` on an arrow's class.
+#[test]
+fn css_gives_head_and_side() {
+    let src = "diagram
+  card#r R
+  zone#z.box Zone
+    | a description line
+    zone#in Inner
+      card#a A
+        to(r).up
+";
+    let opts = Options {
+        css: vec![".box { --head: left; }\n.up { --side: n-s; }".to_string()],
+        ..Options::default()
+    };
+    let d = from_source(src, &opts).unwrap().0;
+    assert_eq!(d.model.node("z").unwrap().head.as_deref(), Some("left"));
+    assert_eq!(d.model.node("in").unwrap().head, None);
+    assert_eq!(d.model.edges[0].side.as_deref(), Some("top-bottom"));
 }

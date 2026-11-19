@@ -22,16 +22,11 @@ avertissement[docked-arrow] : flèche « a->b » : un élément ancré (at="s"�
   │
 9 │     to(b)
   │     ^^^^^
-avertissement[bad-at] : « at="north" » : coordonnées « x,y » ou point cardinal (n s e w ne nw se sw) attendu ; ignoré
+avertissement[bad-at] : « at="north" » : coordonnées « x,y », point cardinal (n s e w ne nw se sw) ou côté (top bottom left right, top-left…) attendu ; ignoré
    ┌─ v08-avertissements.skemo:10:10
    │
 10 │   zone#z(at="north") Z
    │          ^^^^^^^^^^
-avertissement[bad-at] : « at="s" » n'ancre qu'un élément de premier niveau : ignoré
-   ┌─ v08-avertissements.skemo:12:12
-   │
-12 │     card#b(at="s") B
-   │            ^^^^^^
 avertissement[bad-table] : « ^^ » dans la première rangée d'un tableau : aucune cellule au-dessus
    ┌─ v08-avertissements.skemo:13:7
    │

@@ -176,7 +176,7 @@ pub fn add_class(src: &str, target: &Target, class: &str) -> Result<String, Edit
         return Ok(src.to_string());
     }
     // for `to`, canonical form `to(target).class`: after the attribute group
-    let is_to = &src[l.name.start..l.name.end] == "to";
+    let is_to = matches!(&src[l.name.start..l.name.end], "to" | "tunnel");
     let at = match (l.classes.last(), l.attr_group) {
         (Some((_, sp)), _) => sp.end,
         (None, Some(g)) if is_to => g.end,

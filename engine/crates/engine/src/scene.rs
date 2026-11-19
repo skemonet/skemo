@@ -893,12 +893,16 @@ fn line_el(tree: &mut StyleTree, ul: usize, l: &skemo_lang::Li, slot: usize) -> 
     let icon = state_icon(&l.classes)
         .and_then(icons::get)
         .map(|i| (tree.add(Some(li), "svg", None, &["icon", "state-mark"]), i));
-    let it = &l.text;
+    // spaces written before the text are kept: non-breaking, so that no renderer folds them
+    // and no wrap breaks there
+    let lead = l.text.len() - l.text.trim_start_matches([' ', '\t']).len();
+    let kept = format!("{}{}", "\u{a0}".repeat(lead), &l.text[lead..]);
+    let it = &kept;
     let mut out = LiEl {
         el: li,
         slot,
         icon,
-        text: l.text.clone(),
+        text: kept.clone(),
         classes: l.classes.clone(),
         ..LiEl::default()
     };
@@ -1132,6 +1136,9 @@ fn add_edges(
     };
     for e in &model.edges {
         let mut cls: Vec<String> = vec!["edge".into()];
+        if e.tunnel {
+            cls.push("tunnel".into());
+        }
         cls.extend(e.classes.iter().cloned());
         cls.extend(classes(&e.from).iter().map(|c| format!("from-{c}")));
         cls.extend(classes(&e.to).iter().map(|c| format!("to-{c}")));

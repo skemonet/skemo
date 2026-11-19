@@ -5,6 +5,42 @@ and the project uses [Semantic Versioning](https://semver.org/) (pre-1.0: minor 
 
 ## [Unreleased]
 
+## [0.1.0-rc.11] — 2026-11-19
+
+Layout by borders and alignment in the slide engine (D-117): `block`, `dir` and `align` on a
+container, `at="n|s|e|w"` inside a group, docked elements that keep their arrows. Also `tunnel`
+(D-116), `nodes`, a zone's title beside its cards, layout settings given by a type in CSS, and the
+slide engine about twice as fast.
+
+### Added
+
+- `block` (D-117): a group drawn as nothing, no frame nor title, that the other lines go round; it lays out what it holds. `block(dir="right" align="center")`.
+- `dir="right|down|left|up"` (or `horizontal`, `vertical`) on a zone, a stack or a block: its cards and children one after the other that way, in writing order; `align="start|center|end"` across it.
+- `at="n|s|e|w"` on a child of a zone or a block docks it on that side of its group, as Java's `BorderLayout`. A docked element linked to the rest stands on its side of the drawing and its arrows are drawn (they were left out with `docked-arrow`). Slide layout.
+- `nodes`: a node standing for several, one icon with its `×N` badge, no pile: `nodes#c(icon="cable" count="3")`.
+- `head="left"` on a zone: its title and description in a column left of its cards, rather than above them. Slide layout.
+- Compass points for sides: `side="n-s"` (leaves by the top, reaches by the bottom) besides `top-bottom`; `at="top"`, `at="bottom-right"`… besides `n`, `se`….
+- Layout settings given by a type in CSS: `--head: left`, `--dir`, `--align` on a zone's type, `--side: n-s` on an arrow's class; an attribute written on the element wins.
+- `tunnel`: a tube between two cards that arrows pass through (D-116). `tunnel#vpn(gw-b) IPsec` written in one card joins it to `gw-b`; `to(db tunnel="vpn")` runs into the near end, along the tunnel on a lane of its own, and out of the far end: one line, hidden inside the two cards, the tube widening with its lanes. Slide and graph layouts.
+
+### Changed
+
+- An empty zone is drawn as a card (a `zones` pile as a `cards` pile) until something is written inside it.
+- In the slide layout, the cards of a row share the tallest one's height, no longer the drawing's tallest card's; each level of frames opening on a row takes the header its own titles need, no longer the drawing's longest description.
+- The slide engine is about twice as fast: tilings and attempts drawn four at once (the same drawing).
+- The spaces after the `|` of a line, past the first, are kept and drawn, as in Pug: `|     *via* gw-a` is indented by four spaces (they were trimmed).
+
+### Release process
+
+- A release's Linux x86_64 binary is published as soon as it is built, a few minutes after the tag; the four others and `SHA256SUMS` follow.
+- The `history/*` branches, which keep the detailed history of a squashed release, no longer run the checks.
+
+### Fixed
+
+- A `.bare` zone with a title tripled the header of every framed zone of the drawing (its caption below its cards was counted as a header).
+- A `//` comment in column 0 inside the diagram (an editor's comment toggle) hid everything after it, silently: it closed the diagram as a block comment. It now hides its own line only; a comment at its own level still hides its indented block, as in Pug.
+- A tab after a tag starts its text as a space does: `to(b)<TAB>HTTPS` and `card#b<TAB>B` were refused with "unexpected character after the tag".
+
 ## [0.1.0-rc.10] — 2026-11-19
 
 The slide engine reads what ELK read: zones inside zones, `stack`, `.wide`, `.bare`, pinned cards,
@@ -349,7 +385,8 @@ The first public version of skemo, as one repository.
   `icons`, `licences`; messages in the system language; release binaries for Linux, macOS and Windows.
 - **Agent skill**: `cli/skill/skemo/`, for AI agents that write diagrams.
 
-[Unreleased]: https://github.com/skemonet/skemo/compare/v0.1.0-rc.10...HEAD
+[Unreleased]: https://github.com/skemonet/skemo/compare/v0.1.0-rc.11...HEAD
+[0.1.0-rc.11]: https://github.com/skemonet/skemo/compare/v0.1.0-rc.10...v0.1.0-rc.11
 [0.1.0-rc.10]: https://github.com/skemonet/skemo/compare/v0.1.0-rc.9...v0.1.0-rc.10
 [0.1.0-rc.9]: https://github.com/skemonet/skemo/compare/v0.1.0-rc.8...v0.1.0-rc.9
 [0.1.0-rc.8]: https://github.com/skemonet/skemo/compare/v0.1.0-rc.7...v0.1.0-rc.8

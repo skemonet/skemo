@@ -250,7 +250,7 @@ fn render_inner(
     ctx.out.push_str("</g>");
     node::diagram_title(&mut ctx);
     ctx.out.push_str("<g class=\"edges\">");
-    for e in &d.model.edges {
+    for e in crate::arrow::drawing_order(&d.model) {
         edge(&mut ctx, e);
     }
     ctx.out.push_str("</g>");

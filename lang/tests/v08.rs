@@ -120,3 +120,48 @@ fn frieze_end_is_included() {
     // Empire -27 → 476 runs to the end of 476
     assert_eq!(parse_frise("476", true).unwrap(), 477.0);
 }
+
+/// A tab separates a tag from its text as a space does (rc.11): `to(b)<TAB>HTTPS`.
+#[test]
+fn a_tab_after_the_tag_starts_its_text() {
+    let doc = skemo_lang::parse("diagram\n  card#a\tA\n    to(b)\tHTTPS\n  card#b\t\tB\n");
+    assert!(doc.diagnostics.is_empty(), "{:?}", doc.diagnostics);
+    let m = doc.model;
+    assert_eq!(m.node("a").unwrap().title, "A");
+    assert_eq!(m.node("b").unwrap().title, "B");
+    assert_eq!(m.edges[0].label, "HTTPS");
+}
+
+/// The spaces after the bar, past the first, are text (rc.11, as in Pug): `|   x` keeps two.
+#[test]
+fn the_spaces_after_the_bar_are_kept_past_the_first() {
+    let doc = skemo_lang::parse(
+        "diagram\n  card#a A\n    |     *via* gw\n    |.warn   check\n    | plain  \n    |.pill   p\n    |   \n",
+    );
+    assert!(doc.diagnostics.is_empty(), "{:?}", doc.diagnostics);
+    let li = &doc.model.node("a").unwrap().li;
+    let texts: Vec<&str> = li.iter().map(|l| l.text.as_str()).collect();
+    assert_eq!(texts, ["    *via* gw", "  check", "plain", "p", ""]);
+}
+
+/// A `//` in column 0 inside the diagram (an editor's comment toggle) hides its own line only:
+/// it neither closes the open tags nor hides what follows (rc.11).
+#[test]
+fn a_comment_in_column_zero_hides_its_line_only() {
+    let doc = skemo_lang::parse(
+        "diagram\n  zone#z Managed\n    | v0.1\n//    node#w1 Old\n//      | line\n    node#w2 Worker 2\n      | ok\n    node#w3 Worker 3\n  card#c C\n",
+    );
+    assert!(doc.diagnostics.is_empty(), "{:?}", doc.diagnostics);
+    let m = doc.model;
+    assert!(m.node("w1").is_none());
+    for id in ["w2", "w3"] {
+        assert_eq!(m.node(id).unwrap().parent.as_deref(), Some("z"), "{id}");
+    }
+    assert_eq!(m.node("w2").unwrap().li.len(), 1);
+    assert!(m.node("c").is_some());
+    // a comment at its own level still hides its indented block, as in Pug
+    let doc = skemo_lang::parse("diagram\n  card#a A\n  // card#b B\n    | gone\n  card#c C\n");
+    assert!(doc.diagnostics.is_empty(), "{:?}", doc.diagnostics);
+    assert_eq!(doc.model.node("a").unwrap().li.len(), 0);
+    assert!(doc.model.node("c").is_some());
+}

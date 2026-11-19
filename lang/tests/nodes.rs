@@ -51,3 +51,13 @@ fn fmt_and_edits_keep_the_node() {
     let to = skemo_lang::structure::set_tag(SRC, "api", "node").unwrap();
     assert!(skemo_lang::parse(&to).model.node("api").unwrap().node);
 }
+
+/// `nodes` (D-117): a node standing for several, drawn once with its `×N` badge.
+#[test]
+fn nodes_is_a_node_with_a_count() {
+    let doc = skemo_lang::parse("diagram\n  nodes#c(icon=\"cable\" count=\"3\") Cables\n");
+    assert!(doc.diagnostics.is_empty(), "{:?}", doc.diagnostics);
+    let c = doc.model.node("c").unwrap();
+    assert!(c.node);
+    assert_eq!(c.deck.and_then(|d| d.count), Some(3));
+}

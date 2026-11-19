@@ -72,17 +72,42 @@ pub fn dock_defaults(mut model: Model) -> Model {
     model
 }
 
+/// Docked outside the drawing: `at=` a compass point, not laid in it by the slide engine
+/// (`+n`, `laid_in`).
+fn outside(n: &skemo_lang::Node) -> bool {
+    n.dock.as_deref().is_some_and(|d| !d.starts_with('+'))
+}
+
 /// The docked element holding `id`, if any.
 fn dock_of(model: &Model, id: &str) -> Option<String> {
-    top(model, id)
-        .filter(|t| t.dock.is_some())
-        .map(|t| t.id.clone())
+    top(model, id).filter(|t| outside(t)).map(|t| t.id.clone())
+}
+
+/// The slide engine lays a docked element linked to the rest in its tiling, on its side of the
+/// drawing, and draws its arrows (D-117): its point marked `+n` keeps it in the drawing.
+pub fn laid_in(mut model: Model) -> Model {
+    let linked: Vec<String> = model
+        .nodes
+        .iter()
+        .filter(|n| n.parent.is_none() && outside(n))
+        .filter(|n| {
+            model.edges.iter().any(|e| {
+                let (a, b) = (dock_of(&model, &e.from), dock_of(&model, &e.to));
+                a != b && (a.as_deref() == Some(&n.id) || b.as_deref() == Some(&n.id))
+            })
+        })
+        .map(|n| n.id.clone())
+        .collect();
+    for n in model.nodes.iter_mut().filter(|n| linked.contains(&n.id)) {
+        n.dock = n.dock.take().map(|d| format!("+{d}"));
+    }
+    model
 }
 
 /// The model without the arrows between a docked element and anything outside it (the parser's
 /// warning `docked-arrow`: they are not drawn).
 pub fn without_crossing(mut model: Model) -> Model {
-    if !model.nodes.iter().any(|n| n.dock.is_some()) {
+    if !model.nodes.iter().any(outside) {
         return model;
     }
     let keep: Vec<bool> = model
@@ -100,7 +125,7 @@ pub fn split(model: &Model) -> Option<Split> {
     let docked: Vec<&skemo_lang::Node> = model
         .nodes
         .iter()
-        .filter(|n| n.parent.is_none() && n.dock.is_some())
+        .filter(|n| n.parent.is_none() && outside(n))
         .collect();
     if docked.is_empty() {
         return None;

@@ -1,8 +1,10 @@
 #!/bin/sh
-# Publishes the GitHub release of a tag with the binaries of dist/ (the `release` job of
-# .gitlab-ci.yml; image with curl and jq). The release is created if it does not exist yet, then
-# each binary is uploaded, then SHA256SUMS; the SHA-256 of each is also in the release's description
-# and in this log. The addresses stay the same from one release to the next:
+# Publishes the GitHub release of a tag with the binaries of dist/ (the `release-*` jobs of
+# .gitlab-ci.yml; image with curl and jq). It runs twice: once with the Linux x86_64 binary, so that
+# it can be downloaded a few minutes after the tag, then with all five. The release is created if it
+# does not exist yet, otherwise its description is updated; each binary not yet there is uploaded,
+# then SHA256SUMS is replaced; the SHA-256 of each is also in the release's description and in this
+# log. The addresses stay the same from one release to the next:
 #   https://github.com/<repo>/releases/download/<tag>/skemo-<target>   (and …/SHA256SUMS)
 #   GITHUB_TOKEN  a token allowed to write the repository's contents (tag pipelines only)
 #   GITHUB_REPO   owner/name (default skemonet/skemo)
@@ -30,8 +32,11 @@ cd dist
 echo "binaries:"; ls -l skemo-*; sha256sum skemo-* | tee SHA256SUMS
 
 pre=false; case "$tag" in *-*) pre=true ;; esac
+# the first run publishes one binary: the others follow
+later=""
+[ "$(ls skemo-* | wc -l)" -lt 5 ] && later=" The other platforms follow in a few minutes."
 notes=$(cat <<EOF
-One binary per platform: download it, make it executable, run it.
+One binary per platform: download it, make it executable, run it.$later
 
 | Your machine | File |
 |---|---|
@@ -54,18 +59,26 @@ EOF
 )
 
 gh "$api/git/ref/tags/$tag" > /dev/null || { echo "tag $tag not readable on GitHub: push it there first (or check the token)" >&2; exit 1; }
+body=$(jq -n --arg t "$tag" --arg c "${CI_COMMIT_SHA:-}" --arg n "$notes" --argjson p "$pre" \
+  '{tag_name: $t, name: ("skemo " + $t), body: $n, prerelease: $p} + (if $c == "" then {} else {target_commitish: $c} end)')
+# stdin carries the token (gh), so the body goes through a file
+printf '%s' "$body" > ../release.json
 if id=$(gh "$api/releases/tags/$tag" 2> /dev/null | jq -er .id); then
-  echo "release $tag exists (id $id)"
+  gh -X PATCH "$api/releases/$id" --data-binary @../release.json > /dev/null
+  echo "release $tag exists (id $id): description updated"
 else
-  body=$(jq -n --arg t "$tag" --arg c "${CI_COMMIT_SHA:-}" --arg n "$notes" --argjson p "$pre" \
-    '{tag_name: $t, name: ("skemo " + $t), body: $n, prerelease: $p} + (if $c == "" then {} else {target_commitish: $c} end)')
-  # stdin carries the token (gh), so the body goes through a file
-  printf '%s' "$body" > ../release.json
   id=$(gh -X POST "$api/releases" --data-binary @../release.json | jq -er .id)
   echo "release $tag created (id $id)"
 fi
 
+# the assets already there: a binary is uploaded once, SHA256SUMS is replaced
+assets=$(gh "$api/releases/$id/assets?per_page=100")
 for f in skemo-* SHA256SUMS; do
+  old=$(printf '%s' "$assets" | jq -r --arg n "$f" '.[] | select(.name == $n) | .id')
+  if [ -n "$old" ]; then
+    [ "$f" = SHA256SUMS ] || { echo "already there: $f"; continue; }
+    gh -X DELETE "$api/releases/assets/$old" > /dev/null
+  fi
   gh -X POST -H "Content-Type: application/octet-stream" --data-binary "@$f" \
     "https://uploads.github.com/repos/$repo/releases/$id/assets?name=$f" | jq -r '"uploaded " + .name + " (" + (.size|tostring) + " bytes)"'
 done

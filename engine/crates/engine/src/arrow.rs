@@ -87,9 +87,13 @@ pub fn triangle_path(t: &Triangle) -> String {
     )
 }
 
-/// Classes of an arrow: `edge`, its own, then those of its ends (`from-…`, `to-…`).
+/// Classes of an arrow: `edge`, `tunnel` for a tunnel, its own, then those of its ends (`from-…`, `to-…`).
 pub fn edge_classes(d: &Diagram, e: &skemo_lang::Edge) -> Vec<String> {
     let mut cls = vec!["edge".to_string()];
+    // a tunnel is styled by its tag (D-116)
+    if e.tunnel {
+        cls.push("tunnel".into());
+    }
     cls.extend(e.classes.iter().cloned());
     // a node's classes, then those of the layout mode (`mm-b2`…), as in `scene::add_edges`
     let classes = |id: &str| {
@@ -351,11 +355,31 @@ pub const HOP: f64 = 5.0;
 /// A mask that cuts a line at its crossings (`hops`, in the drawing's frame), `HOP` on each side,
 /// and the attribute that applies it; `None` without crossings. A mask rather than a break in
 /// the path: dashes and the progressive drawing run on as if the line were whole (D-093).
-pub fn gap_mask(prefix: &str, hops: &[(f64, f64)]) -> Option<(String, String)> {
-    let first = hops.first()?;
+///
+/// `inside`: boxes where the line is hidden whole, the cards an arrow through a tunnel crosses
+/// (D-116).
+pub fn gap_mask(
+    prefix: &str,
+    hops: &[(f64, f64)],
+    inside: &[crate::layout::Box2],
+) -> Option<(String, String)> {
+    let first = hops
+        .first()
+        .copied()
+        .or_else(|| inside.first().map(|b| (b.x, b.y)))?;
     let num = |v: f64| format!("{v:.0}").replace('-', "m");
     let id = format!("{prefix}-gap{}x{}", num(first.0), num(first.1));
     let mut cuts = String::new();
+    for b in inside {
+        let _ = write!(
+            cuts,
+            "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"black\"/>",
+            n(b.x),
+            n(b.y),
+            n(b.w),
+            n(b.h)
+        );
+    }
     for (x, y) in hops {
         let _ = write!(
             cuts,
@@ -434,6 +458,27 @@ pub fn curved(d: &crate::diagram::Diagram, line_el: usize) -> bool {
 /// The theme or a stylesheet asks for a curve on this line.
 pub fn asks_curve(scene: &crate::scene::Scene, line_el: usize) -> bool {
     scene.style(line_el).get("--curve").map(str::trim) == Some("on")
+}
+
+/// The cards an arrow through a tunnel crosses (D-116), in the drawing's frame: its line is
+/// hidden there.
+pub fn tunnel_cuts(d: &Diagram, e: &skemo_lang::Edge) -> Vec<crate::layout::Box2> {
+    crate::tunnel::cuts(&d.model, e)
+        .into_iter()
+        .filter_map(|c| d.boxes.get(c))
+        .map(|b| crate::layout::Box2 {
+            x: b.x + d.frame.ox,
+            y: b.y + d.frame.oy,
+            ..*b
+        })
+        .collect()
+}
+
+/// The arrows in drawing order: the tunnels first, under the arrows that pass through them
+/// (D-116).
+pub fn drawing_order(model: &skemo_lang::Model) -> impl Iterator<Item = &skemo_lang::Edge> {
+    let (tunnels, rest): (Vec<_>, Vec<_>) = model.edges.iter().partition(|e| e.tunnel);
+    tunnels.into_iter().chain(rest)
 }
 
 #[cfg(test)]

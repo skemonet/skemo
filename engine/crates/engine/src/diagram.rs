@@ -91,6 +91,8 @@ pub struct Diagram {
     pub label_lines: BTreeMap<String, Vec<String>>,
     /// Laid out by the slide engine (`slide`).
     pub slide: bool,
+    /// Tunnel id → how many arrows pass through it (D-116): its tube is as wide as their lanes.
+    pub tubes: BTreeMap<String, usize>,
 }
 
 /// Failure to prepare a diagram.
@@ -127,9 +129,13 @@ pub fn from_source(src: &str, opts: &Options) -> Result<(Diagram, Vec<Diagnostic
     if doc.has_errors() {
         return Err(Error::Source(doc.errors().cloned().collect()));
     }
-    let warnings: Vec<Diagnostic> = doc.warnings().cloned().collect();
+    let mut warnings: Vec<Diagnostic> = doc.warnings().cloned().collect();
     let fit = doc.model.option("fit").is_some();
     let mut d = build(doc.model, opts)?;
+    // the slide engine draws the arrows of a docked element (D-117)
+    if crate::slide::drew() {
+        warnings.retain(|w| w.code != "docked-arrow");
+    }
     if fit && d.frame.h > 0.0 {
         d.warnings.extend(
             crate::fit::check(src, opts, (d.frame.w, d.frame.h))
@@ -137,6 +143,77 @@ pub fn from_source(src: &str, opts: &Options) -> Result<(Diagram, Vec<Diagnostic
         );
     }
     Ok((d, warnings))
+}
+
+/// A zone that holds nothing yet is drawn as a card (D-117): its title, icon, type, description
+/// lines and arrows as a card's, a `zones` pile as a `cards` pile; it becomes a frame again the
+/// day something is written inside it. Not in a timeline, a frieze or a mind map (their zones
+/// are eras and branches), nor for a zone sized by hand.
+fn empty_zones_as_cards(mut model: Model) -> Model {
+    if matches!(
+        model.option("layout"),
+        Some("timeline" | "frise" | "frieze" | "mindmap")
+    ) {
+        return model;
+    }
+    let parents: std::collections::BTreeSet<String> = model
+        .nodes
+        .iter()
+        .filter_map(|n| n.parent.clone())
+        .collect();
+    for n in &mut model.nodes {
+        if n.kind == Kind::Zone
+            && !n.stack
+            && !n.block
+            && n.size.is_none()
+            && !parents.contains(&n.id)
+        {
+            n.kind = Kind::Card;
+        }
+    }
+    model
+}
+
+/// The settings a type gives in CSS rather than on each element (D-117): `--head: left`,
+/// `--dir: right`, `--align: center` on a zone's type, `--side: n-s` on an arrow's class. Written on the element, the attribute wins. A
+/// value only inherited from the element around is not the element's own (a zone's `--head` would
+/// reach every zone inside it).
+fn css_settings(mut model: Model, scene: &Scene) -> Model {
+    let own = |el: usize, name: &str| -> Option<String> {
+        let v = scene.style(el).string(name)?;
+        let inherited = scene
+            .tree
+            .parent(el)
+            .and_then(|p| scene.style(p).string(name))
+            .is_some_and(|p| p == v);
+        (!inherited).then_some(v)
+    };
+    for n in &mut model.nodes {
+        let Some(z) = scene.zones.get(&n.id).filter(|_| n.kind == Kind::Zone) else {
+            continue;
+        };
+        if n.head.is_none() && matches!(own(z.el, "--head").as_deref(), Some("left" | "w")) {
+            n.head = Some("left".to_string());
+        }
+        if n.dir.is_none() {
+            n.dir = own(z.el, "--dir")
+                .and_then(|v| skemo_lang::parse::dir_value(&v))
+                .map(str::to_string);
+        }
+        if n.align.is_none() {
+            n.align = own(z.el, "--align")
+                .and_then(|v| skemo_lang::parse::align_value(&v))
+                .map(str::to_string);
+        }
+    }
+    for e in &mut model.edges {
+        if e.side.is_none()
+            && let Some(el) = scene.edges.get(&e.id)
+        {
+            e.side = own(el.g, "--side").and_then(|v| skemo_lang::parse::side_value(&v));
+        }
+    }
+    model
 }
 
 /// Placement mode asked for by `diagram(layout=…)`.
@@ -171,7 +248,7 @@ struct Placed {
 
 /// Prepares a diagram from a valid model.
 pub fn build(model: Model, opts: &Options) -> Result<Diagram, Error> {
-    let (model, engine) = automatic_engine(model);
+    let (model, engine) = automatic_engine(empty_zones_as_cards(model));
     let mut warnings = Vec::new();
     for f in &opts.fonts {
         if let Err(e) = crate::fonts::register(f) {
@@ -189,6 +266,7 @@ pub fn build(model: Model, opts: &Options) -> Result<Diagram, Error> {
     let mut layout = engine.unwrap_or_else(|| choose_layout(&model, &mut warnings));
     let images = decode_images(opts, &mut warnings);
     let (mut scene, extras) = build_scene(&model, &base, opts, theme, &mut layout, &images);
+    let model = css_settings(model, &scene);
     warnings.extend(scene.warnings.iter().cloned());
     warnings.extend(missing_fonts(&scene));
     warnings.extend(missing_glyphs(&model, &scene));
@@ -203,9 +281,13 @@ pub fn build(model: Model, opts: &Options) -> Result<Diagram, Error> {
             "« --curve: on » ne trace des courbes que dans une carte mentale (layout=\"mindmap\") : les tracés droits sont gardés"
         )));
     }
-    let mut sizes = measure(&scene, &model);
+    // arrows through a tunnel are laid out as legs, drawn as their arrow (D-116)
+    let tunnels = crate::tunnel::expand(&model, &mut scene);
+    let laid = tunnels.as_ref().map_or(&model, |(m, _)| m);
+    let mut sizes = measure(&scene, laid);
     let (pad, _) = scene.zone_pad_head();
-    let arranged = arrange_wrapped(&model, &mut scene, &mut sizes, &layout, &mut warnings)?;
+    let mut arranged = arrange_wrapped(laid, &mut scene, &mut sizes, &layout, &mut warnings)?;
+    let tubes = sew_tunnels(tunnels.as_ref(), &model, &mut scene, &sizes, &mut arranged);
     let Arranged {
         label_lines,
         elk,
@@ -258,7 +340,29 @@ pub fn build(model: Model, opts: &Options) -> Result<Diagram, Error> {
         grid: matches!(layout, Layout::Grid | Layout::Slide(_)),
         label_lines,
         slide: matches!(layout, Layout::Slide(_)) && crate::slide::drew(),
+        tubes,
     })
+}
+
+/// The arrows through a tunnel sewn back from their legs, after the layout (D-116); how many
+/// lanes each tube holds.
+fn sew_tunnels(
+    tunnels: Option<&(Model, crate::tunnel::Plan)>,
+    model: &Model,
+    scene: &mut Scene,
+    sizes: &Sizes,
+    a: &mut Arranged,
+) -> BTreeMap<String, usize> {
+    let Some((_, plan)) = tunnels else {
+        return BTreeMap::new();
+    };
+    let laid = crate::tunnel::Laid {
+        routes: &mut a.routes,
+        labels: &mut a.labels,
+        label_lines: &mut a.label_lines,
+        edge_groups: &mut a.edge_groups,
+    };
+    crate::tunnel::sew_back(plan, model, scene, sizes, &a.boxes, laid)
 }
 
 /// The diagram arranged, its zone titles wrapped where D-099 asks (the layout then runs again with
@@ -1239,7 +1343,7 @@ fn automatic_engine(model: Model) -> (Model, Option<Layout>) {
         crate::dock::without_crossing(m)
     };
     if slide_asked(&model) {
-        let d = docked(model.clone());
+        let d = docked(crate::dock::laid_in(model.clone()));
         if crate::slide::reads(&d) {
             return (d, Some(Layout::Slide(false)));
         }

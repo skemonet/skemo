@@ -81,9 +81,9 @@ pub(super) fn inserts(a: &Lattice, b: &Lattice) -> Vec<(usize, i32, i32)> {
             out.push((1, a.rowy[k + 1], dh));
         }
         if dg != 0 {
-            let lo = a.rowy[k] + a.ch;
+            let lo = a.rowy[k] + a.rowh[k];
             let at = if a.yout[k] {
-                let ft = a.rowy[k + 1] - a.zone_head - ex(a, k + 1);
+                let ft = a.rowy[k + 1] - a.zone_head[k + 1] - ex(a, k + 1);
                 (lo + PAD + ft) / 2
             } else {
                 lo + a.ygap[k] / 2
@@ -164,7 +164,9 @@ impl Engine<'_> {
                 if !l.yout[r1.min(r2)] {
                     need.gin_y = need.gin_y.max(steps(span(h)));
                 } else if same {
-                    need.chan_y = need.chan_y.max(steps(span(h)) - PAD - l.zone_head);
+                    need.chan_y = need
+                        .chan_y
+                        .max(steps(span(h)) - PAD - l.zone_head[r1.max(r2)]);
                 } else {
                     need.chan_y = need.chan_y.max(steps(h + 2.0 * STEP));
                 }
@@ -241,7 +243,7 @@ impl Engine<'_> {
             if grid::away(r.sside, s, t) || grid::away(r.tside, t, s) {
                 p += grid::W_HOOK;
             }
-            if r.bends >= 3 || (self.arrows[k].face && r.bends > 0) {
+            if r.bends >= 3 || (d.arrows[k].face && r.bends > 0) {
                 p += grid::BEND * r.bends as f64;
             }
             if r.cost
@@ -335,29 +337,49 @@ impl Engine<'_> {
         // room tried in fewer places on a dense slide: each attempt redraws it whole
         let limit = (240 / self.inp.edges.len().max(1)).clamp(4, ATTEMPTS);
         'outer: while attempts < limit {
+            // the attempts in the ratchet's order: for each line that pays, each place, a track
+            // and its air, then two (as a label across a gutter may need)
+            let mut queue: Vec<((usize, Move, Extra), Extra, bool)> = Vec::new();
             for k in self.paying(&cur) {
                 for mv in self.where_room(&cur, k) {
                     let key = (k, mv, cur.l.extra.clone());
-                    if tried.contains(&key) {
+                    if tried.contains(&key) || queue.iter().any(|q| q.0 == key) {
                         continue;
                     }
-                    tried.push(key);
-                    // a track and its air; then two, as a label across a gutter may need
-                    for by in [GROW_BY, 2 * GROW_BY] {
-                        attempts += 1;
-                        let extra = grown(&cur.l.extra, mv, by);
-                        let d = self.draw(cur.l.gaps, &extra, Some(&cur), EFFORT_ROOM);
-                        if d.score() < cur.score() - 0.5 && d.dropped <= cur.dropped {
-                            cur = d;
-                            failed = 0;
-                            continue 'outer;
-                        }
-                        failed += 1;
-                        if attempts >= limit || failed >= STALL {
-                            break 'outer;
-                        }
+                    for (i, by) in [GROW_BY, 2 * GROW_BY].into_iter().enumerate() {
+                        queue.push((key.clone(), grown(&cur.l.extra, mv, by), i == 0));
                     }
                 }
+            }
+            // drawn a few at once, read in that order: the first better one is kept, as one
+            // after the other would keep it
+            let mut at = 0;
+            while at < queue.len() {
+                let n = (limit - attempts)
+                    .min(STALL - failed)
+                    .min(queue.len() - at)
+                    .max(1);
+                let base = &cur;
+                let drawn = super::par_map(&queue[at..at + n], &|q| {
+                    self.draw(base.l.gaps, &q.1, Some(base), EFFORT_ROOM)
+                });
+                for (j, d) in drawn.into_iter().enumerate() {
+                    let q = &queue[at + j];
+                    if q.2 {
+                        tried.push(q.0.clone());
+                    }
+                    attempts += 1;
+                    if d.score() < cur.score() - 0.5 && d.dropped <= cur.dropped {
+                        cur = d;
+                        failed = 0;
+                        continue 'outer;
+                    }
+                    failed += 1;
+                    if attempts >= limit || failed >= STALL {
+                        break 'outer;
+                    }
+                }
+                at += n;
             }
             break;
         }

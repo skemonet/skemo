@@ -397,10 +397,14 @@ pub(super) fn card(ctx: &mut Ctx, id: &str) {
     }
     after(ctx, &c, el.after, x, y, fw, fh);
     if let Some((cel, text)) = &el.count {
-        pill(
-            ctx,
-            &geometry::count_pill(&d.scene, *cel, text, x + b.w, y + fh),
-        );
+        // a node's (`nodes`, D-117) on its icon's lower right corner, a pile's on its cards behind
+        let (right, mid) = g
+            .deco
+            .icon
+            .as_ref()
+            .filter(|_| node.is_some_and(|n| n.node))
+            .map_or((x + b.w, y + fh), |i| (x + i.x + i.size, y + i.y + i.size));
+        pill(ctx, &geometry::count_pill(&d.scene, *cel, text, right, mid));
     }
     ctx.out.push_str("</g>");
     link_close(ctx, node.and_then(|n| n.href.as_deref()));
@@ -789,7 +793,7 @@ pub(super) fn zone(ctx: &mut Ctx, id: &str) {
         return;
     }
     let node = d.model.node(id);
-    if node.is_some_and(|n| n.stack) {
+    if node.is_some_and(|n| n.stack || n.block) {
         // a stack draws nothing of its own (D-050)
         let kids: Vec<(String, Kind)> = d
             .model

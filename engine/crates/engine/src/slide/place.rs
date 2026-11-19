@@ -8,6 +8,7 @@
 //! search over the cells) and each link routed alone on the lattice; the cheapest of those is kept.
 
 use super::grid::{Arrow as Search, Route};
+use super::input::{Align, Band};
 use super::lattice::{Extra, Gaps, Lattice, Tiling};
 use super::pairs::count_crossings;
 use super::{Input, Walls};
@@ -397,21 +398,78 @@ impl Tiler<'_> {
     /// after the other along `dir`; a wide card or zone is a row of its own (a column across
     /// `dir`), where it is written.
     fn tile(&self, p: Option<usize>) -> Vec<Rc<Tree>> {
+        self.tile_kids(p, &self.inp.children(p))
+    }
+
+    /// The children of a group docked on its sides (`at=`, D-117) round the rest, as Java's
+    /// `BorderLayout`: the north and south bands span the group, the west and east ones the
+    /// middle; several on one side in writing order.
+    fn border(&self, p: Option<usize>, kids: &[usize]) -> Vec<Rc<Tree>> {
         let inp = self.inp;
-        let kids = inp.children(p);
         let tiled = |c: usize| {
             let mut alts = self.tile(Some(c));
             alts.truncate(KEEP_INNER);
             alts
         };
-        if let Some(p) = p
-            && inp.panels[p].stack
-        {
-            let mut items: Vec<Vec<Rc<Tree>>> = kids.iter().map(|&c| tiled(c)).collect();
-            if inp.dir.reverse {
+        let on = |b: Band| -> Vec<Vec<Rc<Tree>>> {
+            kids.iter()
+                .filter(|&&c| inp.panels[c].dock == Some(b))
+                .map(|&c| tiled(c))
+                .collect()
+        };
+        let rest: Vec<usize> = kids
+            .iter()
+            .copied()
+            .filter(|&c| inp.panels[c].dock.is_none())
+            .collect();
+        let has_own = p.is_some_and(|p| !inp.panels[p].cards.is_empty());
+        let mut middle = on(Band::W);
+        if has_own || !rest.is_empty() {
+            middle.push(self.tile_kids(p, &rest));
+        }
+        middle.extend(on(Band::E));
+        let mut rows = on(Band::N);
+        if !middle.is_empty() {
+            rows.push(self.sequence(middle, true));
+        }
+        rows.extend(on(Band::S));
+        self.sequence(rows, false)
+    }
+
+    /// The children `kids` of group `p` (and its own cards) tiled.
+    fn tile_kids(&self, p: Option<usize>, kids: &[usize]) -> Vec<Rc<Tree>> {
+        let inp = self.inp;
+        if kids.iter().any(|&c| inp.panels[c].dock.is_some()) {
+            return self.border(p, kids);
+        }
+        let tiled = |c: usize| {
+            let mut alts = self.tile(Some(c));
+            alts.truncate(KEEP_INNER);
+            alts
+        };
+        // a stack, or a group with `dir=` (D-117): its own cards on one line, then its children,
+        // in writing order, one after the other that way
+        let along = p.and_then(|p| {
+            inp.panels[p].dir.or(inp.panels[p]
+                .stack
+                .then_some((inp.dir.across, inp.dir.reverse)))
+        });
+        if let (Some(p), Some((across, reverse))) = (p, along) {
+            let mut items: Vec<(usize, Vec<Rc<Tree>>)> = kids
+                .iter()
+                .map(|&c| (inp.panels[c].order, tiled(c)))
+                .collect();
+            let k = inp.panels[p].cards.len();
+            if k > 0 {
+                let (w, h) = if across { (k, 1) } else { (1, k) };
+                items.push((inp.panels[p].first, vec![Rc::new(Tree::Leaf { p, w, h })]));
+            }
+            items.sort_by_key(|i| i.0);
+            let mut items: Vec<Vec<Rc<Tree>>> = items.into_iter().map(|i| i.1).collect();
+            if reverse {
                 items.reverse();
             }
-            return self.sequence(items, inp.dir.across);
+            return self.sequence(items, across);
         }
         // `wrap="N"`: the children in writing order, N a row (a column across `dir`)
         if let Some(p) = p
@@ -572,25 +630,40 @@ fn place_cards(inp: &Input, r: &[(usize, usize, usize, usize)]) -> Vec<(usize, u
 /// over (under) the card it links to when that one is within its width, else in the middle.
 fn spread(inp: &Input, r: &[(usize, usize, usize, usize)], pos: &mut [(usize, usize)]) {
     for (i, p) in inp.panels.iter().enumerate() {
-        let layer = p.parent.is_some_and(|q| inp.panels[q].stack);
-        if p.cards.is_empty() || !(layer || (p.wide && p.zone.is_some())) {
+        let parent = p.parent.map(|q| &inp.panels[q]);
+        // a layer of a stack or of a group with `dir=` (D-117), a band docked in its group, a
+        // wide zone's row: its cards across the layer (`across`: a column)
+        let across = if let Some(b) = p.dock {
+            matches!(b, Band::E | Band::W)
+        } else if let Some(q) = parent.filter(|q| q.stack || q.dir.is_some()) {
+            !q.dir.map_or(inp.dir.across, |d| d.0)
+        } else if p.wide && p.zone.is_some() {
+            inp.dir.across
+        } else {
+            continue;
+        };
+        if p.cards.is_empty() {
             continue;
         }
+        let align = parent.and_then(|q| q.align);
         let (x, y, w, h) = r[i];
-        // the cells along the row (a column across `dir`)
-        let (len, line) = if inp.dir.across { (h, w) } else { (w, h) };
+        let (len, line) = if across { (h, w) } else { (w, h) };
         let k = p.cards.len();
         if line != 1 || len <= k {
             continue;
         }
-        let at = |j: usize| {
-            if inp.dir.across {
-                (x, y + j)
-            } else {
-                (x + j, y)
+        let at = |j: usize| if across { (x, y + j) } else { (x + j, y) };
+        let along = |c: (usize, usize)| if across { c.1 } else { c.0 };
+        // `align=` start or end: packed at that end, in their order
+        if let Some(a @ (Align::Start | Align::End)) = align {
+            let mut cards = p.cards.clone();
+            cards.sort_by_key(|&c| along(pos[c]));
+            let from = if a == Align::Start { 0 } else { len - k };
+            for (n, &c) in cards.iter().enumerate() {
+                pos[c] = at(from + n);
             }
-        };
-        let along = |c: (usize, usize)| if inp.dir.across { c.1 } else { c.0 };
+            continue;
+        }
         if k == 1 {
             let c = p.cards[0];
             let linked = inp.edges.iter().filter_map(|e| {
@@ -837,6 +910,7 @@ pub(crate) fn placement(inp: &Input, walls: &Walls) -> Tiling {
     let n_route = (ROUTE_LINKS / inp.edges.len().max(1)).clamp(2, ROUTE_TOP);
     let mut best: Option<(f64, Tiling)> = None;
     let mut seen = Vec::new();
+    let mut tried = Vec::new();
     for (_, t) in tilings(inp) {
         let r = rects(&t, n);
         if seen.contains(&r) {
@@ -850,13 +924,18 @@ pub(crate) fn placement(inp: &Input, walls: &Walls) -> Tiling {
         let tiling = Tiling {
             cols: t.w(),
             rows: t.h(),
-            rects: r.clone(),
+            rects: r,
             pos,
         };
-        let rc = route_cost(inp, &tiling, walls);
-        let own = (t.w() * t.h() - inp.cards.len()) as f64 * 3.0
+        tried.push(tiling);
+    }
+    // each tiling's routes, several at once: the costliest part of the placement
+    let costs = super::par_map(&tried, &|t: &Tiling| route_cost(inp, t, walls));
+    for (tiling, rc) in tried.into_iter().zip(costs) {
+        let r = &tiling.rects;
+        let own = (tiling.cols * tiling.rows - inp.cards.len()) as f64 * 3.0
             + link_cost(
-                &r,
+                r,
                 &links,
                 &vec![true; n],
                 (inp.dir.across, inp.dir.reverse, inp.dir.written),

@@ -71,6 +71,7 @@ lang/site/examples/themes.skemo: uneven-gaps=1
 lang/site/examples/timeline-small.skemo: clean
 lang/site/examples/timeline.skemo: clean
 lang/site/examples/trunk.skemo: clean
+lang/site/examples/tunnel.skemo: move-moves=2
 lang/site/examples/types.skemo: move-moves=1 uneven-gaps=1
 lang/site/examples/wrap.skemo: clean
 lang/site/examples/zones.skemo: sparse=1
@@ -83,4 +84,4 @@ site/gallery/network.skemo: uneven-gaps=1
 site/gallery/pinned.skemo: port-jog=1 staircase=1
 site/gallery/process.skemo: move-moves=2 uneven-gaps=1
 site/gallery/timeline.skemo: clean
-# total: end-off-card=0 zone-overlap=1 card-outside-zone=0 card-overlap=5 zone-title-overflow=0 text-overflow=0 missing-glyph=0 wide-docked-narrow=0 through-card=0 through-title=0 label-overlap=0 label-on-frame=1 through-label=0 pin-moves=0 move-moves=446 slant=0 overlay=0 close-lines=0 end-crossing=7 sibling-crossing=13 through-zone=5 detour=0 hugging=6 staircase=12 short-tail=11 port-jog=43 row-top=32 writing-order=6 zone-order=0 note-far=0 sprawl=8 sparse=4 uneven-gaps=49 label-markup=0 needless-wrap=0 long-line=2
+# total: end-off-card=0 zone-overlap=1 card-outside-zone=0 card-overlap=5 zone-title-overflow=0 text-overflow=0 missing-glyph=0 wide-docked-narrow=0 through-card=0 through-title=0 label-overlap=0 label-on-frame=1 through-label=0 pin-moves=0 move-moves=448 slant=0 overlay=0 close-lines=0 end-crossing=7 sibling-crossing=13 through-zone=5 detour=0 hugging=6 staircase=12 short-tail=11 port-jog=43 row-top=32 writing-order=6 zone-order=0 note-far=0 sprawl=8 sparse=4 uneven-gaps=49 label-markup=0 needless-wrap=0 long-line=2

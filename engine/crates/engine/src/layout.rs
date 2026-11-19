@@ -148,7 +148,7 @@ pub(crate) fn layer_spacing(model: &Model, sizes: &Sizes) -> f64 {
 
 /// A group that draws nothing (D-050): a stack, or a bare zone without a title.
 pub fn invisible(n: &skemo_lang::Node) -> bool {
-    n.stack || (n.title.is_empty() && n.classes.iter().any(|c| c == "bare"))
+    n.stack || n.block || (n.title.is_empty() && n.classes.iter().any(|c| c == "bare"))
 }
 
 /// Room between the rows of a `wrap` zone, and between it and its sibling zones, when an arrow

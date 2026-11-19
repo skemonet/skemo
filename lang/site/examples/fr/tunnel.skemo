@@ -1,0 +1,13 @@
+diagram(dir="right")
+  zone#paris Site de Paris
+    card#app(icon="skemo-container") Commandes
+      to(db tunnel="vpn") SQL
+      to(s3 tunnel="vpn") Sauvegardes
+      to(web) Santé
+    card#gw-a(icon="skemo-vpn") Passerelle VPN
+      tunnel#vpn(gw-b) IPsec
+  zone#lyon Site de Lyon
+    card#gw-b(icon="skemo-vpn") Passerelle VPN
+    card#db(icon="skemo-server") Base de données
+    card#s3(icon="skemo-object-storage") Stockage objet
+  card#web(icon="skemo-web") Page de statut

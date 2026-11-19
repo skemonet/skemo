@@ -80,10 +80,15 @@ diagram(dir="right" lang="en")
 | `cards#id.type(count="4") Title` | (pre-release) a card drawn as a pile, for several instances of one thing; `count` adds a `×4` badge |
 | `\| text` (under a card) | a content line; an IPv4/CIDR at its start is set in monospace; under a zone, a description line under its title |
 | `zone#id.type Title` | a group; cards and zones indented below are inside it |
+| `nodes#id.type(icon="cable",count="2") Title` | (pre-release) a node standing for several: one icon with a `×2` badge, no pile |
 | `zones#id.type(count="3") Title` | (pre-release) a zone drawn as a pile of frames, for several instances of one group; what it holds is drawn once |
+| `block(dir="right" align="center")` | (pre-release) an invisible container (no frame, no title, other arrows go round it): lays its children in a row (`right`) or a column (`down`); `at="n|s|e|w"` on a child of a zone or block docks it on that side (BorderLayout) |
+| `zone#id(head="left") Title` | (pre-release) the title and description lines in a column left of the cards instead of above; for every zone of a type, `--head: left` in CSS |
 | `to(target).style Label` | an arrow **written inside its source card** (or zone: it leaves the frame), to the card or zone `target` |
 | `to(a b c)` | one arrow per target; to cards of the next row they fork from one trunk by themselves (pre-release); `join="trunk"` forces a trunk |
 | `to(a constraint="false")` | (pre-release) an arrow that does not shape the layout (cross links, service discovery) |
+| `to(a side="n-s")` | only when the user asks for sides: the side the arrow leaves by, then the side it reaches `a` by (`n` `s` `w` `e`, or `top` `bottom` `left` `right`); one half may stay empty, `side="-s"`; for every arrow of a class, `--side: n-s` in CSS |
+| `tunnel#vpn(gw-b) IPsec` | (pre-release) a tube between two cards, written in one of them (a VPN between gateways); `to(db tunnel="vpn")` sends an arrow through it, on its own lane |
 | `diagram(dir="down")` | first line, optional: `dir` = `down` (default) `right` `up` `left` |
 | `tag="Owner"` | text of the card's chip (an owner, a module, a port) |
 | `label="RDS PostgreSQL 16"` | (pre-release) the card's category, above its name; default: the type's `--label` |

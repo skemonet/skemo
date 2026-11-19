@@ -22,7 +22,7 @@ const ORDER: [&str; 10] = [
     "join",
     "constraint",
 ];
-const RESERVED: [&str; 18] = [
+const RESERVED: [&str; 19] = [
     "id",
     "class",
     "at",
@@ -41,6 +41,7 @@ const RESERVED: [&str; 18] = [
     "icon",
     "href",
     "constraint",
+    "tunnel",
 ];
 
 fn quote(v: &str) -> String {
@@ -153,7 +154,7 @@ fn tag_line(t: &Tag) -> String {
                 .join(" ")
         )
     };
-    if t.name == "to" {
+    if t.name == "to" || t.name == "tunnel" {
         out.push_str(&group);
         out.push_str(&classes);
     } else {

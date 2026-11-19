@@ -54,7 +54,8 @@ pub(crate) struct Lattice {
     pub cols: usize,
     pub rows: usize,
     pub cw: i32,
-    pub ch: i32,
+    /// Each row's height: its tallest card's (P7, V5: the other cards of the row align).
+    pub rowh: Vec<i32>,
     pub gaps: Gaps,
     pub extra: Extra,
     pub xgap: Vec<i32>,
@@ -63,7 +64,8 @@ pub(crate) struct Lattice {
     pub yout: Vec<bool>,
     pub colx: Vec<i32>,
     pub rowy: Vec<i32>,
-    pub zone_head: i32,
+    /// The header of the innermost frames opening above each row.
+    pub zone_head: Vec<i32>,
     pub card: Vec<Rect>,
     pub frame: Vec<Option<Rect>>,
     pub width: i32,
@@ -73,8 +75,8 @@ pub(crate) struct Lattice {
 }
 
 impl Lattice {
-    /// The lattice of `tiling` with these gutters; the zone header is as tall as the tallest
-    /// title needs (one height for every zone: rows level across groups, P8).
+    /// The lattice of `tiling` with these gutters; the header above a row is as tall as the
+    /// tallest title of the frames opening there needs (rows level across groups, P8).
     pub(crate) fn new(
         inp: &Input,
         tiling: &Tiling,
@@ -82,27 +84,75 @@ impl Lattice {
         extra: &Extra,
         walls: &Walls,
     ) -> Lattice {
-        let mut head = inp.head_steps;
-        let mut l = Self::with_head(inp, tiling, gaps, extra, head, walls);
-        for _ in 0..3 {
-            let need = l.head_needed();
-            if need <= head {
+        let cells = frame_cells(inp, tiling);
+        let levels = levels(inp);
+        // a level of frames opening on a row: a header; a frame with its title beside its cards
+        // (`head="left"`) only its padding above, and a column on the left instead
+        let mut top: Vec<Vec<Option<i32>>> = vec![vec![None; levels]; tiling.rows];
+        for (i, c) in cells.iter().enumerate() {
+            if let Some((_, y0, _, _)) = c {
+                let d = inp.chain(i).len() - 1;
+                let h = if inp.panels[i].side() {
+                    PAD
+                } else {
+                    inp.head_steps.max(inp.heads[i])
+                };
+                top[*y0][d] = Some(top[*y0][d].map_or(h, |t| t.max(h)));
+            }
+        }
+        let mut bands = Bands {
+            top: top
+                .into_iter()
+                .map(|r| r.into_iter().map(|h| h.unwrap_or(inp.head_steps)).collect())
+                .collect(),
+            left: vec![vec![0; levels]; tiling.cols],
+        };
+        let mut l = Self::with_head(inp, tiling, gaps, extra, &bands, walls);
+        for _ in 0..4 {
+            let need = l.bands_needed(inp, &cells);
+            let mut grew = false;
+            for (h, n) in (bands.top.iter_mut().flatten()).zip(need.top.iter().flatten()) {
+                grew |= n > h;
+                *h = (*h).max(*n);
+            }
+            for (h, n) in (bands.left.iter_mut().flatten()).zip(need.left.iter().flatten()) {
+                grew |= n > h;
+                *h = (*h).max(*n);
+            }
+            if !grew {
                 break;
             }
-            head = need;
-            l = Self::with_head(inp, tiling, gaps, extra, head, walls);
+            l = Self::with_head(inp, tiling, gaps, extra, &bands, walls);
         }
         l
     }
 
-    /// The header the texts ask: from the frame's top to a step under the lowest text.
-    fn head_needed(&self) -> i32 {
-        let mut need = 0;
+    /// The bands the texts ask: a header from the frame's top to a step under the lowest text; a
+    /// column (`head="left"`) from the frame's padding to a step right of the widest text. A
+    /// caption below the cards (`.bare`) asks none: counted, it moved down with every header it
+    /// asked.
+    fn bands_needed(&self, inp: &Input, cells: &[Option<(usize, usize, usize, usize)>]) -> Bands {
+        let levels = levels(inp);
+        let mut need = Bands {
+            top: vec![vec![0; levels]; self.rows],
+            left: vec![vec![0; levels]; self.cols],
+        };
         for (i, f) in self.frame.iter().enumerate() {
-            let Some(f) = f else { continue };
+            let (Some(f), Some((x0, y0, _, _))) = (f.filter(|_| !inp.panels[i].below()), cells[i])
+            else {
+                continue;
+            };
+            let d = inp.chain(i).len() - 1;
             for b in &self.texts[i] {
-                let low = b.y + b.h - f64::from(f.y) * STEP;
-                need = need.max(((low + 6.0) / STEP).ceil() as i32);
+                if inp.panels[i].side() {
+                    let right = b.x + b.w - f64::from(f.x + PAD) * STEP;
+                    let n = ((right + STEP) / STEP).ceil() as i32;
+                    need.left[x0][d] = need.left[x0][d].max(n);
+                } else {
+                    let low = b.y + b.h - f64::from(f.y) * STEP;
+                    let n = ((low + 6.0) / STEP).ceil() as i32;
+                    need.top[y0][d] = need.top[y0][d].max(n);
+                }
             }
         }
         need
@@ -113,11 +163,13 @@ impl Lattice {
         tiling: &Tiling,
         gaps: Gaps,
         extra: &Extra,
-        zone_head: i32,
+        bands: &Bands,
         walls: &Walls,
     ) -> Lattice {
+        let zone_head = &bands.top;
         let (cols, rows) = (tiling.cols, tiling.rows);
-        let (cw, ch) = (inp.card_w, inp.card_h);
+        let cw = inp.card_w;
+        let rowh = row_heights(inp, tiling);
         let ex = |m: &BTreeMap<usize, i32>, k: usize| m.get(&k).copied().unwrap_or(0);
         let Gutters {
             xgap,
@@ -127,13 +179,16 @@ impl Lattice {
             edges: (left, top, right, bottom),
             deep,
             piles,
-        } = gutters(inp, tiling, gaps, extra, zone_head);
-        let colx = offsets(MARGIN + PAD * left, cw, &xgap, cols);
+        } = gutters(inp, tiling, gaps, extra, bands);
+        let colx = offsets(
+            MARGIN + PAD * left + sum(&bands.left, 0, 0, left),
+            &vec![cw; cols],
+            &xgap,
+        );
         let rowy = offsets(
-            MARGIN + zone_head * top + ex(&extra.head, 0),
-            ch,
+            MARGIN + sum(zone_head, 0, 0, top) + ex(&extra.head, 0),
+            &rowh,
             &ygap,
-            rows,
         );
         // a pile takes a step more right and down: the lines keep clear of the cards behind
         // a wide card, a bar, spans its row (its column across `dir`)
@@ -149,7 +204,7 @@ impl Lattice {
                         x: colx[x0],
                         y: rowy[y0],
                         w: colx[x0 + w - 1] + cw - colx[x0],
-                        h: rowy[y0 + h - 1] + ch - rowy[y0],
+                        h: rowy[y0 + h - 1] + rowh[y0 + h - 1] - rowy[y0],
                     };
                 }
                 let more = i32::from(m > 0.0);
@@ -157,7 +212,7 @@ impl Lattice {
                     x: colx[cx],
                     y: rowy[cy],
                     w: cw + more,
-                    h: ch + more,
+                    h: rowh[cy] + more,
                 }
             })
             .collect();
@@ -165,12 +220,12 @@ impl Lattice {
             inp,
             tiling,
             (&colx, &rowy),
-            (cw, ch),
-            (zone_head, &deep),
+            (cw, &rowh),
+            (bands, &deep),
             extra,
         );
         let width = colx[cols - 1] + cw + PAD * right + piles.0 + MARGIN;
-        let height = rowy[rows - 1] + ch + PAD * bottom + piles.1 + MARGIN;
+        let height = rowy[rows - 1] + rowh[rows - 1] + PAD * bottom + piles.1 + MARGIN;
         let frames_px: Vec<(usize, BoxPx)> = frame
             .iter()
             .enumerate()
@@ -184,7 +239,7 @@ impl Lattice {
             cols,
             rows,
             cw,
-            ch,
+            rowh,
             gaps,
             extra: extra.clone(),
             xgap,
@@ -193,7 +248,9 @@ impl Lattice {
             yout,
             colx,
             rowy,
-            zone_head,
+            zone_head: (0..rows)
+                .map(|r| zone_head[r][(deep.1[r] - 1) as usize])
+                .collect(),
             card,
             frame,
             width,
@@ -240,7 +297,7 @@ impl Lattice {
             .iter()
             .map(|r| r.y + r.h)
             .max()
-            .unwrap_or(y0 + self.ch);
+            .unwrap_or(y0 + self.card[c].h);
         Rect {
             x: x0 - 1,
             y: y0 - 1,
@@ -266,9 +323,9 @@ impl Lattice {
     /// The gutter or title band row `y` lies in: `(false, k)` the gutter after row k, `(true, r)`
     /// the header above row r.
     pub(crate) fn gutter_y(&self, y: i32) -> Option<(bool, usize)> {
-        let head = |r: usize| self.zone_head + self.extra.head.get(&r).copied().unwrap_or(0);
+        let head = |r: usize| self.zone_head[r] + self.extra.head.get(&r).copied().unwrap_or(0);
         for r in 0..self.rows.saturating_sub(1) {
-            let (lo, hi) = (self.rowy[r] + self.ch, self.rowy[r + 1]);
+            let (lo, hi) = (self.rowy[r] + self.rowh[r], self.rowy[r + 1]);
             if lo <= y && y <= hi {
                 let head_top = hi - head(r + 1);
                 return Some(if self.yout[r] && y >= head_top {
@@ -308,15 +365,63 @@ fn owners(tiling: &Tiling) -> Vec<usize> {
     owner
 }
 
-/// Where each of `n` cells of size `size` starts, from `start`, with `gaps` between them.
-fn offsets(start: i32, size: i32, gaps: &[i32], n: usize) -> Vec<i32> {
-    let mut out = Vec::with_capacity(n);
+/// The headers above each row, one per level of frames, the outermost first (steps): each as
+/// tall as the tallest title and description of the frames of that level opening on that row
+/// (rows level across groups, P8; a frame round them keeps its own, shorter, header).
+type Heads = Vec<Vec<i32>>;
+
+/// The bands round the cells: a header above each row and a column left of each column of cells,
+/// one per level of frames.
+pub(crate) struct Bands {
+    top: Heads,
+    left: Heads,
+}
+
+/// The levels of frames: the deepest nesting, one at least.
+fn levels(inp: &Input) -> usize {
+    (0..inp.panels.len())
+        .map(|i| inp.chain(i).len())
+        .max()
+        .unwrap_or(1)
+        .max(1)
+}
+
+/// The bands of levels `from..to` at row (column) `r` (a missing level: the last one's).
+fn sum(h: &Heads, r: usize, from: i32, to: i32) -> i32 {
+    (from.max(0)..to.max(0))
+        .map(|j| {
+            let row = &h[r];
+            row.get(j as usize).or(row.last()).copied().unwrap_or(0)
+        })
+        .sum()
+}
+
+/// Where each cell of these sizes starts, from `start`, with `gaps` between them.
+fn offsets(start: i32, sizes: &[i32], gaps: &[i32]) -> Vec<i32> {
+    let mut out = Vec::with_capacity(sizes.len());
     let mut at = start;
-    for k in 0..n {
+    for (k, size) in sizes.iter().enumerate() {
         out.push(at);
         at += size + gaps.get(k).copied().unwrap_or(0);
     }
     out
+}
+
+/// Each row's height: its tallest card's, a wide card's on its first row (P7, V5: the cards of a
+/// row share one height); a row without a card, the smallest card's.
+fn row_heights(inp: &Input, tiling: &Tiling) -> Vec<i32> {
+    let mut h = vec![4; tiling.rows];
+    for (c, &(_, cy)) in tiling.pos.iter().enumerate() {
+        let r = if inp.wide(c) {
+            tiling.rects[inp.card_panel[c]].1
+        } else {
+            cy
+        };
+        if let Some(x) = h.get_mut(r) {
+            *x = (*x).max(inp.heights[c]);
+        }
+    }
+    h
 }
 
 /// Each zone's frame round its own cards and the frames of the zones inside it, the innermost
@@ -325,8 +430,8 @@ fn frames(
     inp: &Input,
     tiling: &Tiling,
     (colx, rowy): (&[i32], &[i32]),
-    (cw, ch): (i32, i32),
-    (zone_head, deep): (i32, &(Vec<i32>, Vec<i32>)),
+    (cw, rowh): (i32, &[i32]),
+    (bands, deep): (&Bands, &(Vec<i32>, Vec<i32>)),
     extra: &Extra,
 ) -> Vec<Option<Rect>> {
     let ex = |m: &BTreeMap<usize, i32>, k: usize| m.get(&k).copied().unwrap_or(0);
@@ -356,11 +461,14 @@ fn frames(
         let (l, r) = (cols_deep[x0] - d + 1, cols_deep[x1] - d + 1);
         let (t, b) = (rows_deep[y0] - d + 1, rows_deep[y1] - d + 1);
         let (lx, ty) = (
-            colx[x0] - PAD * l,
-            rowy[y0] - zone_head * t - ex(&extra.head, y0),
+            colx[x0] - PAD * l - sum(&bands.left, x0, d - 1, d - 1 + l),
+            rowy[y0] - sum(&bands.top, y0, d - 1, d - 1 + t) - ex(&extra.head, y0),
         );
         let (mr, mb) = piled(i, x1, y1);
-        let (rx, by) = (colx[x1] + cw + PAD * r + mr, rowy[y1] + ch + PAD * b + mb);
+        let (rx, by) = (
+            colx[x1] + cw + PAD * r + mr,
+            rowy[y1] + rowh[y1] + PAD * b + mb,
+        );
         *f = Some(Rect {
             x: lx,
             y: ty,
@@ -414,7 +522,7 @@ struct Gutters {
 /// The gutters of `tiling`: between two groups, a padding for each level of frames on either side
 /// each side) and the channel; inside a group, the group's gap; above a row of other groups, a
 /// title for each frame opening there.
-fn gutters(inp: &Input, tiling: &Tiling, gaps: Gaps, extra: &Extra, zone_head: i32) -> Gutters {
+fn gutters(inp: &Input, tiling: &Tiling, gaps: Gaps, extra: &Extra, bands: &Bands) -> Gutters {
     let (cols, rows) = (tiling.cols, tiling.rows);
     let owner = owners(tiling);
     let ex = |m: &BTreeMap<usize, i32>, k: usize| m.get(&k).copied().unwrap_or(0);
@@ -471,7 +579,9 @@ fn gutters(inp: &Input, tiling: &Tiling, gaps: Gaps, extra: &Extra, zone_head: i
     for k in 1..cols {
         let out = (0..rows).any(|r| apart(r * cols + k - 1, r * cols + k));
         let g = if out {
-            PAD * (cols_deep[k - 1] + cols_deep[k]) + gaps.chan_x
+            PAD * (cols_deep[k - 1] + cols_deep[k])
+                + sum(&bands.left, k, 0, cols_deep[k])
+                + gaps.chan_x
         } else {
             gaps.gin_x
         };
@@ -483,7 +593,7 @@ fn gutters(inp: &Input, tiling: &Tiling, gaps: Gaps, extra: &Extra, zone_head: i
     for k in 1..rows {
         let out = (0..cols).any(|c| apart((k - 1) * cols + c, k * cols + c));
         let g = if out {
-            PAD * rows_deep[k - 1] + zone_head * rows_deep[k] + gaps.chan_y
+            PAD * rows_deep[k - 1] + sum(&bands.top, k, 0, rows_deep[k]) + gaps.chan_y
         } else {
             gaps.gin_y
         };

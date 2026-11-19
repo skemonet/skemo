@@ -85,3 +85,13 @@ fn arrows_end_at_the_middle_of_the_icon() {
         "{end:?} {b:?}"
     );
 }
+
+/// `nodes` (D-117): no cards behind, the badge on the icon's corner.
+#[test]
+fn nodes_draws_one_icon_and_its_badge() {
+    let src =
+        "diagram\n  nodes#c(icon=\"cable\" count=\"3\") Cables\n  node#d(icon=\"cable\") One\n";
+    let (d, _) = from_source(src, &Options::default()).unwrap();
+    assert_eq!(d.boxes["c"].h, d.boxes["d"].h, "no room for cards behind");
+    assert!(svg::render(&d).contains("×3"), "the badge");
+}

@@ -79,7 +79,7 @@ impl Engine<'_> {
     /// The whole slide drawn on the lattice of these gutters, starting from `from` (its routes
     /// carried onto this lattice where room was made).
     pub(super) fn draw(
-        &mut self,
+        &self,
         gaps: Gaps,
         extra: &Extra,
         from: Option<&Drawing>,
@@ -90,8 +90,9 @@ impl Engine<'_> {
         trace("lattice");
         let g = Grid::new(inp, &l);
         trace("grid");
+        let mut arrows = self.arrows.clone();
         for (k, e) in inp.edges.iter().enumerate() {
-            self.arrows[k].face = grid::facing(inp, &l, e);
+            arrows[k].face = grid::facing(inp, &l, e);
         }
         let (mut routes, start) = self.own_routes(&g, &l, from);
         trace("own routes");
@@ -105,7 +106,7 @@ impl Engine<'_> {
             routes.iter().map(Vec::len).sum::<usize>()
         ));
         let gn = (g.w * g.h) as usize;
-        let mut p = Problem::new(&self.arrows, routes, slots, valid, (g.w, gn));
+        let mut p = Problem::new(&arrows, routes, slots, valid, (g.w, gn));
         let sol = Self::solve_from(&mut p, &start, from.is_some(), effort);
         let sol = self.aware_round(&g, &l, &mut p, &mut cache, sol, effort);
         let chosen: Vec<Option<Route>> = sol
@@ -131,6 +132,7 @@ impl Engine<'_> {
             labels,
             crossings,
             objective: sol.objective,
+            arrows: arrows.clone(),
         }
     }
 
@@ -144,9 +146,10 @@ impl Engine<'_> {
         let inp = self.inp;
         let keep = (600 / inp.edges.len().max(1)).clamp(6, KEEP);
         let ins = from.map(|d| inserts(&d.l, l));
-        let mut routes = Vec::new();
-        let mut start = Vec::new();
-        for (k, e) in inp.edges.iter().enumerate() {
+        let ks: Vec<usize> = (0..inp.edges.len()).collect();
+        // each arrow's candidates alone: several arrows at once
+        let each = super::par_map(&ks, &|&k| {
+            let e = &inp.edges[k];
             let s = Search::of(g, inp, l, e);
             let carry = |r: &Route, ins: &[(usize, i32, i32)]| {
                 let nodes = grid::dense(&r.pts.iter().map(|&p| mapped(ins, p)).collect::<Vec<_>>());
@@ -192,10 +195,9 @@ impl Engine<'_> {
                     },
                 );
             }
-            start.push(first);
-            routes.push(cands);
-        }
-        (routes, start)
+            (cands, first)
+        });
+        each.into_iter().unzip()
     }
 
     /// The arrows' written ways: an arrow with waypoints (`via`) takes the route through them,
@@ -241,8 +243,12 @@ impl Engine<'_> {
     /// Routes sharing a trunk with a sibling (a fork or a join drawn alike with one label).
     fn add_siblings(&self, g: &Grid, l: &Lattice, routes: &mut [Vec<Route>]) {
         let inp = self.inp;
-        let mut sib: Vec<Vec<Route>> = vec![Vec::new(); inp.edges.len()];
-        for (k, e) in inp.edges.iter().enumerate() {
+        let ks: Vec<usize> = (0..inp.edges.len()).collect();
+        let shared: &[Vec<Route>] = routes;
+        let sib = super::par_map(&ks, &|&k| {
+            let e = &inp.edges[k];
+            let mut sib = Vec::new();
+            let routes = shared;
             let s = Search::of(g, inp, l, e);
             for join in [true, false] {
                 let mates: Vec<&Route> = inp
@@ -258,10 +264,11 @@ impl Engine<'_> {
                     .flat_map(|(j, _)| routes[j].iter().take(3))
                     .collect();
                 if !mates.is_empty() {
-                    sib[k].extend(s.siblings(&mates, join, 3));
+                    sib.extend(s.siblings(&mates, join, 3));
                 }
             }
-        }
+            sib
+        });
         merge_new(routes, sib);
     }
 
@@ -296,19 +303,14 @@ impl Engine<'_> {
         effort: usize,
     ) -> solve::Sol {
         let fresh = self.aware(g, l, p, &sol);
+        let arrows = p.arrows;
         if fresh.iter().all(Vec::is_empty) {
             return sol;
         }
         let mut routes = std::mem::take(&mut p.routes);
         merge_new(&mut routes, fresh);
         let (slots, valid) = slots_for(cache, l, &routes, self.inp);
-        *p = Problem::new(
-            &self.arrows,
-            routes,
-            slots,
-            valid,
-            (g.w, (g.w * g.h) as usize),
-        );
+        *p = Problem::new(arrows, routes, slots, valid, (g.w, (g.w * g.h) as usize));
         let again = solve::Search::new(p, effort / 2).run(&sol.pick);
         let sol = if again.objective <= sol.objective {
             again
@@ -342,7 +344,7 @@ impl Engine<'_> {
                 Some(r) => {
                     grid::away(r.sside, s, t)
                         || grid::away(r.tside, t, s)
-                        || (self.arrows[k].face && r.bends > 0)
+                        || (p.arrows[k].face && r.bends > 0)
                         || sol.ldropped.contains(&k)
                         || chosen.iter().enumerate().any(|(j, q)| {
                             j != k && q.is_some_and(|q| pairs::count_crossings(&[r, q]) > 0)

@@ -51,3 +51,4 @@ taken in issues and pull requests.
 | D-079 | Arrows in motion (`.flow`, `.pulse`): still images draw them solid; the SVG plays them only with `--motion`. |
 | D-114 | `zones`: a zone drawn as a pile of frames, with a `×N` badge. |
 | D-115 | skemo's own infrastructure icons (`skemo-*`) beside Lucide; the names Lucide changed keep working. |
+| D-116 | `tunnel`: a tube between two cards; an arrow marked `tunnel="id"` runs along it on its own lane, hidden inside the two cards. |

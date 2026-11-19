@@ -97,6 +97,11 @@ impl StyleTree {
         i
     }
 
+    /// The element `i` sits in (the host of a pseudo-element).
+    pub fn parent(&self, i: usize) -> Option<usize> {
+        self.nodes.get(i).and_then(|n| n.parent)
+    }
+
     pub fn add_class(&mut self, i: usize, c: &str) {
         if let Some(n) = self.nodes.get_mut(i)
             && !n.classes.iter().any(|k| k == c)

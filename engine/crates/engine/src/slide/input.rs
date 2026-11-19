@@ -30,6 +30,86 @@ pub(crate) struct Panel {
     pub first: usize,
     /// `zones` (D-114): the room its frames behind take beyond its frame, right and down (px).
     pub pile: f64,
+    /// Where its title and description stand.
+    pub title: TitleAt,
+    /// `at="n|s|e|w"` inside its zone or block, or at the drawing's edge with arrows (D-117): the
+    /// band it takes round the rest, as Java's `BorderLayout` (a corner: its east or west side).
+    pub dock: Option<Band>,
+    /// `dir=` on a zone, a stack or a block (D-117): its children one after the other that way.
+    pub dir: Option<(bool, bool)>,
+    /// `block` (D-117): drawn as nothing, the other lines go round it.
+    pub block: bool,
+    /// `align=` (D-117): where its cards stand across its `dir` when their block is wider.
+    pub align: Option<Align>,
+}
+
+/// Where a frame's title and description stand.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum TitleAt {
+    /// A band above its cards (the header).
+    Above,
+    /// A caption below its cards (`.bare`, or set so in CSS, D-050): no header text.
+    Below,
+    /// A column left of its cards (`head="left"`, D-117).
+    Left,
+}
+
+impl Panel {
+    /// Its title is a caption below its cards.
+    pub(crate) fn below(&self) -> bool {
+        self.title == TitleAt::Below
+    }
+
+    /// Its title is a column left of its cards.
+    pub(crate) fn side(&self) -> bool {
+        self.title == TitleAt::Left
+    }
+}
+
+/// A band round the rest of a group (`at=` inside it, D-117).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Band {
+    N,
+    S,
+    E,
+    W,
+}
+
+/// Where cards stand across a group's `dir` (D-117).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Align {
+    Start,
+    Center,
+    End,
+}
+
+/// The band of `at="…"` (`+n`: a docked element the slide engine lays in, D-117).
+fn band(n: &skemo_lang::Node) -> Option<Band> {
+    match n.dock.as_deref()?.trim_start_matches('+') {
+        "n" => Some(Band::N),
+        "s" => Some(Band::S),
+        "e" | "ne" | "se" => Some(Band::E),
+        "w" | "nw" | "sw" => Some(Band::W),
+        _ => None,
+    }
+}
+
+/// A container's `dir=`: (across, reverse).
+fn dir_of(n: &skemo_lang::Node) -> Option<(bool, bool)> {
+    match n.dir.as_deref()? {
+        "right" => Some((true, false)),
+        "left" => Some((true, true)),
+        "up" => Some((false, true)),
+        _ => Some((false, false)),
+    }
+}
+
+fn align_of(n: &skemo_lang::Node) -> Option<Align> {
+    match n.align.as_deref()? {
+        "start" => Some(Align::Start),
+        "end" => Some(Align::End),
+        _ => Some(Align::Center),
+    }
 }
 
 impl Panel {
@@ -68,7 +148,13 @@ pub(crate) struct Input {
     pub edges: Vec<Edge>,
     pub card_w: i32,
     pub card_h: i32,
+    /// The header a zone's title alone asks (steps).
     pub head_steps: i32,
+    /// Each card's own height (steps, the top card's for a pile): a row takes its tallest (P7, V5).
+    pub heights: Vec<i32>,
+    /// Each panel's header: its title and its description lines (steps; the title's alone for a
+    /// panel without a frame).
+    pub heads: Vec<i32>,
     /// The room of the cards behind a pile (`cards`), right and down, px (0 for a card): the
     /// top card is the module, the pile takes a step more of the lattice.
     pub pile: Vec<f64>,
@@ -152,6 +238,19 @@ impl Input {
         self.chain(self.card_panel[c])
     }
 
+    /// The blocks holding card `c` (D-117), outwards.
+    pub(crate) fn blocks_of(&self, c: usize) -> Vec<usize> {
+        let mut out = Vec::new();
+        let mut at = Some(self.card_panel[c]);
+        while let Some(i) = at {
+            if self.panels[i].block {
+                out.push(i);
+            }
+            at = self.panels[i].parent;
+        }
+        out
+    }
+
     /// Panel `p` if it is a zone, and the zones it sits in, outwards.
     pub(crate) fn chain(&self, p: usize) -> Vec<usize> {
         let mut out = Vec::new();
@@ -204,17 +303,26 @@ impl Input {
             .iter()
             .map(|p| {
                 (
-                    &p.zone, &p.cards, p.parent, p.stack, p.wide, p.wrap, p.order,
+                    &p.zone,
+                    &p.cards,
+                    p.parent,
+                    p.stack,
+                    p.wide,
+                    p.wrap,
+                    p.order,
+                    (p.title, p.dock, p.dir, p.block, p.align),
                 )
             })
             .collect();
         format!(
             "{:?}{panels:?}{edges:?}{}x{}+{}",
             self.cards, self.card_w, self.card_h, self.head_steps
-        ) + &format!(
-            "{:?}{:?}{:?}{:?}{:?}",
-            self.pile, self.icon, self.dir, self.notes, self.cols
-        ) + &format!("{}", self.fit)
+        ) + &format!("{:?}{:?}", self.heights, self.heads)
+            + &format!(
+                "{:?}{:?}{:?}{:?}{:?}",
+                self.pile, self.icon, self.dir, self.notes, self.cols
+            )
+            + &format!("{}", self.fit)
     }
 }
 
@@ -287,7 +395,18 @@ pub(crate) fn reads(model: &Model) -> bool {
 
 /// The diagram as the slide engine reads it, or `None` when the grid engine draws it.
 pub(super) fn read(model: &Model, scene: &Scene, sizes: &Sizes, head: f64) -> Option<Input> {
-    let (cards, panels, card_panel) = panels_of(model)?;
+    let (cards, mut panels, card_panel) = panels_of(model)?;
+    for p in &mut panels {
+        let below = p.zone.as_ref().is_some_and(|z| {
+            sizes.captions_below.contains(z)
+                || model
+                    .node(z)
+                    .is_some_and(|n| n.classes.iter().any(|c| c == "bare"))
+        });
+        if below {
+            p.title = TitleAt::Below;
+        }
+    }
     let cards_at = cards.clone();
     let cols = columns(model, &cards, &panels);
     let edges = edges_of(model, &cards, (&panels, &card_panel), sizes)?;
@@ -307,7 +426,23 @@ pub(super) fn read(model: &Model, scene: &Scene, sizes: &Sizes, head: f64) -> Op
             h = h.max(s.h - m);
         }
     }
-    let desc = sizes.zone_heads.values().copied().fold(0.0, f64::max);
+    let heights: Vec<i32> = cards
+        .iter()
+        .zip(&pile)
+        .map(|(c, m)| sizes.cards.get(c).map_or(4, |s| steps(s.h - m).max(4)))
+        .collect();
+    let heads: Vec<i32> = panels
+        .iter()
+        .map(|p| {
+            let desc = p
+                .zone
+                .as_ref()
+                .and_then(|z| sizes.zone_heads.get(z))
+                .copied()
+                .unwrap_or(0.0);
+            steps(head + desc + STEP)
+        })
+        .collect();
     Some(Input {
         cards,
         panels,
@@ -315,7 +450,9 @@ pub(super) fn read(model: &Model, scene: &Scene, sizes: &Sizes, head: f64) -> Op
         edges,
         card_w: steps(w).max(CARD_W_MIN),
         card_h: steps(h).max(4),
-        head_steps: steps(head + desc + STEP),
+        head_steps: steps(head + STEP),
+        heights,
+        heads,
         pile,
         icon,
         cols,
@@ -384,13 +521,24 @@ fn panels_of(model: &Model) -> Option<(Vec<String>, Vec<Panel>, Vec<usize>)> {
                     order,
                     first: usize::MAX,
                     pile: crate::measure::deck_margin(n),
+                    title: if n.head.as_deref() == Some("left") {
+                        TitleAt::Left
+                    } else {
+                        TitleAt::Above
+                    },
+                    dock: band(n),
+                    dir: dir_of(n),
+                    block: n.block,
+                    align: align_of(n),
                 });
             }
             Kind::Card if n.at.is_some() || crate::layout::invisible(n) => return None,
-            // a card of its own: outside every zone, in a stack or a `wrap` zone, or a wide one
+            // a card of its own: outside every zone, in a stack or a `wrap` zone, a wide one, or
+            // one docked in its group
             Kind::Card
                 if parent.is_none_or(|p| panels[p].stack || panels[p].wrap.is_some())
-                    || wide(n) =>
+                    || wide(n)
+                    || band(n).is_some() =>
             {
                 panels.push(Panel {
                     id: None,
@@ -403,6 +551,11 @@ fn panels_of(model: &Model) -> Option<(Vec<String>, Vec<Panel>, Vec<usize>)> {
                     order,
                     first: order,
                     pile: 0.0,
+                    title: TitleAt::Above,
+                    dock: band(n),
+                    dir: None,
+                    block: false,
+                    align: None,
                 });
                 cards.push(n.id.clone());
             }

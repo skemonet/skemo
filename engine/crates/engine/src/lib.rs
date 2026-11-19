@@ -42,6 +42,7 @@ pub mod svg;
 pub mod tidy;
 pub mod timeline;
 pub mod trace;
+pub mod tunnel;
 pub mod warning;
 #[cfg(feature = "png")]
 pub mod webp;

@@ -1,8 +1,10 @@
 # The skemo pipeline, run by the maintainers' CI (gitlab-ci-local with podman; no GitLab server).
-# Every push to a branch runs the checks of tools/ci.sh (identical locally: `tools/ci.sh`); a vX.Y.Z
-# tag builds the four binaries and publishes them in the GitHub release of the tag (tools/release.sh).
-# A tag does not run the checks again (with them the pipeline would pass the CI's 2 h limit): push it
-# on a commit whose branch pipeline is green.
+# Every push to a branch runs the checks of tools/ci.sh (identical locally: `tools/ci.sh`), except
+# the `history/*` branches, which keep the detailed history of a squashed release (their commits'
+# trees were checked on `main`). A vX.Y.Z tag builds the binaries and publishes them in the GitHub
+# release of the tag (tools/release.sh): the Linux x86_64 binary first, published at once, then the
+# four others. A tag does not run the checks again (with them the pipeline would pass the CI's 2 h
+# limit): push it on a commit whose branch pipeline is green.
 #
 # Images (built by the CI's ci-images repository): skemo-check for tools/ci.sh (rustfmt, clippy,
 # llvm-tools, cargo-llvm-cov, cargo-deny, the wasm32 target, wasm-bindgen-cli 0.2.129 as engine-wasm,
@@ -14,7 +16,9 @@ variables:
   CARGO_HOME: $CI_PROJECT_DIR/.cargo-home
   CARGO_TERM_COLOR: always
 
-stages: [check, build, release]
+# The binaries are built one job after the other (the CI's memory is shared between jobs): the
+# stages keep them in order, whatever the runner makes of `needs`.
+stages: [check, build, publish, build-more, release]
 
 default:
   image: localhost/ci/skemo-check:1
@@ -25,7 +29,7 @@ default:
 .checks:
   stage: check
   rules:
-    - if: '$CI_COMMIT_TAG == null'
+    - if: '$CI_COMMIT_TAG == null && $CI_COMMIT_BRANCH !~ /^history\//'
 
 quality:
   extends: .checks
@@ -37,11 +41,10 @@ security:
   script:
     - tools/ci.sh security
 
-# The five binaries, one after the other (the CI's memory is shared between jobs).
-build:
-  stage: build
+# The binaries of a tag: `build` makes the Linux x86_64 one, which `publish` puts in the release at
+# once; `build-more` makes the four others, `release` adds them and SHA256SUMS.
+.binaries:
   image: localhost/ci/rust:1.99.1-4
-  needs: []
   rules:
     - if: '$CI_COMMIT_TAG =~ /^v[0-9]/'
   script:
@@ -49,26 +52,52 @@ build:
     - |
       set -e
       while read -r target asset exe; do
+        [ -n "$target" ] || continue
         echo "== $target -> $asset"
         cargo zigbuild --release --locked -p skemo-cli --target "$target"
         cp "target/$target/release/$exe" "dist/$asset"
       done <<EOF
-      x86_64-unknown-linux-musl skemo-linux-x86_64 skemo
+      $TARGETS
+      EOF
+    - ls -l dist && sha256sum dist/*
+    # the Linux x86_64 binary runs here: it must start
+    - dist/skemo-linux-x86_64 --version
+
+build:
+  extends: .binaries
+  stage: build
+  variables:
+    TARGETS: x86_64-unknown-linux-musl skemo-linux-x86_64 skemo
+  artifacts:
+    paths: [dist/]
+
+publish:
+  stage: publish
+  image: localhost/ci/release:1
+  needs: [build]
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v[0-9]/'
+  cache: []
+  script:
+    - sh tools/release.sh
+
+build-more:
+  extends: .binaries
+  stage: build-more
+  needs: [build]
+  variables:
+    TARGETS: |
       aarch64-unknown-linux-musl skemo-linux-arm64 skemo
       aarch64-apple-darwin skemo-macos-arm64 skemo
       x86_64-apple-darwin skemo-macos-x86_64 skemo
       x86_64-pc-windows-gnu skemo-windows-x86_64.exe skemo.exe
-      EOF
-    - ls -l dist && sha256sum dist/*
-    # the Linux x86_64 binary runs here: it must start and render
-    - dist/skemo-linux-x86_64 --version
   artifacts:
     paths: [dist/]
 
 release:
   stage: release
   image: localhost/ci/release:1
-  needs: [build]
+  needs: [build, build-more]
   rules:
     - if: '$CI_COMMIT_TAG =~ /^v[0-9]/'
   cache: []

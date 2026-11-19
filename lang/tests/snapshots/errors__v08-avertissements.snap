@@ -22,16 +22,11 @@ warning[docked-arrow]: arrow `a->b`: a docked element (at="s"…) and the rest o
   │
 9 │     to(b)
   │     ^^^^^
-warning[bad-at]: `at="north"`: coordinates `x,y` or a compass point (n s e w ne nw se sw) expected; ignored
+warning[bad-at]: `at="north"`: coordinates `x,y`, a compass point (n s e w ne nw se sw) or a side (top bottom left right, top-left…) expected; ignored
    ┌─ v08-avertissements.skemo:10:10
    │
 10 │   zone#z(at="north") Z
    │          ^^^^^^^^^^
-warning[bad-at]: `at="s"` docks only a top-level element: ignored
-   ┌─ v08-avertissements.skemo:12:12
-   │
-12 │     card#b(at="s") B
-   │            ^^^^^^
 warning[bad-table]: `^^` in the first row of a table: there is no cell above
    ┌─ v08-avertissements.skemo:13:7
    │

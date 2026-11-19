@@ -185,6 +185,27 @@ Every arrow also gets the classes `from-<type>` and `to-<type>` of its endpoints
 Routing: every arrow is routed orthogonally around cards, and around zones that contain neither of its
 ends; segments are centred in the free corridor.
 
+**Tunnels** (pre-release): `tunnel` joins two cards with a tube, written like an arrow inside one of
+them (`#id`, classes, label, markers; no head, either card). An arrow passes through it when it names
+it: `to(db tunnel="vpn")` runs from its source into the near end, along the tunnel on a lane of its
+own, and out of the far end to its target, as one line hidden inside the two cards; the tube widens
+with its lanes.
+
+```pug
+zone#paris Paris site
+  card#app Orders app
+    to(db tunnel="vpn") SQL
+  card#gw-a(icon="skemo-vpn") VPN gateway
+    tunnel#vpn(gw-b) IPsec
+zone#lyon Lyon site
+  card#gw-b(icon="skemo-vpn") VPN gateway
+  card#db Database
+```
+
+Use it for flows that really go through the tunnel (traffic between sites over a VPN), not for every
+arrow between the two sites. Give the tunnel an `#id`: an arrow names it; `to(db tunnel)` alone is a
+warning. Style: `.edge.tunnel .line` (16 px tube, green); a class on the tunnel recolours it.
+
 ## 5. Positions and adjustments
 
 Layout is automatic. Pin only what the user wants fixed:

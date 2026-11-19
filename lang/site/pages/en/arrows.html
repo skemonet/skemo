@@ -62,6 +62,14 @@ card#queue Queue</code></pre>
   share, just before the card.</p>
 <p>A line without a head (<code>.nohead</code>, <code>.link</code>, a head shown as a dot) runs right up to the card.</p>
 
+<h2>Tunnels <em>(preview)</em></h2>
+<skemo name="tunnel"></skemo>
+<p><code>tunnel</code> joins two cards with a tube: a VPN between two gateways, a link between two sites. It is written like an
+  arrow, inside one of the two cards (<code>tunnel#vpn(gw-b) IPsec</code>), with an id, classes, a label and markers, but no
+  head. An arrow passes through it when it names it, <code>to(db tunnel="vpn")</code>: it runs into the near end, along the
+  tunnel on a lane of its own, and out of the far end to its target, as one line hidden inside the two cards. The tube widens by
+  a lane for each arrow; arrows that do not name it (here the health check) go their own way.</p>
+
 <h2>Arrows outside the layout <em>(preview)</em></h2>
 <skemo name="constraint"></skemo>
 <p><code>constraint="false"</code> draws and routes an arrow without letting it shape the layout: its target is not pushed a row

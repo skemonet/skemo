@@ -66,6 +66,7 @@ impl Rng {
 }
 
 /// An arrow as the model sees it.
+#[derive(Clone)]
 pub(crate) struct Arrow {
     pub src: usize,
     pub dst: usize,

@@ -955,7 +955,7 @@ fn edges_svg(d: &Diagram, (w, h): (f64, f64), body: &mut String) {
         n(w),
         n(h)
     );
-    for e in &d.model.edges {
+    for e in crate::arrow::drawing_order(&d.model) {
         let Some(r) = d.routes.get(&e.id) else {
             continue;
         };
@@ -1008,10 +1008,30 @@ fn edge_html(
         let _ = write!(body, "<a class=\"href\"{}>", href_attrs(h));
     }
     // crossings: the line is cut there, as passing under the other (D-093)
-    let (mask, cut) = crate::arrow::gap_mask(&crate::svg::prefix(d), &hops).unwrap_or_default();
+    // and hidden inside the cards it crosses through a tunnel (D-116)
+    let cuts = crate::arrow::tunnel_cuts(d, e);
+    let (mask, cut) =
+        crate::arrow::gap_mask(&crate::svg::prefix(d), &hops, &cuts).unwrap_or_default();
+    // a tunnel's tube widens by a lane for each arrow through it past the first (D-116)
+    let tube = d
+        .tubes
+        .get(&e.id)
+        .filter(|n| **n > 1)
+        .map_or_else(String::new, |lanes| {
+            let base = d
+                .scene
+                .edges
+                .get(&e.id)
+                .and_then(|el| d.scene.style(el.line).length("stroke-width"))
+                .unwrap_or(16.0);
+            format!(
+                " style=\"stroke-width:{}px\"",
+                n(base + (*lanes - 1) as f64 * crate::tunnel::GAP)
+            )
+        });
     let _ = write!(
         body,
-        "<g class=\"{}\" data-id=\"{}\"{}>{mask}<path class=\"line\" d=\"{}\"{cut}{flow}/>{dots}{pulse}<path class=\"head\" d=\"{}\"/><path class=\"tail\" d=\"{}\"/><circle class=\"origin\" cx=\"{}\" cy=\"{}\" r=\"3.5\"/></g>",
+        "<g class=\"{}\" data-id=\"{}\"{}>{mask}<path class=\"line\" d=\"{}\"{cut}{flow}{tube}/>{dots}{pulse}<path class=\"head\" d=\"{}\"/><path class=\"tail\" d=\"{}\"/><circle class=\"origin\" cx=\"{}\" cy=\"{}\" r=\"3.5\"/></g>",
         esc(&edge_classes(d, e).join(" ")),
         esc(&e.id),
         anim_attrs(d, &e.id),

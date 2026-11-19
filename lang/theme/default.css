@@ -262,6 +262,10 @@ card.wide .title::before { content: none; }
 .edge.nohead .head, .edge.link .head { display: none; }   /* simple trait ; .link = rattachement pointillé sans pointe */
 .edge.dot .origin  { display: inline; }        /* rond au départ */
 .edge.secure { color: #2E9E6B; }
+/* D-116: a tunnel is a tube tinted with its colour, the arrows that pass through it inside */
+.edge.tunnel { color: #2E9E6B; }
+.edge.tunnel .line, .stage .edge.tunnel .line { stroke: color-mix(in srgb, currentColor 22%, var(--bg)); stroke-width: 16; stroke-linecap: butt; }
+.edge.tunnel .head { display: none; }
 
 /* ---------- Animations (mode présentation) ---------- */
 [data-step] { transition: opacity .45s ease, transform .45s ease; }

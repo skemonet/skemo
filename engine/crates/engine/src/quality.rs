@@ -338,15 +338,31 @@ fn wide_docked_narrow(d: &Diagram) -> Vec<String> {
     out
 }
 
+/// Is `p` within box `b` (its border included)?
+fn inside(b: &Box2, p: (f64, f64)) -> bool {
+    p.0 >= b.x - 0.5 && p.0 <= b.x + b.w + 0.5 && p.1 >= b.y - 0.5 && p.1 <= b.y + b.h + 0.5
+}
+
 fn segments(r: &[(f64, f64)]) -> impl Iterator<Item = ((f64, f64), (f64, f64))> + '_ {
     r.windows(2).map(|w| (w[0], w[1]))
 }
 
 fn slant(d: &Diagram) -> Vec<String> {
+    // the turn of an arrow through a tunnel inside a card it crosses is hidden (D-116)
+    let hidden = |id: &str, a: (f64, f64), b: (f64, f64)| {
+        d.model.edges.iter().find(|e| e.id == id).is_some_and(|e| {
+            crate::tunnel::cuts(&d.model, e)
+                .iter()
+                .filter_map(|c| d.boxes.get(*c))
+                .any(|bx| inside(bx, a) && inside(bx, b))
+        })
+    };
     d.routes
         .iter()
-        .filter(|(_, r)| {
-            segments(r).any(|(a, b)| (a.0 - b.0).abs() > 1.0 && (a.1 - b.1).abs() > 1.0)
+        .filter(|(id, r)| {
+            segments(r).any(|(a, b)| {
+                (a.0 - b.0).abs() > 1.0 && (a.1 - b.1).abs() > 1.0 && !hidden(id, a, b)
+            })
         })
         .map(|(id, _)| id.clone())
         .collect()
@@ -951,8 +967,10 @@ fn through_card(d: &Diagram) -> Vec<String> {
         let Some(r) = d.routes.get(&e.id) else {
             continue;
         };
+        // an arrow through a tunnel crosses the tunnel's cards on purpose (D-116)
+        let crossed = crate::tunnel::cuts(&d.model, e);
         for (c, b) in cards(d) {
-            if together(d, &e.id, c) && cuts_box(r, &b, 1.0) {
+            if together(d, &e.id, c) && !crossed.contains(&c) && cuts_box(r, &b, 1.0) {
                 out.push(format!("{} {c}", e.id));
             }
         }
@@ -1068,7 +1086,15 @@ fn close_lines(d: &Diagram) -> Vec<String> {
         for b in &runs[i + 1..] {
             let apart = (a.2 - b.2).abs();
             let beside = a.4.min(b.4) - a.3.max(b.3);
-            if a.0 != b.0 && a.1 == b.1 && (1.5..CLOSE).contains(&apart) && beside > CLOSE_LEN {
+            // the lanes of one tube run close on purpose (D-116)
+            let tube = crate::tunnel::tube_of(&d.model, a.0)
+                .is_some_and(|t| crate::tunnel::tube_of(&d.model, b.0) == Some(t));
+            if a.0 != b.0
+                && a.1 == b.1
+                && !tube
+                && (1.5..CLOSE).contains(&apart)
+                && beside > CLOSE_LEN
+            {
                 out.push(format!("{} {}", a.0, b.0));
             }
         }
@@ -1366,7 +1392,15 @@ fn unrelated_moves(
     let in_the_way = |r: &[(f64, f64)]| moved.is_some_and(|b| cuts_box(r, &b, -margin));
     let mut out = Vec::new();
     for e in &m.edges {
-        if e.from == card || e.to == card || !still(&e.from) || !still(&e.to) {
+        // an arrow through a tunnel belongs to the tunnel's cards too (D-116)
+        let ends = crate::tunnel::ends(m, e);
+        if e.from == card
+            || e.to == card
+            || ends.contains(&card)
+            || !still(&e.from)
+            || !still(&e.to)
+            || ends.iter().any(|c| !still(c))
+        {
             continue;
         }
         if before.routes.get(&e.id).is_some_and(|r| in_the_way(r)) {

@@ -427,7 +427,9 @@ pub const DECK_STEP: f64 = 5.0;
 
 /// Room the cards behind take beyond the top card of a pile, right and down (0 for a card).
 pub fn deck_margin(n: &skemo_lang::Node) -> f64 {
+    // `nodes` (D-117): one icon and its badge, no cards behind
     n.deck
+        .filter(|_| !n.node)
         .map_or(0.0, |d| f64::from(d.layers().saturating_sub(1)) * DECK_STEP)
 }
 

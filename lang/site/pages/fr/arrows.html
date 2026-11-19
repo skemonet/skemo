@@ -64,6 +64,14 @@ card#queue File</code></pre>
   nomme tout le flux : elle se place sur la partie commune, juste avant la carte.</p>
 <p>Une ligne sans pointe (<code>.nohead</code>, <code>.link</code>, une pointe en forme de point) va jusqu’à la carte.</p>
 
+<h2>Tunnels <em>(préversion)</em></h2>
+<skemo name="tunnel"></skemo>
+<p><code>tunnel</code> relie deux cartes par un tube : un VPN entre deux passerelles, un lien entre deux sites. Il s’écrit comme
+  une flèche, dans l’une des deux cartes (<code>tunnel#vpn(gw-b) IPsec</code>), avec un id, des classes, une étiquette et des
+  marqueurs, mais sans pointe. Une flèche passe dedans quand elle le nomme, <code>to(db tunnel="vpn")</code> : elle entre par
+  l’extrémité proche, suit le tunnel sur sa propre voie et ressort par l’autre extrémité vers sa cible, d’un seul trait caché dans
+  les deux cartes. Le tube s’élargit d’une voie par flèche ; celles qui ne le nomment pas (ici la sonde de santé) passent ailleurs.</p>
+
 <h2>Flèches hors du placement <em>(préversion)</em></h2>
 <skemo name="constraint"></skemo>
 <p><code>constraint="false"</code> dessine et trace une flèche sans la laisser façonner le placement : sa cible n’est pas repoussée

@@ -96,7 +96,7 @@ pub(crate) fn glued_classes(raw: &str) -> (Vec<String>, &str) {
     }
     match rest.chars().next() {
         None => (out, ""),
-        Some(' ') => (out, &rest[1..]),
+        Some(' ' | '\t') => (out, &rest[1..]),
         // `.5 GB`, `.env-file:` … not classes after all
         Some(_) => (Vec::new(), raw),
     }

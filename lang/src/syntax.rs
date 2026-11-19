@@ -94,6 +94,12 @@ pub fn parse_tree(src: &str, diags: &mut Vec<Diagnostic>) -> Vec<Tag> {
             }
             skip_deeper_than = None;
         }
+        // a comment written at the root's indentation (an editor's `//` in column 0, the
+        // commented text keeping its own indentation after it) hides its own line only: as a
+        // block comment it would close the diagram and hide all that follows
+        if l.body.starts_with("//") && stack.first().is_some_and(|r| l.indent <= r.indent) {
+            continue;
+        }
         while stack.last().is_some_and(|t| t.indent >= l.indent) {
             close(&mut stack, &mut roots);
         }
@@ -306,7 +312,7 @@ fn parse_trailing_text(
     if rest.is_empty() {
         return;
     }
-    if let Some(t) = rest.strip_prefix(' ') {
+    if let Some(t) = rest.strip_prefix([' ', '\t']) {
         let trimmed = t.trim();
         if !trimmed.is_empty() {
             let s = i + 1 + (t.len() - t.trim_start().len());

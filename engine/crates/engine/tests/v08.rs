@@ -144,9 +144,20 @@ fn docked_elements_go_around_the_drawing() {
     );
 }
 
+/// The slide engine lays a docked element linked to the rest on its side of the drawing and
+/// draws its arrows (D-117); the graph engine leaves them out.
 #[test]
-fn an_arrow_into_a_docked_element_is_not_drawn() {
-    let d = build("card#a A\n  to(x)\nzone#z(at=\"s\") Z\n  card#x X\n");
+fn an_arrow_into_a_docked_element() {
+    let src = "card#a A\n  to(x)\nzone#z(at=\"s\") Z\n  card#x X\n";
+    let d = build(src);
+    assert!(d.routes.contains_key("a->x"), "slide draws it");
+    assert!(
+        d.boxes["z"].y > d.boxes["a"].y + d.boxes["a"].h,
+        "z south of a"
+    );
+    let d = build(
+        "diagram(layout=\"graph\")\n  card#a A\n    to(x)\n  zone#z(at=\"s\") Z\n    card#x X\n",
+    );
     assert!(d.model.edges.is_empty() && d.routes.is_empty());
 }
 

@@ -53,7 +53,16 @@ pub(super) fn edge(ctx: &mut Ctx, e: &skemo_lang::Edge) {
     };
     let (dots, hops) = (own_dots(d, e, &sharp), hops_of(d, &e.id, curved));
     let phase = crate::arrow::dash_phase(d, e, &full, &line);
-    edge_line(ctx, el.line, &line, &pr, (&sharp, &dots, &hops), phase);
+    let cuts = crate::arrow::tunnel_cuts(d, e);
+    edge_line(
+        ctx,
+        el.line,
+        &line,
+        &pr,
+        (&sharp, &dots, &hops),
+        phase,
+        &cuts,
+    );
     if pr.draw > 0.95 {
         pulse(ctx, &e.id, el.line, &pts, &sharp, &hops);
     }
@@ -229,6 +238,7 @@ fn edge_line(
     pr: &Presence,
     (sharp, dots, hops): (&[Pt], &[Pt], &[Pt]),
     phase: f64,
+    cuts: &[crate::layout::Box2],
 ) {
     let lc = ctx.d.scene.style(line_el);
     let stroke = lc.color_of("stroke").or_else(|| Some(lc.color()));
@@ -237,7 +247,8 @@ fn edge_line(
         .length("stroke-width")
         .or_else(|| lc.get("stroke-width")?.trim().parse::<f64>().ok())
         .filter(|w| w.is_finite() && *w >= 0.0)
-        .unwrap_or(1.0);
+        .unwrap_or(1.0)
+        + tube_extra(ctx.d, line_el);
     let mut extra = stroke_motion(ctx, line_el);
     // the dashes of a grouped arrow fall on those of the trunk it shares (D-093)
     let period: f64 = {
@@ -270,7 +281,8 @@ fn edge_line(
     // and arriving along the route's first and last segments
     let d = line_path(ctx.d, line_el, line, sharp, hops);
     // crossings: the line is cut there, as passing under the other (D-093)
-    if let Some((mask, attr)) = crate::arrow::gap_mask(&ctx.prefix, hops) {
+    // and hidden inside the cards it crosses through a tunnel (D-116)
+    if let Some((mask, attr)) = crate::arrow::gap_mask(&ctx.prefix, hops, cuts) {
         ctx.out.push_str(&mask);
         extra.push_str(&attr);
     }
@@ -354,4 +366,14 @@ fn curve_path(line: &[(f64, f64)]) -> String {
         n(q0.0),
         n(q0.1)
     )
+}
+
+/// A tunnel's tube widens by a lane for each arrow through it past the first (D-116).
+pub(crate) fn tube_extra(d: &Diagram, line_el: usize) -> f64 {
+    d.scene
+        .edges
+        .iter()
+        .find(|(_, el)| el.line == line_el)
+        .and_then(|(id, _)| d.tubes.get(id))
+        .map_or(0.0, |n| n.saturating_sub(1) as f64 * crate::tunnel::GAP)
 }

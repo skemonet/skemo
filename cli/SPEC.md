@@ -201,7 +201,7 @@ Tests: `tests/contract.rs` (`allowed_codes_are_left_out`).
 | C-NF-1 | **Single binary**, static if possible (musl on Linux). Targets: Linux x86_64/arm64, macOS arm64/x86_64, Windows x86_64; the same file names at every release (`skemo-<target>`), with `SHA256SUMS` |
 | C-NF-2 | Default theme and **fonts embedded** in the binary |
 | C-NF-3 | Size < 25 MB (indicative); start-up < 50 ms; rendering of the examples < 300 ms |
-| C-NF-4 | Automated releases: one binary per platform, the SHA-256 of each in the release's description (done: `.gitlab-ci.yml` and `tools/release.sh`; archives and `.sha256` files until `v0.1.0-rc.2`); installation by `cli/install.sh`, served at `https://skemo.net/install.sh` (`curl … | sh`, checksum verified; done) and by `cargo install` (to come, after publication) |
+| C-NF-4 | Automated releases: one binary per platform, the SHA-256 of each in the release's description (done: `.gitlab-ci.yml` and `tools/release.sh`; the Linux x86_64 binary is published first, the four others a few minutes later; archives and `.sha256` files until `v0.1.0-rc.2`); installation by `cli/install.sh`, served at `https://skemo.net/install.sh` (`curl … | sh`, checksum verified; done) and by `cargo install` (to come, after publication) |
 | C-NF-5 | `watch` mode only embeds a mini HTTP server (`tiny_http`) and polls the files every 300 ms (no `notify` dependency) |
 
 ## 4. Tests

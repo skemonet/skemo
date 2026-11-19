@@ -67,7 +67,49 @@ impl Rect {
 pub(crate) type BoxPx = Box2;
 
 /// The zone texts (title, description, tag) of each framed panel, given the frames, px.
-pub(crate) type Walls<'a> = dyn Fn(&[(usize, BoxPx)]) -> Vec<(usize, BoxPx)> + 'a;
+pub(crate) type Walls<'a> = dyn Fn(&[(usize, BoxPx)]) -> Vec<(usize, BoxPx)> + Sync + 'a;
+
+/// At most this many drawings tried at once (native builds; one at a time in WebAssembly).
+#[cfg(not(target_arch = "wasm32"))]
+const THREADS: usize = 4;
+
+/// `f` on each item, several at once where threads exist, the results in the items' order: the
+/// same results as one after the other.
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn par_map<T: Sync, R: Send>(items: &[T], f: &(dyn Fn(&T) -> R + Sync)) -> Vec<R> {
+    thread_local! {
+        /// Inside a thread of `par_map` already: no more threads (four at most in all).
+        static WORKER: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    }
+    let n = std::thread::available_parallelism()
+        .map_or(1, std::num::NonZero::get)
+        .min(THREADS)
+        .min(items.len());
+    if n <= 1 || WORKER.with(std::cell::Cell::get) {
+        return items.iter().map(f).collect();
+    }
+    let size = items.len().div_ceil(n);
+    std::thread::scope(|s| {
+        let handles: Vec<_> = items
+            .chunks(size)
+            .map(|chunk| {
+                s.spawn(move || {
+                    WORKER.with(|w| w.set(true));
+                    chunk.iter().map(f).collect::<Vec<R>>()
+                })
+            })
+            .collect();
+        handles
+            .into_iter()
+            .flat_map(|h| h.join().unwrap_or_else(|e| std::panic::resume_unwind(e)))
+            .collect()
+    })
+}
+
+#[cfg(target_arch = "wasm32")]
+pub(crate) fn par_map<T: Sync, R: Send>(items: &[T], f: &(dyn Fn(&T) -> R + Sync)) -> Vec<R> {
+    items.iter().map(f).collect()
+}
 
 thread_local! {
     /// The last diagram asked of the slide engine was drawn by it (not handed to the grid).
@@ -275,6 +317,8 @@ struct Drawing {
     ldropped: usize,
     crossings: usize,
     objective: f64,
+    /// The arrows as drawn on this lattice (which link two facing cards, H2.23).
+    arrows: Vec<Arrow>,
 }
 
 impl Drawing {
@@ -288,6 +332,7 @@ impl Drawing {
             ldropped: 0,
             crossings: 0,
             objective: 0.0,
+            arrows: Vec::new(),
         }
     }
 
@@ -305,7 +350,7 @@ impl Drawing {
             }
             if inp.pile[c] > 0.0 {
                 b.w = f64::from(inp.card_w) * STEP + inp.pile[c];
-                b.h = f64::from(inp.card_h) * STEP + inp.pile[c];
+                b.h = f64::from(self.l.card[c].h - 1) * STEP + inp.pile[c];
             }
             b
         };

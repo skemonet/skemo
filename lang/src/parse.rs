@@ -9,7 +9,7 @@ use crate::tr;
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
 
-const RESERVED: [&str; 19] = [
+const RESERVED: [&str; 23] = [
     "id",
     "class",
     "at",
@@ -29,6 +29,10 @@ const RESERVED: [&str; 19] = [
     "href",
     "wrap",
     "constraint",
+    "tunnel",
+    "head",
+    "dir",
+    "align",
 ];
 const SIDES: [&str; 4] = ["top", "bottom", "left", "right"];
 /// Compass points of a docked element (`at="s"`, FORMAT §3.2.9).
@@ -112,6 +116,9 @@ struct Ctx {
     id_spans: BTreeMap<String, Span>,
     /// Named joins (`join="http"`, D-050), checked at the end: (edge id, position of `join=`).
     joins: Vec<(String, Span)>,
+    /// Arrows through a tunnel (`tunnel="id"`, D-116), checked at the end: (index of the arrow,
+    /// position of `tunnel=`).
+    throughs: Vec<(usize, Span)>,
 }
 
 /// Analyse un fichier de diagramme. Ne panique jamais.
@@ -126,11 +133,13 @@ pub fn parse(src: &str) -> Document {
         targets: Vec::new(),
         id_spans: BTreeMap::new(),
         joins: Vec::new(),
+        throughs: Vec::new(),
     };
     for t in &tree {
         walk(&mut cx, t, None);
     }
     lonely_joins(&mut cx);
+    tunnels_through(&mut cx);
     docked_arrows(&mut cx);
     // cibles inconnues
     let ids: BTreeSet<String> = cx.model.nodes.iter().map(|n| n.id.clone()).collect();
@@ -369,7 +378,9 @@ fn walk(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
                 }
             }
         }
-        "card" | "cards" | "node" | "zone" | "zones" | "stack" => node(cx, t, parent),
+        "card" | "cards" | "node" | "nodes" | "zone" | "zones" | "stack" | "block" => {
+            node(cx, t, parent);
+        }
         "title" => cx.diags.push(Diagnostic::warning(
             "title-misplaced",
             t.name_span,
@@ -378,6 +389,24 @@ fn walk(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
                 "« title » s'écrit directement sous « diagram » : ignoré"
             ),
         )),
+        // a tunnel joins two cards (D-116), written in one of them like an arrow
+        "tunnel" => match parent.and_then(|p| cx.model.node(p)).map(|n| n.kind) {
+            Some(Kind::Card) => edges(cx, t, parent.unwrap_or_default()),
+            _ => cx.diags.push(
+                Diagnostic::error(
+                    "tunnel-outside-card",
+                    t.name_span,
+                    tr!(
+                        "`tunnel` must be written inside one of the two cards it joins",
+                        "« tunnel » doit être écrit dans l'une des deux cartes qu'il relie"
+                    ),
+                )
+                .with_help(tr!(
+                    "indent tunnel(...) under a card: tunnel#vpn(gw-b) IPsec",
+                    "indenter tunnel(...) sous une carte : tunnel#vpn(gw-b) IPsec"
+                )),
+            ),
+        },
         // an arrow leaves the card or the zone it is written in (a zone's: from its frame)
         "to" => match parent.and_then(|p| cx.model.node(p)).map(|n| n.kind) {
             Some(Kind::Card | Kind::Zone) => edges(cx, t, parent.unwrap_or_default()),
@@ -414,15 +443,15 @@ fn walk(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
                 ),
             )
             .with_help(tr!(
-                "known tags: diagram, title, card, cards, node, zone, zones, stack, to; a line starts with `|`",
-                "balises reconnues : diagram, title, card, cards, node, zone, zones, stack, to ; une ligne commence par « | »"
+                "known tags: diagram, title, card, cards, node, nodes, zone, zones, stack, block, to, tunnel; a line starts with `|`",
+                "balises reconnues : diagram, title, card, cards, node, nodes, zone, zones, stack, block, to, tunnel ; une ligne commence par « | »"
             )),
         ),
     }
 }
 
 fn node(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
-    let kind = if matches!(t.name.as_str(), "card" | "cards" | "node") {
+    let kind = if matches!(t.name.as_str(), "card" | "cards" | "node" | "nodes") {
         Kind::Card
     } else {
         Kind::Zone
@@ -458,16 +487,9 @@ fn node(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
     };
     let (mut title, anim, text_span, markers) = text_of(cx, t);
     let stack = t.name == "stack";
-    if stack && !title.is_empty() {
-        cx.diags.push(Diagnostic::warning(
-            "stack-text",
-            text_span.unwrap_or(t.name_span),
-            tr!(
-                "a `stack` has no title: `{title}` is ignored",
-                "un « stack » n'a pas de titre : « {title} » est ignoré"
-            ),
-        ));
-        title.clear();
+    let block = t.name == "block";
+    if stack || block {
+        untitled(cx, t, &mut title, text_span);
     }
     let anim = legacy_anim(cx, t, anim, false);
     let (at, dock) = at_attr(cx, t, parent);
@@ -476,6 +498,7 @@ fn node(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
     let href = attr(t, "href").and_then(|a| parse_href(cx, a));
     let (tag, tag_anim, label) = chip_of(cx, t);
     let wrap = attr(t, "wrap").and_then(|a| parse_wrap(cx, a, kind));
+    let (head, dir, align) = layout_attrs(cx, t, kind);
     let deck = deck_of(cx, t);
     warn_part_classes(cx, t);
     cx.map
@@ -507,7 +530,11 @@ fn node(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
         wrap,
         stack,
         deck,
-        node: t.name == "node",
+        node: matches!(t.name.as_str(), "node" | "nodes"),
+        head,
+        block,
+        dir,
+        align,
     });
     for c in &t.children {
         if matches!(c.name.as_str(), "li" | "|") && !stack {
@@ -519,9 +546,39 @@ fn node(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
     check_tables(cx, idx, &id);
 }
 
+/// A stack or a block has no title: warning `stack-text`, the title dropped.
+fn untitled(cx: &mut Ctx, t: &Tag, title: &mut String, text_span: Option<Span>) {
+    if title.is_empty() {
+        return;
+    }
+    cx.diags.push(Diagnostic::warning(
+        "stack-text",
+        text_span.unwrap_or(t.name_span),
+        tr!(
+            "a `{}` has no title: `{title}` is ignored",
+            "un « {} » n'a pas de titre : « {title} » est ignoré",
+            t.name
+        ),
+    ));
+    title.clear();
+}
+
+/// A group's own layout (D-117): `head=`, `dir=`, `align=`.
+fn layout_attrs(
+    cx: &mut Ctx,
+    t: &Tag,
+    kind: Kind,
+) -> (Option<String>, Option<String>, Option<String>) {
+    (
+        attr(t, "head").and_then(|a| parse_head(cx, a, kind)),
+        attr(t, "dir").and_then(|a| parse_dir(cx, a, kind)),
+        attr(t, "align").and_then(|a| parse_align(cx, a, kind)),
+    )
+}
+
 /// `tag=` (with its markers) and `label=`; a `node` has neither (D-087): warning, ignored.
 fn chip_of(cx: &mut Ctx, t: &Tag) -> (Option<String>, Option<Anim>, Option<String>) {
-    if t.name != "node" {
+    if !matches!(t.name.as_str(), "node" | "nodes") {
         let (tag, anim) = tag_of(cx, t);
         return (tag, anim, value(t, "label").map(|v| v.trim().to_string()));
     }
@@ -595,8 +652,25 @@ fn read_line(cx: &mut Ctx, c: &Tag) -> (Li, Located) {
                     .push((k.clone(), Span::new(at + 1, at + 1 + k.len())));
                 at += 1 + k.len();
             }
+            // the space after the bar (or the classes) only separates: the others are text,
+            // as in Pug (`|   indented` keeps two), except on a pill
+            li.text = if cls.iter().any(|k| k == "pill") {
+                rest.trim().to_string()
+            } else {
+                // `glued_classes` has taken the space after the classes
+                let t = rest.trim_end();
+                let t = if cls.is_empty() {
+                    t.strip_prefix([' ', '\t']).unwrap_or(t)
+                } else {
+                    t
+                };
+                if t.trim_start().is_empty() {
+                    String::new()
+                } else {
+                    t.to_string()
+                }
+            };
             li.classes = cls;
-            li.text = rest.trim().to_string();
         }
     }
     // the shown text starts after the classes and the space that ends them
@@ -724,6 +798,30 @@ fn diagram_options(cx: &mut Ctx, t: &Tag) {
 }
 
 /// `at="x,y"` (pinned) or `at="s"` (docked, top-level only); the compass point is returned apart.
+/// A band named by its sides, as `side=` names them: `top` n, `bottom` s, `left` w, `right` e, and
+/// two of them for a corner (`top-left` nw, `bottom-right` se, in either order); a compass point as
+/// it is.
+fn compass(p: &str) -> String {
+    let one = |w: &str| match w {
+        "top" => Some('n'),
+        "bottom" => Some('s'),
+        "left" => Some('w'),
+        "right" => Some('e'),
+        _ => None,
+    };
+    let mut ns = None;
+    let mut ew = None;
+    for w in p.split(['-', ' ']).filter(|w| !w.is_empty()) {
+        match one(w) {
+            Some(c @ ('n' | 's')) if ns.is_none() => ns = Some(c),
+            Some(c @ ('e' | 'w')) if ew.is_none() => ew = Some(c),
+            _ => return p.to_string(),
+        }
+    }
+    let out: String = ns.into_iter().chain(ew).collect();
+    if out.is_empty() { p.to_string() } else { out }
+}
+
 fn at_attr(cx: &mut Ctx, t: &Tag, parent: Option<&str>) -> (Option<[f64; 2]>, Option<String>) {
     let Some(a) = attr(t, "at") else {
         return (None, None);
@@ -732,16 +830,19 @@ fn at_attr(cx: &mut Ctx, t: &Tag, parent: Option<&str>) -> (Option<[f64; 2]>, Op
     if v.chars().any(|c| c.is_ascii_digit()) {
         return (point_attr(cx, t, "at", &tr!("`x,y`", "« x,y »")), None);
     }
-    let p = v.trim().to_ascii_lowercase();
+    let p = compass(&v.trim().to_ascii_lowercase());
     let msg = if !COMPASS.contains(&p.as_str()) {
         tr!(
-            "`at=\"{v}\"`: coordinates `x,y` or a compass point (n s e w ne nw se sw) expected; ignored",
-            "« at=\"{v}\" » : coordonnées « x,y » ou point cardinal (n s e w ne nw se sw) attendu ; ignoré"
+            "`at=\"{v}\"`: coordinates `x,y`, a compass point (n s e w ne nw se sw) or a side (top bottom left right, top-left…) expected; ignored",
+            "« at=\"{v}\" » : coordonnées « x,y », point cardinal (n s e w ne nw se sw) ou côté (top bottom left right, top-left…) attendu ; ignoré"
         )
-    } else if parent.is_some() {
+    } else if parent
+        .and_then(|p| cx.model.node(p))
+        .is_some_and(|p| p.kind == Kind::Card)
+    {
         tr!(
-            "`at=\"{p}\"` docks only a top-level element: ignored",
-            "« at=\"{p}\" » n'ancre qu'un élément de premier niveau : ignoré"
+            "`at=\"{p}\"` docks an element in the drawing, a zone or a block, not in a card: ignored",
+            "« at=\"{p}\" » ancre un élément dans le dessin, une zone ou un block, pas dans une carte : ignoré"
         )
     } else {
         return (None, Some(p));
@@ -1044,21 +1145,118 @@ fn parse_via(cx: &mut Ctx, a: &Attr) -> Option<Vec<[f64; 2]>> {
 }
 
 /// `side="start-end"`: imposed sides; ignored with a warning if invalid.
+/// A `side=` value as the engine reads it (`top-bottom`, `-right`, `left`), or `None` when it names
+/// no side: a compass point names a side too, as `at=` names a band (n top, s bottom, e right,
+/// w left). Also read from the `--side` of an arrow's class (D-117).
+pub fn side_value(v: &str) -> Option<String> {
+    let side = |p: &str| -> Option<&'static str> {
+        match p {
+            "" => Some(""),
+            "n" => Some("top"),
+            "s" => Some("bottom"),
+            "e" => Some("right"),
+            "w" => Some("left"),
+            _ => SIDES.iter().find(|s| **s == p).copied(),
+        }
+    };
+    match v.trim().split_once('-') {
+        Some((s, e)) => side(s).zip(side(e)).map(|(s, e)| format!("{s}-{e}")),
+        None => side(v.trim()).filter(|s| !s.is_empty()).map(str::to_string),
+    }
+}
+
 fn parse_side(cx: &mut Ctx, a: &Attr) -> Option<String> {
     let v = a.value.clone().unwrap_or_default();
-    let ok = match v.split_once('-') {
-        Some((s, e)) => [s, e].iter().all(|p| p.is_empty() || SIDES.contains(p)),
-        None => SIDES.contains(&v.as_str()),
-    };
-    if ok {
+    if let Some(v) = side_value(&v) {
         return Some(v);
     }
     cx.diags.push(Diagnostic::warning(
         "bad-side",
         a.span,
         tr!(
-            "`side=\"{v}\"`: expected sides are top, bottom, left, right (e.g. \"left-top\", \"-top\"); ignored",
-            "« side=\"{v}\" » : côtés attendus top, bottom, left, right (ex. \"left-top\", \"-top\") ; ignoré"
+            "`side=\"{v}\"`: expected sides are top, bottom, left, right or n, s, w, e (e.g. \"left-top\", \"-top\", \"n-s\"); ignored",
+            "« side=\"{v}\" » : côtés attendus top, bottom, left, right ou n, s, w, e (ex. \"left-top\", \"-top\", \"n-s\") ; ignoré"
+        ),
+    ));
+    None
+}
+
+/// `head="left"` (or `w`) on a zone (D-117): its title and description beside what it holds;
+/// `top` (or `n`), the default, above it.
+fn parse_head(cx: &mut Ctx, a: &Attr, kind: Kind) -> Option<String> {
+    let v = a.value.clone().unwrap_or_default();
+    let msg = if kind != Kind::Zone {
+        tr!(
+            "`head` is read on a zone only: ignored",
+            "« head » ne se lit que sur une zone : ignoré"
+        )
+    } else {
+        match v.trim() {
+            "left" | "w" => return Some("left".to_string()),
+            "top" | "n" => return None,
+            _ => tr!(
+                "`head=\"{v}\"`: `left` (the title beside what the zone holds) or `top` expected; ignored",
+                "« head=\"{v}\" » : « left » (le titre à côté du contenu de la zone) ou « top » attendu ; ignoré"
+            ),
+        }
+    };
+    cx.diags.push(Diagnostic::warning("bad-head", a.span, msg));
+    None
+}
+
+/// `dir=` on a zone, a stack or a block (D-117): `right`, `down`, `left`, `up`; also `horizontal`
+/// (right), `vertical` (down) and the compass points.
+pub fn dir_value(v: &str) -> Option<&'static str> {
+    match v.trim() {
+        "right" | "e" | "horizontal" | "row" => Some("right"),
+        "down" | "s" | "vertical" | "column" => Some("down"),
+        "left" | "w" => Some("left"),
+        "up" | "n" => Some("up"),
+        _ => None,
+    }
+}
+
+/// `align=` on a zone, a stack or a block (D-117): `start`, `center`, `end`; also the sides.
+pub fn align_value(v: &str) -> Option<&'static str> {
+    match v.trim() {
+        "start" | "top" | "left" | "n" | "w" => Some("start"),
+        "center" | "centre" | "middle" => Some("center"),
+        "end" | "bottom" | "right" | "s" | "e" => Some("end"),
+        _ => None,
+    }
+}
+
+fn parse_dir(cx: &mut Ctx, a: &Attr, kind: Kind) -> Option<String> {
+    let v = a.value.clone().unwrap_or_default();
+    if kind == Kind::Zone
+        && let Some(d) = dir_value(&v)
+    {
+        return Some(d.to_string());
+    }
+    cx.diags.push(Diagnostic::warning(
+        "bad-dir",
+        a.span,
+        tr!(
+            "`dir=\"{v}\"` on a zone, a stack or a block: right, down, left, up (or horizontal, vertical) expected; ignored",
+            "« dir=\"{v}\" » sur une zone, un stack ou un block : right, down, left, up (ou horizontal, vertical) attendu ; ignoré"
+        ),
+    ));
+    None
+}
+
+fn parse_align(cx: &mut Ctx, a: &Attr, kind: Kind) -> Option<String> {
+    let v = a.value.clone().unwrap_or_default();
+    if kind == Kind::Zone
+        && let Some(d) = align_value(&v)
+    {
+        return Some(d.to_string());
+    }
+    cx.diags.push(Diagnostic::warning(
+        "bad-align",
+        a.span,
+        tr!(
+            "`align=\"{v}\"` on a zone, a stack or a block: start, center or end expected; ignored",
+            "« align=\"{v}\" » sur une zone, un stack ou un block : start, center ou end attendu ; ignoré"
         ),
     ));
     None
@@ -1106,8 +1304,8 @@ fn deck_of(cx: &mut Ctx, t: &Tag) -> Option<Deck> {
             warn(
                 cx,
                 tr!(
-                    "`count` is read on `cards` and `zones` only (a pile); ignored",
-                    "« count » ne se lit que sur « cards » et « zones » (une pile) ; ignoré"
+                    "`count` is read on `cards`, `zones` and `nodes` only (several of one thing); ignored",
+                    "« count » ne se lit que sur « cards », « zones » et « nodes » (plusieurs d'une même chose) ; ignoré"
                 ),
             );
             return None;
@@ -1129,9 +1327,10 @@ fn deck_of(cx: &mut Ctx, t: &Tag) -> Option<Deck> {
     piled(t).then_some(Deck { count })
 }
 
-/// `cards` and `zones`: a card or a zone drawn as a pile (D-062, D-114).
+/// `cards` and `zones`: a card or a zone drawn as a pile (D-062, D-114); `nodes`: a node standing
+/// for several, drawn once with its `×N` badge (D-117).
 fn piled(t: &Tag) -> bool {
-    matches!(t.name.as_str(), "cards" | "zones")
+    matches!(t.name.as_str(), "cards" | "zones" | "nodes")
 }
 
 /// `join="trunk"` : hyperarête (one source, a shared trunk out). Any other name (D-050): the
@@ -1151,6 +1350,105 @@ fn parse_join(cx: &mut Ctx, a: &Attr) -> Option<String> {
         ),
     ));
     None
+}
+
+/// `tunnel="id"` on a `to` (D-116): the tunnel the arrow passes through, checked at the end
+/// (`tunnels_through`). Written alone, or on a `tunnel`, it is a warning and ignored.
+fn through_of(cx: &mut Ctx, t: &Tag, is_tunnel: bool) -> (Option<String>, Option<Span>) {
+    let Some(a) = attr(t, "tunnel") else {
+        return (None, None);
+    };
+    let name = a.value.as_deref().map(str::trim).unwrap_or_default();
+    if is_tunnel || name.is_empty() {
+        let d = Diagnostic::warning(
+            "bad-tunnel",
+            a.span,
+            if is_tunnel {
+                tr!(
+                    "`tunnel=` is written on the arrows that pass through a tunnel, not on the tunnel: ignored",
+                    "« tunnel= » s'écrit sur les flèches qui passent par un tunnel, pas sur le tunnel : ignoré"
+                )
+            } else {
+                tr!(
+                    "`tunnel` names the tunnel the arrow passes through: ignored",
+                    "« tunnel » nomme le tunnel par lequel passe la flèche : ignoré"
+                )
+            },
+        );
+        cx.diags.push(if is_tunnel {
+            d
+        } else {
+            d.with_help(tr!(
+                "give the tunnel an id and name it on the arrow: tunnel#vpn(gw-b), then to(db tunnel=\"vpn\")",
+                "donner un id au tunnel et le nommer sur la flèche : tunnel#vpn(gw-b), puis to(db tunnel=\"vpn\")"
+            ))
+        });
+        return (None, None);
+    }
+    (Some(name.to_string()), Some(a.span))
+}
+
+/// An arrow through a tunnel (D-116) names one of the diagram's tunnels; otherwise warning
+/// `bad-tunnel`, and the arrow is drawn as written.
+fn tunnels_through(cx: &mut Ctx) {
+    // a tunnel joins two cards: one written to a zone is an arrow
+    for i in 0..cx.model.edges.len() {
+        let e = &cx.model.edges[i];
+        if !e.tunnel || cx.model.node(&e.to).is_none_or(|n| n.kind == Kind::Card) {
+            continue;
+        }
+        let (id, to) = (e.id.clone(), e.to.clone());
+        cx.model.edges[i].tunnel = false;
+        let span = cx.map.edges.get(&id).map_or(Span::new(0, 0), |l| l.name);
+        cx.diags.push(Diagnostic::warning(
+            "bad-tunnel",
+            span,
+            tr!(
+                "a tunnel joins two cards: `{to}` is a zone, drawn as an arrow",
+                "un tunnel relie deux cartes : « {to} » est une zone, tracé comme une flèche"
+            ),
+        ));
+    }
+    let throughs = std::mem::take(&mut cx.throughs);
+    for (i, span) in throughs {
+        let Some(name) = cx.model.edges[i].through.clone() else {
+            continue;
+        };
+        let tunnels: Vec<&str> = cx
+            .model
+            .edges
+            .iter()
+            .filter(|e| e.tunnel)
+            .map(|e| e.id.as_str())
+            .collect();
+        if tunnels.contains(&name.as_str()) {
+            continue;
+        }
+        let help = if tunnels.is_empty() {
+            tr!(
+                "write the tunnel in one of its two cards: tunnel#{name}(gw-b)",
+                "écrire le tunnel dans l'une de ses deux cartes : tunnel#{name}(gw-b)"
+            )
+        } else {
+            tr!(
+                "tunnels of the diagram: {}",
+                "tunnels du schéma : {}",
+                tunnels.join(", ")
+            )
+        };
+        cx.model.edges[i].through = None;
+        cx.diags.push(
+            Diagnostic::warning(
+                "bad-tunnel",
+                span,
+                tr!(
+                    "no tunnel `{name}`: the arrow is drawn as written",
+                    "aucun tunnel « {name} » : la flèche est tracée telle qu'écrite"
+                ),
+            )
+            .with_help(help),
+        );
+    }
 }
 
 /// A named join that no other arrow to the same card carries joins nothing: warning `bad-join`,
@@ -1231,6 +1529,8 @@ fn edges(cx: &mut Ctx, t: &Tag, from: &str) {
     let (step, fx) = compat_step(&anim);
     let cls = classes(t);
     warn_part_classes(cx, t);
+    let is_tunnel = t.name == "tunnel";
+    let (through, through_span) = through_of(cx, t, is_tunnel);
     let targets: Vec<&Attr> = t
         .attrs
         .iter()
@@ -1285,15 +1585,21 @@ fn edges(cx: &mut Ctx, t: &Tag, from: &str) {
             step: step.clone(),
             fx: fx.clone(),
             anim: anim.clone(),
+            tunnel: is_tunnel,
+            through: through.clone(),
         });
+        if let Some(sp) = through_span {
+            cx.throughs.push((cx.model.edges.len() - 1, sp));
+        }
     }
     for c in &t.children {
         cx.diags.push(Diagnostic::warning(
             "ignored-child",
             c.name_span,
             tr!(
-                "content indented under `to`: ignored",
-                "contenu indenté sous « to » : ignoré"
+                "content indented under `{}`: ignored",
+                "contenu indenté sous « {} » : ignoré",
+                t.name
             ),
         ));
     }

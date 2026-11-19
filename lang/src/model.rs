@@ -156,6 +156,23 @@ pub struct Node {
     /// the looks do not apply to it. Absent from the JSON when false.
     #[serde(default, skip_serializing_if = "is_no")]
     pub node: bool,
+    /// `head="left"` on a zone (D-117): its title and description in a column left of what it
+    /// holds, instead of a band above it. Absent from the JSON when the band is above.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub head: Option<String>,
+    /// `block` (D-117): a group drawn as nothing, no frame nor title, that the other lines go
+    /// round; it lays out what it holds (`dir`, `align`, `at=` inside it). Absent from the JSON
+    /// when false.
+    #[serde(default, skip_serializing_if = "is_no")]
+    pub block: bool,
+    /// `dir="right|down|left|up"` on a zone, a stack or a block (D-117): its children one after the
+    /// other that way, in writing order. Absent from the JSON when not written.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dir: Option<String>,
+    /// `align="start|center|end"` on a zone, a stack or a block (D-117): where its children stand
+    /// across its `dir` when they are narrower than it. Absent from the JSON when not written.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub align: Option<String>,
 }
 
 /// A pile (`cards`, `zones`): how many instances it stands for, if known.
@@ -219,6 +236,14 @@ pub struct Edge {
     pub step: Option<Number>,
     pub fx: Option<String>,
     pub anim: Option<Anim>,
+    /// Written `tunnel(…)` (D-116): a tunnel between two cards, which the arrows marked
+    /// `tunnel="id"` pass through. Absent from the JSON when false.
+    #[serde(default, skip_serializing_if = "is_no")]
+    pub tunnel: bool,
+    /// `tunnel="id"` on a `to` (D-116): the id of the tunnel this arrow passes through, checked
+    /// (a tunnel of the diagram). Absent from the JSON when not written.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub through: Option<String>,
 }
 
 fn yes() -> bool {
