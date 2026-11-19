@@ -17,7 +17,7 @@ skemo-router.workspace = true
 org-eclipse-elk-graph-json.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-resvg = { version = "0.49", default-features = false, features = ["text", "raster-images"], optional = true }
+resvg = { version = "0.50", default-features = false, features = ["text", "raster-images"], optional = true }
 # Animated GIF: NeuQuant quantisation (color_quant, MIT), deterministic; not imagequant (GPL-3)
 gif = { version = "0.14", optional = true }
 # Animated PNG (APNG): already pulled in by tiny-skia (resvg)
