@@ -91,6 +91,12 @@ impl Session {
             m.at = Some([x, y]);
         }
         self.moved.insert(id.to_string(), (x, y));
+        // the slide engine: the drawing the file will give once `at=` is written, computed as
+        // it will be (the slide without its pins is kept, only the routes are made again)
+        if d.slide {
+            return self.reload();
+        }
+        let d = &mut self.diagram;
         let (pad, head) = d.scene.zone_pad_head();
         // a docked element is a drawing of its own set around this one (`dock`): it stays where
         // it is, unless the card dragged is its own
@@ -165,6 +171,9 @@ impl Session {
             edge.to_string(),
             points.iter().map(|(x, y)| (x.round(), y.round())).collect(),
         );
+        if self.diagram.slide {
+            return self.reload();
+        }
         Ok(self.reroute())
     }
 
@@ -177,6 +186,9 @@ impl Session {
             Some(side.to_string())
         };
         self.sides.insert(edge.to_string(), side.to_string());
+        if self.diagram.slide {
+            return self.reload();
+        }
         Ok(self.reroute())
     }
 
@@ -189,9 +201,8 @@ impl Session {
             .ok_or_else(|| tr!("unknown arrow `{id}`", "flèche « {id} » inconnue"))
     }
 
-    /// Writes the positions of the moved cards into the source (`at="x,y"`, integers) and computes the
-    /// diagram again from that source. Returns the new source.
-    pub fn commit(&mut self) -> Result<String, String> {
+    /// The source with the moves, waypoints and sides of the session written in.
+    fn edited(&self) -> Result<String, String> {
         let mut src = self.source.clone();
         for (id, (x, y)) in &self.moved {
             src = skemo_lang::edit::move_card(&src, id, *x, *y).map_err(|e| e.to_string())?;
@@ -202,6 +213,28 @@ impl Session {
         for (id, v) in &self.sides {
             src = skemo_lang::edit::set_side(&src, id, v).map_err(|e| e.to_string())?;
         }
+        Ok(src)
+    }
+
+    /// The diagram computed again from the edited source; returns the arrows whose drawing
+    /// changed.
+    fn reload(&mut self) -> Result<Vec<String>, String> {
+        let src = self.edited()?;
+        let (fresh, _) = from_source(&src, &self.opts).map_err(|e| e.to_string())?;
+        let ids = fresh
+            .routes
+            .iter()
+            .filter(|(id, p)| self.diagram.routes.get(*id) != Some(*p))
+            .map(|(id, _)| id.clone())
+            .collect();
+        self.diagram = fresh;
+        Ok(ids)
+    }
+
+    /// Writes the positions of the moved cards into the source (`at="x,y"`, integers) and computes the
+    /// diagram again from that source. Returns the new source.
+    pub fn commit(&mut self) -> Result<String, String> {
+        let src = self.edited()?;
         let fresh = Session::new(&src, self.opts.clone()).map_err(|e| e.to_string())?;
         *self = fresh;
         Ok(self.source.clone())

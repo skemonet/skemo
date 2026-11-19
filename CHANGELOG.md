@@ -5,6 +5,55 @@ and the project uses [Semantic Versioning](https://semver.org/) (pre-1.0: minor 
 
 ## [Unreleased]
 
+## [0.1.0-rc.10] — 2026-11-19
+
+The slide engine reads what ELK read: zones inside zones, `stack`, `.wide`, `.bare`, pinned cards,
+`via=`, `side=`, empty zones, notes, `join=`, a written `dir`, `wrap`, `zones="fit"`, zones placed
+by hand, arrows to zones and columns. Only an invisible card or more than 120 arrows still send a
+diagram to ELK. Also: `zones`, a zone drawn as a pile of frames; arrows from a zone; skemo's own
+infrastructure icons (`skemo-*`); Lucide 1.73.
+
+- **`zones`** (D-114): a zone drawn as a pile of frames, for several instances of one group (the
+  clusters of a fleet); what it holds is drawn once, in the frame on top; `count="N"` adds the
+  `×N` badge, as on `cards`. The slide engine keeps the frames behind clear of the rest.
+- **Arrows from a zone**: `to(…)` written in a zone leaves its frame, to a card or a zone (one
+  link between two sites rather than one per card); drawn by the slide engine.
+- **Icons**: 36 icons of skemo's own for infrastructure, `skemo-vm`, `skemo-hypervisor`,
+  `skemo-rack`, `skemo-load-balancer`, `skemo-pod`… (D-115), drawn like Lucide's; Lucide 1.73.0
+  (2,055 icons, 1,866 before: `graph-ring`…); the names Lucide changed (`triangle-alert` is
+  `triangle-exclamation-point`) still work.
+- **Slide engine, stack and wide layers**: a stack's layer and a wide zone's row share their width
+  evenly, each card in the middle of its share (D-092); a card alone in its layer stands over the
+  card it links to when it can, else in the middle.
+- **Slide engine, arrows to zones and columns**: an arrow may leave or enter a zone (or a stack, a
+  bare zone): its line ends on the frame, from outside; the members of a column (`.col-<name>`, a
+  card or a zone) share an axis across `dir`, the tiling and the cells chosen for it.
+- **Slide engine, `wrap`, `zones="fit"` and zones placed by hand**: a `wrap="N"` zone lays its
+  children in writing order, N a row (a column with `dir` right or left); `zones="fit"` fits each
+  frame to its cards; a zone with `at=` (and `size=`) stands where written with what it holds, at
+  the size written, its arrows routed again. Two blocks of one zone keep the zone's own gap.
+- **Slide engine, notes, `join` and `dir`**: a note leans to the place beside its card (P16, a
+  preference: it gives way to the lines' rules) and stays out of the writing order; arrows joined
+  by `join=` share their trunk (out of one card for `trunk`, into one for a name); a written `dir`
+  lays the flow that way, an arrow set aside across it or back against it paying (without `dir`,
+  down or right as before). A frame takes the padding of its level, so that frames of one level
+  line up.
+- **Slide engine, written ways and empty zones**: `via=` (the route runs through the waypoints in
+  order, a waypoint off the lattice taken to its nearest free node) and `side=` (the sides an arrow
+  leaves and enters by) are kept, in the editing session too; an empty zone keeps a frame.
+- **Slide engine, zones inside zones**: a zone holds cards and zones at any depth; each level is
+  tiled like the slide, a gutter holds a padding for each frame it crosses and a title for each
+  frame opening below it. Such diagrams no longer go to ELK.
+- **Slide engine, `stack`, `.wide` and `.bare`**: a stack lays its children one after the other in
+  writing order along `dir`, a card alone in its layer in the middle; a `.wide` card is a bar across
+  its group that arrows reach straight; a `.wide` zone is a row of its own, its cards on one row; a
+  `.bare` zone groups without a frame. Columns (`.col-<name>`) still go to ELK.
+- **Slide engine, pinned cards** (D-031): the slide is drawn without its pins; a pin where the
+  slide put the card changes nothing; a card pinned elsewhere stands there, the zones holding it
+  grow round it, the arrows are routed again, and a zone grown over a card not its own is
+  reported (`overlap`). The editing session's drag preview is the drawing the file gives once
+  `at=` is written.
+
 ## [0.1.0-rc.9] — 2026-11-18
 
 The slide engine becomes the default. `node` draws a thing by its icon; in the slide engine its
@@ -300,7 +349,8 @@ The first public version of skemo, as one repository.
   `icons`, `licences`; messages in the system language; release binaries for Linux, macOS and Windows.
 - **Agent skill**: `cli/skill/skemo/`, for AI agents that write diagrams.
 
-[Unreleased]: https://github.com/skemonet/skemo/compare/v0.1.0-rc.9...HEAD
+[Unreleased]: https://github.com/skemonet/skemo/compare/v0.1.0-rc.10...HEAD
+[0.1.0-rc.10]: https://github.com/skemonet/skemo/compare/v0.1.0-rc.9...v0.1.0-rc.10
 [0.1.0-rc.9]: https://github.com/skemonet/skemo/compare/v0.1.0-rc.8...v0.1.0-rc.9
 [0.1.0-rc.8]: https://github.com/skemonet/skemo/compare/v0.1.0-rc.7...v0.1.0-rc.8
 [0.1.0-rc.7]: https://github.com/skemonet/skemo/compare/v0.1.0-rc.6...v0.1.0-rc.7

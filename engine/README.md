@@ -104,5 +104,5 @@ with `tests/golden.txt`: a refactoring must change nothing; after an intended ch
 Requirements: `SPEC.md`. Depends on: [`skemo-lang`](https://github.com/skemonet/skemo/tree/main/lang),
 [`skemo-router`](https://github.com/skemonet/skemo/tree/main/router), `elk-rs` (EPL-2.0). License: MIT OR Apache-2.0
 (`LICENSE-MIT` and `LICENSE-APACHE` at the root of the repository); the embedded fonts are under the SIL OFL 1.1; the built-in icons are
-[Lucide](https://lucide.dev) (ISC, `crates/engine/assets/icons/LICENSE-lucide.txt`; regenerate with
-`tools/gen-icons.py`); the `elk-rs` notice (EPL-2.0) accompanies distributions.
+[Lucide](https://lucide.dev) (ISC, `crates/engine/assets/icons/LICENSE-lucide.txt`), and skemo's own
+`skemo-*` icons (`crates/engine/src/icons/skemo.rs`, under the repository's licence); the `elk-rs` notice (EPL-2.0) accompanies distributions.

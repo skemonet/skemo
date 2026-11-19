@@ -148,8 +148,8 @@ pub struct Node {
     /// order along `dir`. Absent from the JSON when false.
     #[serde(default, skip_serializing_if = "is_no")]
     pub stack: bool,
-    /// `cards`: a card drawn as a pile of cards (several instances of one thing); `count`, when
-    /// written, is shown as a `×N` badge. Absent from the JSON for a plain card.
+    /// `cards` or `zones`: a card or a zone drawn as a pile (several instances of one thing);
+    /// `count`, when written, is shown as a `×N` badge. Absent from the JSON otherwise.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub deck: Option<Deck>,
     /// `node` (D-087): a card drawn as its icon, with its name and lines beside it and no frame;
@@ -158,7 +158,7 @@ pub struct Node {
     pub node: bool,
 }
 
-/// A pile of cards (`cards`): how many instances it stands for, if known.
+/// A pile (`cards`, `zones`): how many instances it stands for, if known.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct Deck {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -166,7 +166,7 @@ pub struct Deck {
 }
 
 impl Deck {
-    /// Cards drawn: the count, at most 3; 3 when the count is not written.
+    /// Cards (frames) drawn: the count, at most 3; 3 when the count is not written.
     pub fn layers(&self) -> u32 {
         self.count.map_or(3, |n| n.clamp(1, 3))
     }

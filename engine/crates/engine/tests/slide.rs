@@ -131,21 +131,222 @@ fn nothing_hidden() {
 
 #[test]
 fn what_it_does_not_read_goes_to_the_grid_engine() {
-    // a nested zone: drawn by the grid engine, still drawn
+    // an invisible card (a bare one without a title): drawn by the grid engine, still drawn
     let d = slide(
         "diagram(layout=\"slide\")
   zone#a Alpha
-    zone#a1 Inner
-      card#x X
-        to(y)
+    card#x X
+      to(y)
     card#y Y
+    card#z.bare
 ",
     );
     assert!(d.routes.contains_key(&d.model.edges[0].id));
+    assert_eq!(d.layout_json()["layout"]["engine"], "grid");
+}
+
+#[test]
+fn zones_inside_zones_are_framed_one_inside_the_other() {
+    let d = slide(
+        "diagram(layout=\"slide\")
+  zone#hub Hub
+    zone#g Global
+      card#mc MC
+        to(set)
+      card#set Set
+    zone#c Office
+      card#w Work
+        to(mc)
+      card#x X
+    card#own Own
+      to(w)
+  card#out Outside
+    to(own)
+",
+    );
+    assert_eq!(d.layout_json()["layout"]["engine"], "slide");
+    let inside = |a: &str, b: &str| {
+        let (a, b) = (d.boxes[a], d.boxes[b]);
+        a.x > b.x && a.right() < b.right() && a.y > b.y && a.bottom() < b.bottom()
+    };
+    for (card, zone) in [
+        ("mc", "g"),
+        ("set", "g"),
+        ("w", "c"),
+        ("x", "c"),
+        ("own", "hub"),
+    ] {
+        assert!(inside(card, zone), "{card} out of {zone}");
+    }
+    assert!(inside("g", "hub") && inside("c", "hub"));
+    assert!(!inside("out", "hub"));
+    // the two inner zones apart
+    let (g, c) = (d.boxes["g"], d.boxes["c"]);
+    assert!(g.right() < c.x || c.right() < g.x || g.bottom() < c.y || c.bottom() < g.y);
+    let defects = quality::defects(&d);
+    for p in [
+        "zone-overlap",
+        "card-outside-zone",
+        "card-overlap",
+        "through-card",
+    ] {
+        assert!(defects[p].is_empty(), "{p}: {:?}", defects[p]);
+    }
 }
 
 #[test]
 fn the_layout_says_which_engine_drew_it() {
     let d = slide(MAP);
     assert_eq!(d.layout_json()["layout"]["engine"], "slide");
+}
+
+/// Does the route `r` pass through point `p` (on a vertex or along a stretch)?
+fn on_route(r: &[(f64, f64)], p: (f64, f64)) -> bool {
+    r.windows(2).any(|w| {
+        let (a, b) = (w[0], w[1]);
+        let (x0, x1) = (a.0.min(b.0), a.0.max(b.0));
+        let (y0, y1) = (a.1.min(b.1), a.1.max(b.1));
+        p.0 >= x0 - 0.5 && p.0 <= x1 + 0.5 && p.1 >= y0 - 0.5 && p.1 <= y1 + 0.5
+    })
+}
+
+#[test]
+fn an_arrow_keeps_its_waypoints_and_its_sides() {
+    let base = "diagram
+  card#a A
+    to(b)
+    to(c)
+  card#b B
+  card#c C
+";
+    let d = slide(base);
+    assert_eq!(d.layout_json()["layout"]["engine"], "slide");
+    let (a, c) = (d.boxes["a"], d.boxes["c"]);
+    // a waypoint below both cards, on the lattice
+    let w = (
+        ((a.x + a.w / 2.0) / 10.0).round() * 10.0,
+        ((a.bottom().max(c.bottom()) + 60.0) / 10.0).round() * 10.0,
+    );
+    let src = base.replace(
+        "    to(c)\n",
+        &format!("    to(c via=\"{},{}\" side=\"bottom-bottom\")\n", w.0, w.1),
+    );
+    let d = slide(&src);
+    let r = &d.routes["a->c"];
+    assert!(on_route(r, w), "{w:?} not on {r:?}");
+    let (a, c) = (d.boxes["a"], d.boxes["c"]);
+    assert!(
+        (r[0].1 - a.bottom()).abs() < 0.5,
+        "leaves a by its bottom: {r:?}"
+    );
+    let end = r[r.len() - 1];
+    assert!(
+        (end.1 - c.bottom()).abs() < 0.5,
+        "enters c by its bottom: {r:?}"
+    );
+}
+
+#[test]
+fn an_empty_zone_keeps_a_frame() {
+    let d = slide("diagram\n  zone#z Empty\n  card#a A\n    to(b)\n  card#b B\n");
+    assert_eq!(d.layout_json()["layout"]["engine"], "slide");
+    let z = d.boxes["z"];
+    assert!(z.w > 0.0 && z.h > 0.0, "{z:?}");
+}
+
+#[test]
+fn dir_right_lays_the_flow_left_to_right() {
+    let d =
+        slide("diagram(dir=\"right\")\n  card#a A\n    to(b)\n  card#b B\n    to(c)\n  card#c C\n");
+    assert_eq!(d.layout_json()["layout"]["engine"], "slide");
+    let (a, b, c) = (d.boxes["a"], d.boxes["b"], d.boxes["c"]);
+    assert!(a.x < b.x && b.x < c.x, "{a:?} {b:?} {c:?}");
+}
+
+#[test]
+fn a_trunk_join_leaves_its_card_once() {
+    let d = slide(
+        "diagram\n  card#a A\n    to(b c d join=\"trunk\")\n  card#b B\n  card#c C\n  card#d D\n",
+    );
+    let starts: Vec<(f64, f64)> = ["a->b", "a->c", "a->d"]
+        .iter()
+        .map(|id| d.routes[*id][0])
+        .collect();
+    assert!(starts.windows(2).all(|w| w[0] == w[1]), "{starts:?}");
+}
+
+#[test]
+fn wrap_lays_n_children_a_row_in_writing_order() {
+    let d = slide(
+        "diagram\n  zone#z(wrap=\"2\") Z\n    card#a A\n    card#b B\n    card#c C\n    card#e E\n  card#x X\n    to(a)\n",
+    );
+    assert_eq!(d.layout_json()["layout"]["engine"], "slide");
+    let at = |id: &str| (d.boxes[id].y, d.boxes[id].x);
+    // two a row, in writing order
+    assert!(at("a").0 == at("b").0 && at("a").1 < at("b").1);
+    assert!(at("c").0 == at("e").0 && at("c").1 < at("e").1);
+    assert!(at("a").0 < at("c").0);
+}
+
+#[test]
+fn a_zone_placed_and_sized_by_hand_keeps_that_frame() {
+    let d = slide(
+        "diagram\n  zone#z(at=\"600,400\" size=\"500,300\") Z\n    card#a A\n  card#x X\n    to(a)\n",
+    );
+    assert_eq!(d.layout_json()["layout"]["engine"], "slide");
+    let z = d.boxes["z"];
+    assert_eq!((z.x, z.y, z.w, z.h), (600.0, 400.0, 500.0, 300.0));
+    let a = d.boxes["a"];
+    assert!(a.x > z.x && a.y > z.y, "{a:?} {z:?}");
+}
+
+#[test]
+fn zones_fit_keeps_each_frame_to_its_cards() {
+    let src = "diagram(zones=\"fit\")\n  zone#z Z\n    card#a A\n  zone#w W\n    card#b B\n    card#c C\n    card#e E\n    card#f F\n  card#x X\n    to(a b)\n";
+    let d = slide(src);
+    let (z, a) = (d.boxes["z"], d.boxes["a"]);
+    // one card: the frame round it, its padding on either side
+    assert!((z.w - a.w - 60.0).abs() < 0.5, "{z:?} {a:?}");
+}
+
+#[test]
+fn an_arrow_to_a_zone_ends_on_its_frame() {
+    let d = slide("diagram\n  card#x X\n    to(z)\n  zone#z Z\n    card#a A\n    card#b B\n");
+    assert_eq!(d.layout_json()["layout"]["engine"], "slide");
+    let z = d.boxes["z"];
+    let r = &d.routes["x->z"];
+    let end = *r.last().unwrap();
+    let on_side = |v: f64, a: f64| (v - a).abs() < 0.5;
+    let on_frame =
+        (on_side(end.0, z.x) || on_side(end.0, z.right())) && end.1 >= z.y && end.1 <= z.bottom()
+            || (on_side(end.1, z.y) || on_side(end.1, z.bottom()))
+                && end.0 >= z.x
+                && end.0 <= z.right();
+    assert!(on_frame, "{r:?} {z:?}");
+}
+
+#[test]
+fn an_arrow_from_a_zone_leaves_its_frame() {
+    // `to` written in a zone: the arrow leaves the zone's frame, here into another zone
+    let d = slide("diagram\n  zone#a A\n    to(b) VPN\n    card#x X\n  zone#b B\n    card#y Y\n");
+    assert_eq!(d.layout_json()["layout"]["engine"], "slide");
+    let (a, b) = (d.boxes["a"], d.boxes["b"]);
+    let r = &d.routes["a->b"];
+    let (start, end) = (r[0], *r.last().unwrap());
+    let on = |p: (f64, f64), z: skemo_engine::layout::Box2| {
+        let near = |v: f64, w: f64| (v - w).abs() < 0.5;
+        (near(p.0, z.x) || near(p.0, z.right())) && p.1 >= z.y && p.1 <= z.bottom()
+            || (near(p.1, z.y) || near(p.1, z.bottom())) && p.0 >= z.x && p.0 <= z.right()
+    };
+    assert!(on(start, a) && on(end, b), "{r:?} {a:?} {b:?}");
+}
+
+#[test]
+fn the_members_of_a_column_share_an_axis() {
+    let d = slide(
+        "diagram\n  zone#a A\n    card#p.col-k P\n    card#q Q\n    card#r R\n  zone#b B\n    card#s S\n    card#t T\n    card#u.col-k U\n  card#x X\n    to(p u)\n",
+    );
+    assert_eq!(d.layout_json()["layout"]["engine"], "slide");
+    let (p, u) = (d.boxes["p"], d.boxes["u"]);
+    assert!((p.x - u.x).abs() < 0.5, "{p:?} {u:?}");
 }

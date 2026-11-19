@@ -18,8 +18,9 @@ A diagram is a **valid Pug** file, restricted to a subset: **8 tags**, and **lin
 | `node#id.type` *(D-087)* | a thing: an icon, its name beside it and lines under the name, no frame | as `card`, without `tag=` and `label=` |
 | `cards#id.type` *(preview, D-062)* | a card drawn as a pile: several instances of one thing | as `card`; `count="N"` adds a `×N` badge |
 | `zone#id.type` | a group | text = title · `\|` lines = description lines under the title · indented cards or zones |
+| `zones#id.type` *(preview, D-114)* | a zone drawn as a pile: several instances of one group | as `zone`; `count="N"` adds a `×N` badge |
 | `stack` *(preview, D-050)* | an invisible group that lays its children one after the other | indented cards or zones |
-| `to(target).type` | an arrow, written in its source card | text = label (optional) |
+| `to(target).type` | an arrow, written in its source card or zone (a zone's leaves its frame) | text = label (optional) |
 
 | Line | Role |
 |---|---|
@@ -48,7 +49,7 @@ line        := indentation (comment | tag | text_line) end_of_line
 indentation := spaces* | tabs*                    ; no mixing within a file
 comment     := "//-" text | "//" text             ; ignored (with their indented block)
 tag         := name (("#" ident) | ("." ident))* attributes? (" " text)?
-name        := "diagram" | "title" | "card" | "cards" | "zone" | "stack" | "to"
+name        := "diagram" | "title" | "card" | "cards" | "node" | "zone" | "zones" | "stack" | "to"
 attributes  := "(" attribute ((","|" ")+ attribute)* ")"
 attribute   := ident "=" value | ident            ; a lone ident = flag (arrow target)
 value       := string_in_"_or_' | number
@@ -74,7 +75,7 @@ Rules:
 | Attribute | Values | Default | Effect |
 |---|---|---|---|
 | `dir` | `down` `right` `up` `left` | `down` | main direction of the automatic layout |
-| `layout` | `slide` (default) · `graph` · `grid` · `timeline` · `frieze` · `mindmap` | — | layout mode (§3.6, §3.7, §3.9). `slide`: one model solved at once, the groups tiled like a slide on a lattice of 10 px; a diagram it does not read yet (nested zones, a pinned card, an empty zone, a zone placed or sized by hand, `wrap`, `stack`, `.wide`, an arrow to a zone) is drawn by `graph` (ELK). `graph`: ELK's layered graph. `grid`: the grid engine (experimental) |
+| `layout` | `slide` (default) · `graph` · `grid` · `timeline` · `frieze` · `mindmap` | — | layout mode (§3.6, §3.7, §3.9). `slide`: one model solved at once, the groups tiled like a slide on a lattice of 10 px; a diagram it does not read (an invisible card, more than 120 arrows) is drawn by `graph` (ELK). `graph`: ELK's layered graph. `grid`: the grid engine (experimental) |
 | `look` | `band` `header` `classic` `eyebrow` | `band` | look of the cards of the diagram (§4.5) |
 | `zones` *(D-045, D-085)* | `stretch` · `fit` | — | sibling zones stacked one under the other (`dir` down or up) take the width of the widest, like layers drawn by hand: **by default**. `stretch` does it in every direction (with right or left, the height of the tallest) and for undrawn groups too; `fit` keeps each frame fitted to its content. Only the frames grow; no card moves. Zones side by side and pinned zones (`at` + `size`) are left alone |
 | `css` *(D-082)* | file names, separated by spaces | — | stylesheets of the diagram, applied after the theme and in this order: paths relative to the `.skemo` file, inside its folder (no `..`, no absolute path). The CLI reads them (and `--css` after them) and embeds them in what it renders; the libraries leave the option to their caller |
@@ -90,7 +91,7 @@ Rules:
 | text | title |
 | `\| text` (children) | *v0.8* lines (§3.2.3): content lines of a card, description lines under a zone's title. If a line starts with an IPv4/CIDR, that IP is rendered as `span.mono`. *(preview, D-051)* `\|.pill 8080 · http`: the line's classes reach its style; a line with a background or a border (the theme's `.pill`: a pill tinted with the card's accent) is drawn as a box around its text |
 | `label="RDS PostgreSQL 16.4"` (`card`, `cards`) | *v0.8* the card's **category**, drawn above its name (§3.2.6). Default: the type's `--label`; `label=""` shows none |
-| `icon="name"` (v0.6) | icon drawn before the name, from the built-in set (Lucide, kebab-case: `database`, `server`, `user`). Overrides the type's `--icon`. `icon="none"`: no icon, even if the type has one. *(Preview, D-046)* `icon="img/logo.svg"`: an **image file** (§3.2.1). Ignored with the warning `icon-ignored` on `to` and on lines |
+| `icon="name"` (v0.6) | icon drawn before the name, from the built-in set (Lucide, kebab-case: `database`, `server`, `user`; and skemo's own infrastructure icons, `skemo-vm`, `skemo-hypervisor`, `skemo-rack`…, D-115). Overrides the type's `--icon`. `icon="none"`: no icon, even if the type has one. *(Preview, D-046)* `icon="img/logo.svg"`: an **image file** (§3.2.1). Ignored with the warning `icon-ignored` on `to` and on lines |
 | `href="…"` (v0.6) | the card or zone is a link in the HTML and SVG outputs (§3.2.1) |
 | `tag="Owner"` (`card`; `zone` *preview, D-050*) | the card's **chip** (an owner, a module, a port), beside its category (§3.2.6); on a zone, a pill after its title (`zone#pods(tag="172.30.0.0/16") Pods`). *(preview, D-041)* `@` markers at the end of the value animate the chip alone: `tag="8080 @1"` (not in the HTML `classic` look, where the chip is a pseudo-element) |
 | `wrap="N"` (`zone`, *preview, D-041*) | (D-056: when an arrow from outside enters a card beyond the first row, the rows are spread like the diagram's, the rows of sibling `wrap` zones too, and the zone keeps a corridor that other arrows may cross) at most N children per row (per column with `dir` right or left), on a grid, in writing order; the cards of one column of the grid take the width of the widest and are left-aligned, so that a stack reads as a clean column (D-045). A warning names the cards that end up behind others as seen from the node they are linked to (second column with `dir="right"`): their arrows can only go round them (D-044); not with `wrap="1"`, a single file of cards that arrows enter by their free sides (a server and its stack, D-045). *(preview, 2026-10-28, to validate)* A zone without `wrap` that holds only cards, at least four, none with an arrow (an inventory: monitors, secrets, registries) is laid as a grid of ⌈√n⌉ columns rather than one long row; write `wrap=` to choose |
@@ -99,14 +100,22 @@ Rules:
 | `size="w,h"` | a zone (with `at="x,y"`): **imposed** size, otherwise the zone encloses its children. A card (*preview, editor*): **minimum** size, it takes at least that room and its text may make it larger; written by the editor when a card is resized |
 | `@…` at the end of the line | **animation markers** (§3.8) |
 
-A zone contains lines, then cards, nodes, zones and stacks. A card or a node contains lines and `to`.
+A zone contains lines, then cards, nodes, zones and stacks, and may hold `to`: an arrow from the zone's frame, to a card or a zone (one link between two sites rather than one per card; drawn by the slide engine, `layout="graph"` warns and leaves it out). A card or a node contains lines and `to`.
 
-**`cards`** *(preview, D-062)* is a card in every respect (`#id`, classes, `label`, `tag`, `icon`, lines, `to`, markers) drawn as a **pile**: up to two cards show behind it, 5 px right and down each, like a pile of playing cards, for several instances of one thing (the tasks of a service, the machines of a group). `count="N"` (a whole number ≥ 1, `cards` only, otherwise the warning `bad-count`) says how many: `min(N, 3)` cards are drawn, three when there is no count, and `N > 1` adds a `×N` badge (`card .count` in the theme) whose right edge is the pile's, centred on the top card's bottom edge, the same place in every look. The cards behind are part of the card's box: arrows end on them, gaps and routes keep clear of them, and the top card keeps its siblings' width. Graph layout only; in timeline, frieze and mind map modes a pile is laid out like a card.
+**`cards`** *(preview, D-062)* is a card in every respect (`#id`, classes, `label`, `tag`, `icon`, lines, `to`, markers) drawn as a **pile**: up to two cards show behind it, 5 px right and down each, like a pile of playing cards, for several instances of one thing (the tasks of a service, the machines of a group). `count="N"` (a whole number ≥ 1, `cards` and `zones` only, otherwise the warning `bad-count`) says how many: `min(N, 3)` cards are drawn, three when there is no count, and `N > 1` adds a `×N` badge (`card .count` in the theme) whose right edge is the pile's, centred on the top card's bottom edge, the same place in every look. The cards behind are part of the card's box: arrows end on them, gaps and routes keep clear of them, and the top card keeps its siblings' width. Graph layout only; in timeline, frieze and mind map modes a pile is laid out like a card.
 
 ```pug
 cards#api.service(count="4" tag="ECS") api
   | 4 tasks
   to(db)
+```
+
+**`zones`** *(preview, D-114)* is a zone in every respect (`#id`, classes, title, `tag`, description lines, cards and zones inside, `wrap`, `at=`) drawn as a **pile**, for several instances of one group (the clusters of a fleet, the replicas of a region): up to two empty frames show behind it, 5 px right and down each; what it holds is drawn once, in the frame on top. `count="N"` reads as on `cards`: `min(N, 3)` frames, three without a count, and `N > 1` adds the `×N` badge (`zone > .count` in the theme) on the corner of the frames behind, centred on the top frame's bottom edge. The zone's box is the top frame; the slide engine keeps the frames behind clear: the gutter after it is a step wider, the frames round it grow by that step, and an arrow to the zone ends on the pile. With `layout="graph"` the frames behind take from the gap beside the zone.
+
+```pug
+zones#clusters.t2(count="3" tag="spoke") Managed clusters
+  card#agent klusterlet
+  card#apps Applications
 ```
 
 #### 3.2.2 Title and stacks *(preview, D-050)*
@@ -254,7 +263,7 @@ A card shows two pieces of information beside its name: its **category** (what i
 
 #### 3.2.7 States: `.ok`, `.warn`, `.error` *(v0.8)*
 
-Predefined classes for a finding, a check, a health state. Each has a mark (Lucide `circle-check`, `triangle-alert`, `circle-x`) and a colour (theme variables `--ok`, `--warn`, `--error`: green, amber, red; contrast 4.5:1 for text).
+Predefined classes for a finding, a check, a health state. Each has a mark (Lucide `circle-check`, `triangle-exclamation-point`, `circle-x`) and a colour (theme variables `--ok`, `--warn`, `--error`: green, amber, red; contrast 4.5:1 for text).
 
 | On | Rendering |
 |---|---|

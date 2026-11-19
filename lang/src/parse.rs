@@ -369,7 +369,7 @@ fn walk(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
                 }
             }
         }
-        "card" | "cards" | "node" | "zone" | "stack" => node(cx, t, parent),
+        "card" | "cards" | "node" | "zone" | "zones" | "stack" => node(cx, t, parent),
         "title" => cx.diags.push(Diagnostic::warning(
             "title-misplaced",
             t.name_span,
@@ -378,20 +378,21 @@ fn walk(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
                 "« title » s'écrit directement sous « diagram » : ignoré"
             ),
         )),
+        // an arrow leaves the card or the zone it is written in (a zone's: from its frame)
         "to" => match parent.and_then(|p| cx.model.node(p)).map(|n| n.kind) {
-            Some(Kind::Card) => edges(cx, t, parent.unwrap_or_default()),
-            _ => cx.diags.push(
+            Some(Kind::Card | Kind::Zone) => edges(cx, t, parent.unwrap_or_default()),
+            None => cx.diags.push(
                 Diagnostic::error(
                     "to-outside-card",
                     t.name_span,
                     tr!(
-                        "`to` must be written inside its source card",
-                        "« to » doit être écrit dans sa carte de départ"
+                        "`to` must be written inside its source card or zone",
+                        "« to » doit être écrit dans sa carte ou sa zone de départ"
                     ),
                 )
                 .with_help(tr!(
-                    "indent to(...) under the card the arrow starts from",
-                    "indenter to(...) sous la carte d'où part la flèche"
+                    "indent to(...) under the card or the zone the arrow starts from",
+                    "indenter to(...) sous la carte ou la zone d'où part la flèche"
                 )),
             ),
         },
@@ -413,8 +414,8 @@ fn walk(cx: &mut Ctx, t: &Tag, parent: Option<&str>) {
                 ),
             )
             .with_help(tr!(
-                "known tags: diagram, title, card, cards, node, zone, stack, to; a line starts with `|`",
-                "balises reconnues : diagram, title, card, cards, node, zone, stack, to ; une ligne commence par « | »"
+                "known tags: diagram, title, card, cards, node, zone, zones, stack, to; a line starts with `|`",
+                "balises reconnues : diagram, title, card, cards, node, zone, zones, stack, to ; une ligne commence par « | »"
             )),
         ),
     }
@@ -1093,19 +1094,20 @@ fn parse_wrap(cx: &mut Ctx, a: &Attr, kind: Kind) -> Option<u32> {
     }
 }
 
-/// `cards` (a pile) and its `count="N"`; `count` on a `card` or a bad number: warning `bad-count`.
+/// `cards` or `zones` (a pile) and its `count="N"`; `count` elsewhere or a bad number: warning
+/// `bad-count`.
 fn deck_of(cx: &mut Ctx, t: &Tag) -> Option<Deck> {
     let count = attr(t, "count").and_then(|a| {
         let v = a.value.clone().unwrap_or_default();
         let warn = |cx: &mut Ctx, msg: String| {
             cx.diags.push(Diagnostic::warning("bad-count", a.span, msg));
         };
-        if t.name != "cards" {
+        if !piled(t) {
             warn(
                 cx,
                 tr!(
-                    "`count` is read on `cards` only (a pile of cards); ignored",
-                    "« count » ne se lit que sur « cards » (un paquet de cartes) ; ignoré"
+                    "`count` is read on `cards` and `zones` only (a pile); ignored",
+                    "« count » ne se lit que sur « cards » et « zones » (une pile) ; ignoré"
                 ),
             );
             return None;
@@ -1124,7 +1126,12 @@ fn deck_of(cx: &mut Ctx, t: &Tag) -> Option<Deck> {
             }
         }
     });
-    (t.name == "cards").then_some(Deck { count })
+    piled(t).then_some(Deck { count })
+}
+
+/// `cards` and `zones`: a card or a zone drawn as a pile (D-062, D-114).
+fn piled(t: &Tag) -> bool {
+    matches!(t.name.as_str(), "cards" | "zones")
 }
 
 /// `join="trunk"` : hyperarête (one source, a shared trunk out). Any other name (D-050): the

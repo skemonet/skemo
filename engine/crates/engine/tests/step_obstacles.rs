@@ -1,6 +1,7 @@
 //! In a diagram drawn in steps, an arrow is routed among what is shown at the same time (D-060):
 //! a card that only appears later is no obstacle to it, and the cards do not move.
 
+mod elk;
 use skemo_engine::{Options, from_source};
 
 /// `ic`, a wide card shown from step 3, stands right between `a` and `b`.
@@ -75,8 +76,9 @@ fn a_zone_whose_cards_come_later_is_crossed() {
 /// round the whole stack instead.
 #[test]
 fn a_bent_arrow_crosses_the_room_of_a_card_not_yet_shown() {
-    let src = include_str!("data/step-ports.skemo");
-    let d = from_source(src, &Options::default()).unwrap().0;
+    // ELK's router: the slide engine keeps every card's room
+    let src = elk::graph(include_str!("data/step-ports.skemo"));
+    let d = from_source(&src, &Options::default()).unwrap().0;
     let r = &d.routes["w1->sa"];
     let stack = d.boxes["stack1"];
     assert!(

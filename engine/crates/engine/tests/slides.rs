@@ -147,7 +147,8 @@ fn wrap_across_the_direction_makes_columns() {
 fn fit_suggests_settings_that_show_the_text_larger() {
     use skemo_engine::fit::{TOLERANCE, apply, parse_target, size_of, suggestions};
     let src = WRAP.replace("(wrap=\"3\")", "");
-    let src = format!("diagram(fit=\"16:9\")\n{src}");
+    // ELK's drawing, which the settings change (the slide engine fits the slide's shape itself)
+    let src = format!("diagram(fit=\"16:9\" layout=\"graph\")\n{src}");
     let d = build(&src);
     assert!(
         d.warnings

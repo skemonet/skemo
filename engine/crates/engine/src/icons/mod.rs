@@ -1,9 +1,21 @@
-//! Built-in icon set: Lucide (ISC), 24 × 24, stroke 2, round caps (FORMAT §3.2.1).
-//! The data is generated (`tools/gen-icons.py`); rendering is offline and deterministic.
+//! Built-in icon set: Lucide (ISC), 24 × 24, stroke 2, round caps (FORMAT §3.2.1), and skemo's
+//! own `skemo-*` icons drawn the same way (D-115). Lucide's data is generated from its archive;
+//! rendering is offline and deterministic.
 
 mod data;
+mod skemo;
 
-use data::ICONS;
+use std::sync::OnceLock;
+
+/// Both sets, sorted by name.
+fn all() -> &'static [(&'static str, &'static str, &'static str)] {
+    static ALL: OnceLock<Vec<(&str, &str, &str)>> = OnceLock::new();
+    ALL.get_or_init(|| {
+        let mut v: Vec<_> = data::ICONS.iter().chain(&skemo::SKEMO).copied().collect();
+        v.sort_by_key(|e| e.0);
+        v
+    })
+}
 
 /// One icon of the set.
 #[derive(Debug, Clone, Copy)]
@@ -32,7 +44,7 @@ impl Icon {
 }
 
 fn icon_at(i: usize) -> Icon {
-    let (name, markup, tags) = ICONS[i];
+    let (name, markup, tags) = all()[i];
     Icon {
         name,
         markup,
@@ -41,14 +53,21 @@ fn icon_at(i: usize) -> Icon {
     }
 }
 
-/// The icon called `name` (kebab-case), if it exists.
+/// The icon called `name` (kebab-case), if it exists: by its name, or by a name Lucide gave it in
+/// an earlier release (`triangle-alert` is `triangle-exclamation-point` since 1.73).
 pub fn get(name: &str) -> Option<Icon> {
-    ICONS.binary_search_by(|e| e.0.cmp(name)).ok().map(icon_at)
+    let at = |n: &str| all().binary_search_by(|e| e.0.cmp(n)).ok();
+    at(name)
+        .or_else(|| {
+            let i = data::ALIASES.binary_search_by(|e| e.0.cmp(name)).ok()?;
+            at(data::ALIASES[i].1)
+        })
+        .map(icon_at)
 }
 
 /// Every icon name, sorted.
 pub fn names() -> impl Iterator<Item = &'static str> {
-    ICONS.iter().map(|e| e.0)
+    all().iter().map(|e| e.0)
 }
 
 /// Names matching `query` (case-insensitive), best first: exact, prefix, name substring, tag
@@ -59,7 +78,7 @@ pub fn search(query: &str) -> Vec<&'static str> {
         return names().collect();
     }
     let mut groups: [Vec<&'static str>; 4] = Default::default();
-    for (name, _, tags) in &ICONS {
+    for (name, _, tags) in all() {
         let rank = if *name == q {
             0
         } else if name.starts_with(&q) {
@@ -96,5 +115,27 @@ mod tests {
         assert_eq!(search("database")[0], "database");
         assert!(search("servers").contains(&"database"), "tag match");
         assert_eq!(suggest("databse"), Some("database"));
+        // Lucide 1.73: a new icon, and a renamed one under its former name
+        assert!(get("graph-ring").is_some());
+        let old = get("triangle-alert").unwrap();
+        assert_eq!(old.name, "triangle-exclamation-point");
+        assert!(data::ALIASES.windows(2).all(|w| w[0].0 < w[1].0));
+        assert!(data::ALIASES.iter().all(|(_, n)| get(n).is_some()));
+    }
+
+    #[test]
+    fn skemo_icons_join_the_set() {
+        let vm = get("skemo-vm").unwrap();
+        assert!(vm.markup.contains("stroke-dasharray") && vm.tags.contains("virtual machine"));
+        assert_eq!(names().filter(|n| n.starts_with("skemo-")).count(), 36);
+        assert!(search("hypervisor").contains(&"skemo-hypervisor"));
+        // drawn in the text's colour, as Lucide's: no colour of their own
+        for (name, markup, _) in &skemo::SKEMO {
+            assert!(
+                name.starts_with("skemo-") && !markup.contains('#'),
+                "{name}"
+            );
+            assert!(get(name).is_some(), "{name}");
+        }
     }
 }

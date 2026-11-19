@@ -100,7 +100,6 @@ fn check_errors_exit_1() {
     for f in [
         "cible-inconnue",
         "id-duplique",
-        "to-hors-carte",
         "groupes-multiples",
         "indentation-melangee",
         "marqueurs",
@@ -113,6 +112,11 @@ fn check_errors_exit_1() {
     }
     bin()
         .args(["lint", fx("reseau.pug").to_str().unwrap()])
+        .assert()
+        .success();
+    // `to` in a zone is an arrow from the zone's frame (rc.10): no longer an error
+    bin()
+        .args(["lint", dir.join("to-hors-carte.skemo").to_str().unwrap()])
         .assert()
         .success();
 }
@@ -826,7 +830,8 @@ fn check_reports_unknown_icons_and_unsafe_links() {
     assert!(String::from_utf8_lossy(&out.stderr).contains("unsafe-href"));
 }
 
-const WIDE: &str = "diagram(fit=\"16:9\")\ncard#lb Load balancer\n  to(p1)\nzone#ns Namespace\n  card#p1 pod-1\n  card#p2 pod-2\n  card#p3 pod-3\n  card#p4 pod-4\n  card#p5 pod-5\n  card#p6 pod-6\n  card#p7 pod-7\n";
+/// Drawn by ELK, which the settings change (the slide engine fits the slide's shape itself).
+const WIDE: &str = "diagram(fit=\"16:9\" layout=\"graph\")\ncard#lb Load balancer\n  to(p1)\nzone#ns Namespace\n  card#p1 pod-1\n  card#p2 pod-2\n  card#p3 pod-3\n  card#p4 pod-4\n  card#p5 pod-5\n  card#p6 pod-6\n  card#p7 pod-7\n";
 
 #[test]
 fn lint_fit_lists_suggestions_and_writes_the_best() {

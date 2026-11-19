@@ -8,7 +8,7 @@ use crate::scene::Scene;
 use serde_json::{Value, json};
 use skemo_lang::style::Theme;
 use skemo_lang::tr;
-use skemo_lang::{Diagnostic, Model};
+use skemo_lang::{Diagnostic, Kind, Model};
 use std::collections::BTreeMap;
 
 /// Framing margin around the content (prototype: 28 px).
@@ -863,7 +863,7 @@ fn arrange_all(
             .model
             .nodes
             .iter()
-            .find(|n| n.parent.is_none() && n.kind == skemo_lang::Kind::Card)
+            .find(|n| n.parent.is_none() && n.kind == Kind::Card)
             .and_then(|n| scene.cards.get(&n.id).map(|c| (n.id.clone(), c)))
         else {
             continue;
@@ -923,8 +923,34 @@ fn arrange(
     warnings: &mut Vec<crate::EngineWarning>,
 ) -> Result<Arranged, Error> {
     if let Layout::Slide(preview) = *layout {
-        if let Some(d) = crate::slide::arrange(model, scene, sizes, head, preview) {
-            sizes.labels.extend(d.label_sizes);
+        // the slide is drawn without its pins (D-031); a pin where the slide put the card changes
+        // nothing, a card moved elsewhere stands where it is pinned (`slide_pinned`)
+        let free = crate::layout::unpinned(model);
+        if let Some(d) = crate::slide::arrange(&free, scene, sizes, head, preview) {
+            sizes.labels.extend(d.label_sizes.clone());
+            let zones = zone_pins(model, &d.boxes);
+            let mut moved = pins_moved(model, &d.boxes);
+            // the cards of a zone placed by hand go with it (their own pins first)
+            for (z, dx, dy, _) in &zones {
+                for n in model.nodes.iter().filter(|n| n.kind == Kind::Card) {
+                    if n.at.is_none()
+                        && within(model, &n.id, z)
+                        && let Some(b) = d.boxes.get(&n.id)
+                    {
+                        moved.push((n.id.clone(), b.x + dx, b.y + dy));
+                    }
+                }
+            }
+            if (!moved.is_empty() || !zones.is_empty()) && !preview {
+                return Ok(slide_pinned(
+                    model,
+                    scene,
+                    sizes,
+                    d,
+                    (&moved, &zones),
+                    warnings,
+                ));
+            }
             return Ok(Arranged {
                 label_lines: d.label_lines,
                 elk: Placement::default(),
@@ -976,6 +1002,203 @@ fn arrange(
         edge_groups,
         labels,
     })
+}
+
+/// Is node `id` inside zone `z`, at any depth?
+fn within(model: &Model, id: &str, z: &str) -> bool {
+    let mut p = model.node(id).and_then(|n| n.parent.as_deref());
+    while let Some(q) = p {
+        if q == z {
+            return true;
+        }
+        p = model.node(q).and_then(|n| n.parent.as_deref());
+    }
+    false
+}
+
+/// The zones placed by hand (`at=`, `size=`) elsewhere than the slide's frame, or sized: each
+/// with the move of its frame and the size written.
+type ZonePin = (String, f64, f64, Option<[f64; 2]>);
+
+fn zone_pins(model: &Model, boxes: &BTreeMap<String, Box2>) -> Vec<ZonePin> {
+    model
+        .nodes
+        .iter()
+        .filter(|n| n.kind == Kind::Zone && (n.at.is_some() || n.size.is_some()))
+        .filter_map(|n| {
+            let b = boxes.get(&n.id)?;
+            let [x, y] = n.at.unwrap_or([b.x, b.y]);
+            Some((n.id.clone(), x - b.x, y - b.y, n.size))
+        })
+        .collect()
+}
+
+/// The cards pinned elsewhere than where the slide put them (a pin within half a pixel of its
+/// place is that place), with their pinned corner.
+fn pins_moved(model: &Model, boxes: &BTreeMap<String, Box2>) -> Vec<(String, f64, f64)> {
+    model
+        .nodes
+        .iter()
+        .filter(|n| n.kind == Kind::Card)
+        .filter_map(|n| {
+            let [x, y] = n.at?;
+            let b = boxes.get(&n.id)?;
+            ((b.x - x).abs() > 0.5 || (b.y - y).abs() > 0.5).then(|| (n.id.clone(), x, y))
+        })
+        .collect()
+}
+
+/// The slide with cards (or zones) moved by hand: each card stands where it is pinned, a zone
+/// placed by hand where written with what it holds and the size written, the zones holding a
+/// moved card grow round it (their margin kept), and every arrow is routed again by the router,
+/// as the grid engine routes (the lattice's routes hold only for the lattice's places).
+fn slide_pinned(
+    model: &Model,
+    scene: &Scene,
+    sizes: &Sizes,
+    d: crate::slide::Drawn,
+    (moved, zones): (&[(String, f64, f64)], &[ZonePin]),
+    warnings: &mut Vec<crate::EngineWarning>,
+) -> Arranged {
+    // a zone placed by hand: its frame and those inside it move with it
+    let mut boxes = d.boxes;
+    for (z, dx, dy, _) in zones {
+        for (id, b) in &mut boxes {
+            let zone = model.node(id).is_some_and(|n| n.kind == Kind::Zone);
+            if zone && (id == z || within(model, id, z)) {
+                b.x += dx;
+                b.y += dy;
+            }
+        }
+    }
+    let mut boxes = grown_round_pins(model, boxes, moved);
+    // … and takes the size written
+    for (z, _, _, size) in zones {
+        if let (Some([w, h]), Some(b)) = (size, boxes.get_mut(z)) {
+            b.w = *w;
+            b.h = *h;
+        }
+    }
+    let elk = Placement {
+        boxes: boxes.clone(),
+        ..Placement::default()
+    };
+    warnings.extend(pin_overlaps(model, scene, &boxes, &elk));
+    let titles = crate::labels::zone_titles(model, scene, &boxes);
+    let (anchored, obstacles) = crate::route::anchors(model, scene, &boxes, &titles);
+    let params = crate::grid::params(model);
+    let mode = crate::route::Mode::Grid;
+    let (mut routes, rw, edge_groups) =
+        route_all(model, &anchored, &elk, &params, mode, &[], &obstacles);
+    warnings.extend(rw);
+    let labels = label_all(model, scene, &boxes, &mut routes, sizes, &edge_groups, true);
+    Arranged {
+        label_lines: d.label_lines,
+        elk,
+        boxes,
+        timeline: None,
+        frise: None,
+        routes,
+        edge_groups,
+        labels,
+    }
+}
+
+/// The slide's boxes with each moved card where it is pinned, and the zones holding it grown
+/// round it (their margin, and the room above their content, kept).
+fn grown_round_pins(
+    model: &Model,
+    boxes: BTreeMap<String, Box2>,
+    moved: &[(String, f64, f64)],
+) -> BTreeMap<String, Box2> {
+    const MARGIN: f64 = 30.0;
+    // the room each zone keeps above what it holds (its title), read on the slide as drawn
+    let above_of: BTreeMap<String, f64> = model
+        .nodes
+        .iter()
+        .filter(|z| z.kind == Kind::Zone)
+        .filter_map(|z| {
+            let f = boxes.get(&z.id)?;
+            let top = model
+                .children(Some(&z.id))
+                .filter_map(|c| boxes.get(&c.id))
+                .map(|b| b.y)
+                .reduce(f64::min)?;
+            Some((z.id.clone(), top - f.y))
+        })
+        .collect();
+    let mut boxes = boxes;
+    for (id, x, y) in moved {
+        let Some(b) = boxes.get_mut(id) else {
+            continue;
+        };
+        b.x = *x;
+        b.y = *y;
+        let mut inner = *b;
+        let mut at = model.node(id).and_then(|n| n.parent.clone());
+        while let Some(z) = at {
+            let Some(f) = boxes.get_mut(&z) else {
+                break;
+            };
+            // the room above the zone's content (its title) is kept above the card too
+            let above = above_of.get(&z).copied().unwrap_or(MARGIN);
+            let (x0, y0) = (f.x.min(inner.x - MARGIN), f.y.min(inner.y - above));
+            let x1 = f.right().max(inner.right() + MARGIN);
+            let y1 = f.bottom().max(inner.bottom() + MARGIN);
+            *f = Box2 {
+                x: x0,
+                y: y0,
+                w: x1 - x0,
+                h: y1 - y0,
+            };
+            inner = *f;
+            at = model.node(&z).and_then(|n| n.parent.clone());
+        }
+    }
+    boxes
+}
+
+/// What the pins make overlap (Q7, D-033: reported, never corrected): cards over one another,
+/// and a zone grown over a card that is not its own (which it would hide).
+fn pin_overlaps(
+    model: &Model,
+    scene: &Scene,
+    boxes: &BTreeMap<String, Box2>,
+    elk: &Placement,
+) -> Vec<crate::EngineWarning> {
+    // Q7 (D-033): what a pin makes overlap is reported, never corrected
+    let cards: BTreeMap<String, Box2> = boxes
+        .iter()
+        .filter(|(id, _)| model.node(id).is_some_and(|n| n.kind == Kind::Card))
+        .map(|(id, b)| (id.clone(), *b))
+        .collect();
+    let (pad, head) = scene.zone_pad_head();
+    let mut out: Vec<crate::EngineWarning> =
+        crate::layout::suggest_separation(model, &cards, elk, pad, head)
+            .into_iter()
+            .map(|(m, by)| overlap_warning(model, &m, &by))
+            .collect();
+    // a zone grown round a moved card over a card that is not its own (which it would hide)
+    let within = |c: &str, z: &str| {
+        let mut p = model.node(c).and_then(|n| n.parent.as_deref());
+        while let Some(id) = p {
+            if id == z {
+                return true;
+            }
+            p = model.node(id).and_then(|n| n.parent.as_deref());
+        }
+        false
+    };
+    for z in model.nodes.iter().filter(|n| n.kind == Kind::Zone) {
+        let Some(f) = boxes.get(&z.id) else { continue };
+        for (c, b) in &cards {
+            let meet = b.x < f.right() && b.right() > f.x && b.y < f.bottom() && b.bottom() > f.y;
+            if meet && !within(c, &z.id) {
+                out.push(overlap_warning(model, &z.id, c));
+            }
+        }
+    }
+    out
 }
 
 /// The arrow labels of `routes`; the grid engine then moves the lines that run through a label
@@ -1264,10 +1487,7 @@ fn wrap_warning(h: &crate::tidy::Hidden) -> crate::EngineWarning {
 }
 
 fn overlap_warning(model: &Model, moved: &str, by: &str) -> crate::EngineWarning {
-    let what = if model
-        .node(moved)
-        .is_some_and(|n| n.kind == skemo_lang::Kind::Zone)
-    {
+    let what = if model.node(moved).is_some_and(|n| n.kind == Kind::Zone) {
         tr!("zone", "zone")
     } else {
         tr!("card", "carte")

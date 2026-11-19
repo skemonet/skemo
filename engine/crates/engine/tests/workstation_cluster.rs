@@ -2,7 +2,9 @@
 //! of a stack at one width, cross links forking, a corridor between the rows of the nodes, and
 //! cards of a column keeping one title alignment.
 
-use skemo_engine::{Options, from_source, html};
+use skemo_engine::{Options, html};
+mod elk;
+use elk::from_source;
 
 const SRC: &str = "diagram(dir=\"down\")
   stack

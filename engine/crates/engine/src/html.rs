@@ -328,11 +328,22 @@ pub fn render(d: &Diagram, opts: &HtmlOptions) -> String {
         match node.kind {
             // a stack draws nothing (D-050): its children are placed on their own
             skemo_lang::Kind::Zone if node.stack => {}
-            skemo_lang::Kind::Zone => zone_html(d, node, &style, &mut body),
+            skemo_lang::Kind::Zone => {
+                let m = crate::measure::deck_margin(node);
+                let style = if m > 0.0 {
+                    let el = d.scene.zones.get(&node.id).map(|z| z.el);
+                    deck_style(d, el, (b.x + d.frame.ox, b.y + d.frame.oy, b.w, b.h), m)
+                } else {
+                    style
+                };
+                zone_html(d, node, &style, &mut body);
+            }
             skemo_lang::Kind::Card => {
                 let m = crate::measure::deck_margin(node);
                 let style = if m > 0.0 {
-                    deck_style(d, node, (b.x + d.frame.ox, b.y + d.frame.oy, b.w, b.h), m)
+                    let el = d.scene.cards.get(&node.id).map(|c| c.el);
+                    let (x, y) = (b.x + d.frame.ox, b.y + d.frame.oy);
+                    deck_style(d, el, (x, y, b.w - m, b.h - m), m)
                 } else {
                     style
                 };
@@ -461,11 +472,24 @@ fn zone_html(d: &Diagram, node: &skemo_lang::Node, style: &str, body: &mut Strin
             )
         })
         .collect();
+    let count = d
+        .scene
+        .zones
+        .get(&node.id)
+        .and_then(|z| z.count.as_ref())
+        .map(|(_, t)| format!("<span class=\"count\">{}</span>", esc(t)))
+        .unwrap_or_default();
+    let classes: Vec<&str> = node
+        .classes
+        .iter()
+        .map(String::as_str)
+        .chain(node.deck.map(|_| "deck"))
+        .collect();
     let _ = write!(
         body,
-        "<zone data-id=\"{}\" class=\"{}\" style=\"{style}\"{}><div class=\"title\">{}{tag}{subs}</div></zone>",
+        "<zone data-id=\"{}\" class=\"{}\" style=\"{style}\"{}><div class=\"title\">{}{tag}{subs}</div>{count}</zone>",
         esc(&node.id),
-        esc(&node.classes.join(" ")),
+        esc(&classes.join(" ")),
         anim_attrs(d, &node.id),
         titled(
             d,
@@ -537,16 +561,18 @@ fn title_html(d: &Diagram, body: &mut String) {
 
 /// A pile (`cards`): the top card's box, and the cards behind as outlined shadows in the card's
 /// own fill and border colours, nearest first.
+/// A pile's position and its cards (frames) behind as shadows: `(x, y, w, h)` is the top card's
+/// box (a card's box holds its pile, a zone's does not: the caller takes it off).
 fn deck_style(
     d: &Diagram,
-    node: &skemo_lang::Node,
+    el: Option<usize>,
     (x, y, w, h): (f64, f64, f64, f64),
     m: f64,
 ) -> String {
-    let Some(el) = d.scene.cards.get(&node.id) else {
+    let Some(el) = el else {
         return pos(x, y, w, h);
     };
-    let c = d.scene.style(el.el);
+    let c = d.scene.style(el);
     let fill = c
         .color_of("background-color")
         .or_else(|| skemo_lang::style::parse_color(c.get("background")?, c.color()))
@@ -565,7 +591,7 @@ fn deck_style(
     }
     format!(
         "{};--deck-m:{}px;box-shadow:{}",
-        pos(x, y, w - m, h - m),
+        pos(x, y, w, h),
         n(m),
         layers.join(", ")
     )

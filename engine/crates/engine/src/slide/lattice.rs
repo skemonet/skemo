@@ -118,48 +118,40 @@ impl Lattice {
     ) -> Lattice {
         let (cols, rows) = (tiling.cols, tiling.rows);
         let (cw, ch) = (inp.card_w, inp.card_h);
-        let owner = owners(tiling);
         let ex = |m: &BTreeMap<usize, i32>, k: usize| m.get(&k).copied().unwrap_or(0);
-        // a gutter between two groups holds both paddings and the channel; one inside a group,
-        // the group's gap; above a row of other groups, their titles too
-        let xout: Vec<bool> = (1..cols)
-            .map(|k| (0..rows).any(|r| owner[r * cols + k - 1] != owner[r * cols + k]))
-            .collect();
-        let xgap: Vec<i32> = xout
-            .iter()
-            .enumerate()
-            .map(|(i, &out)| {
-                let g = if out {
-                    2 * PAD + gaps.chan_x
-                } else {
-                    gaps.gin_x
-                };
-                g + ex(&extra.x, i)
-            })
-            .collect();
-        let yout: Vec<bool> = (1..rows)
-            .map(|k| (0..cols).any(|c| owner[(k - 1) * cols + c] != owner[k * cols + c]))
-            .collect();
-        let ygap: Vec<i32> = yout
-            .iter()
-            .enumerate()
-            .map(|(i, &out)| {
-                let g = if out {
-                    PAD + gaps.chan_y + zone_head
-                } else {
-                    gaps.gin_y
-                };
-                g + ex(&extra.y, i) + ex(&extra.head, i + 1)
-            })
-            .collect();
-        let colx = offsets(MARGIN + PAD, cw, &xgap, cols);
-        let rowy = offsets(MARGIN + zone_head + ex(&extra.head, 0), ch, &ygap, rows);
+        let Gutters {
+            xgap,
+            xout,
+            ygap,
+            yout,
+            edges: (left, top, right, bottom),
+            deep,
+            piles,
+        } = gutters(inp, tiling, gaps, extra, zone_head);
+        let colx = offsets(MARGIN + PAD * left, cw, &xgap, cols);
+        let rowy = offsets(
+            MARGIN + zone_head * top + ex(&extra.head, 0),
+            ch,
+            &ygap,
+            rows,
+        );
         // a pile takes a step more right and down: the lines keep clear of the cards behind
+        // a wide card, a bar, spans its row (its column across `dir`)
         let card = tiling
             .pos
             .iter()
             .zip(&inp.pile)
-            .map(|(&(cx, cy), &m)| {
+            .enumerate()
+            .map(|(c, (&(cx, cy), &m))| {
+                if inp.wide(c) {
+                    let (x0, y0, w, h) = tiling.rects[inp.card_panel[c]];
+                    return Rect {
+                        x: colx[x0],
+                        y: rowy[y0],
+                        w: colx[x0 + w - 1] + cw - colx[x0],
+                        h: rowy[y0 + h - 1] + ch - rowy[y0],
+                    };
+                }
                 let more = i32::from(m > 0.0);
                 Rect {
                     x: colx[cx],
@@ -169,30 +161,20 @@ impl Lattice {
                 }
             })
             .collect();
-        let frame: Vec<Option<Rect>> = tiling
-            .rects
-            .iter()
-            .enumerate()
-            .map(|(i, &(x0, y0, w, h))| {
-                inp.panels[i].zone.as_ref()?;
-                let l = colx[x0] - PAD;
-                let r = colx[x0 + w - 1] + cw + PAD;
-                let t = rowy[y0] - zone_head - ex(&extra.head, y0);
-                let b = rowy[y0 + h - 1] + ch + PAD;
-                Some(Rect {
-                    x: l,
-                    y: t,
-                    w: r - l,
-                    h: b - t,
-                })
-            })
-            .collect();
-        let width = colx[cols - 1] + cw + PAD + MARGIN;
-        let height = rowy[rows - 1] + ch + PAD + MARGIN;
+        let frame = frames(
+            inp,
+            tiling,
+            (&colx, &rowy),
+            (cw, ch),
+            (zone_head, &deep),
+            extra,
+        );
+        let width = colx[cols - 1] + cw + PAD * right + piles.0 + MARGIN;
+        let height = rowy[rows - 1] + ch + PAD * bottom + piles.1 + MARGIN;
         let frames_px: Vec<(usize, BoxPx)> = frame
             .iter()
             .enumerate()
-            .filter_map(|(i, f)| f.map(|f| (i, f.px())))
+            .filter_map(|(i, f)| f.map(|f| (i, top_frame(inp, i, f))))
             .collect();
         let mut texts = vec![Vec::new(); tiling.rects.len()];
         for (i, b) in walls(&frames_px) {
@@ -220,10 +202,59 @@ impl Lattice {
         }
     }
 
-    /// The frames holding card `c` (its panel's, when framed).
-    pub(crate) fn zones_of(&self, inp: &Input, c: usize) -> Option<usize> {
-        let p = inp.card_panel[c];
-        self.frame[p].map(|_| p)
+    /// The box an end of arrow `e` stands for (`start`: its source): a card, a zone's frame, or
+    /// round a group drawn without one (a stack, a bare zone).
+    pub(crate) fn end(&self, inp: &Input, e: &super::input::Edge, start: bool) -> Rect {
+        let (c, z) = if start {
+            (e.from, e.ends.0)
+        } else {
+            (e.to, e.ends.1)
+        };
+        let Some(z) = z else {
+            return self.card[c];
+        };
+        if let Some(f) = self.frame[z] {
+            return f;
+        }
+        let inside: Vec<Rect> = (0..inp.cards.len())
+            .filter(|&k| {
+                let mut at = Some(inp.card_panel[k]);
+                while let Some(q) = at {
+                    if q == z {
+                        return true;
+                    }
+                    at = inp.panels[q].parent;
+                }
+                false
+            })
+            .map(|k| self.card[k])
+            .collect();
+        let x0 = inside.iter().map(|r| r.x).min().unwrap_or(self.card[c].x);
+        let y0 = inside.iter().map(|r| r.y).min().unwrap_or(self.card[c].y);
+        let x1 = inside
+            .iter()
+            .map(|r| r.x + r.w)
+            .max()
+            .unwrap_or(x0 + self.cw);
+        let y1 = inside
+            .iter()
+            .map(|r| r.y + r.h)
+            .max()
+            .unwrap_or(y0 + self.ch);
+        Rect {
+            x: x0 - 1,
+            y: y0 - 1,
+            w: x1 - x0 + 2,
+            h: y1 - y0 + 2,
+        }
+    }
+
+    /// The frames holding card `c`, its own first, outwards.
+    pub(crate) fn zones_of(&self, inp: &Input, c: usize) -> Vec<usize> {
+        inp.zones_of(c)
+            .into_iter()
+            .filter(|&z| self.frame[z].is_some())
+            .collect()
     }
 
     /// The gutter column `x` (steps) lies in, between columns k and k+1.
@@ -252,10 +283,22 @@ impl Lattice {
 }
 
 /// The panel owning each cell of the tiling, row by row.
+/// Panel `i`'s frame as drawn, px: a pile's (`zones`, D-114) without the step its frames behind
+/// take.
+pub(crate) fn top_frame(inp: &Input, i: usize, f: Rect) -> BoxPx {
+    let mut b = f.px();
+    if inp.panels[i].pile_step() > 0 {
+        b.w -= STEP;
+        b.h -= STEP;
+    }
+    b
+}
+
 fn owners(tiling: &Tiling) -> Vec<usize> {
     let cols = tiling.cols;
     let mut owner = vec![usize::MAX; cols * tiling.rows];
     for (i, &(x, y, w, h)) in tiling.rects.iter().enumerate() {
+        // a zone holding no card of its own has no cells
         for cx in x..x + w {
             for cy in y..y + h {
                 owner[cy * cols + cx] = i;
@@ -274,4 +317,199 @@ fn offsets(start: i32, size: i32, gaps: &[i32], n: usize) -> Vec<i32> {
         at += size + gaps.get(k).copied().unwrap_or(0);
     }
     out
+}
+
+/// Each zone's frame round its own cards and the frames of the zones inside it, the innermost
+/// first (a zone is written before the zones inside it).
+fn frames(
+    inp: &Input,
+    tiling: &Tiling,
+    (colx, rowy): (&[i32], &[i32]),
+    (cw, ch): (i32, i32),
+    (zone_head, deep): (i32, &(Vec<i32>, Vec<i32>)),
+    extra: &Extra,
+) -> Vec<Option<Rect>> {
+    let ex = |m: &BTreeMap<usize, i32>, k: usize| m.get(&k).copied().unwrap_or(0);
+    let (cols_deep, rows_deep) = deep;
+    let cells = frame_cells(inp, tiling);
+    // a pile of frames (`zones`, D-114) takes a step more right and down, its frame and the
+    // frames round it that end on the same column (row) with it
+    let piled = |i: usize, x1: usize, y1: usize| {
+        let mut more = (0, 0);
+        for (p, c) in cells.iter().enumerate() {
+            let Some(c) = c.filter(|_| inp.panels[p].pile_step() > 0 && inp.chain(p).contains(&i))
+            else {
+                continue;
+            };
+            more.0 = more.0.max(i32::from(c.2 == x1));
+            more.1 = more.1.max(i32::from(c.3 == y1));
+        }
+        more
+    };
+    let mut frame: Vec<Option<Rect>> = vec![None; inp.panels.len()];
+    for (i, f) in frame.iter_mut().enumerate() {
+        let Some((x0, y0, x1, y1)) = cells[i] else {
+            continue;
+        };
+        // its level: the outermost frame takes the outermost padding of the gutter
+        let d = inp.chain(i).len() as i32;
+        let (l, r) = (cols_deep[x0] - d + 1, cols_deep[x1] - d + 1);
+        let (t, b) = (rows_deep[y0] - d + 1, rows_deep[y1] - d + 1);
+        let (lx, ty) = (
+            colx[x0] - PAD * l,
+            rowy[y0] - zone_head * t - ex(&extra.head, y0),
+        );
+        let (mr, mb) = piled(i, x1, y1);
+        let (rx, by) = (colx[x1] + cw + PAD * r + mr, rowy[y1] + ch + PAD * b + mb);
+        *f = Some(Rect {
+            x: lx,
+            y: ty,
+            w: rx - lx,
+            h: by - ty,
+        });
+    }
+    frame
+}
+
+/// The cells each framed panel's frame holds: those of its cards and of the zones inside it
+/// (`zones="fit"`: the cells its cards stand in, not the block they were given), first and last
+/// column and row; none for a panel without a frame or without cells.
+fn frame_cells(inp: &Input, tiling: &Tiling) -> Vec<Option<(usize, usize, usize, usize)>> {
+    (0..inp.panels.len())
+        .map(|i| {
+            inp.panels[i].zone.as_ref()?;
+            let mut cells: Option<(usize, usize, usize, usize)> = None;
+            for (j, &(x, y, w, h)) in tiling.rects.iter().enumerate() {
+                if w == 0 || h == 0 || !inp.chain(j).contains(&i) {
+                    continue;
+                }
+                let (x, y, w, h) = match fitted(inp, tiling, j) {
+                    Some(b) if inp.fit => b,
+                    _ => (x, y, w, h),
+                };
+                let (x1, y1) = (x + w - 1, y + h - 1);
+                cells = Some(cells.map_or((x, y, x1, y1), |(a, b, c, d)| {
+                    (a.min(x), b.min(y), c.max(x1), d.max(y1))
+                }));
+            }
+            cells
+        })
+        .collect()
+}
+
+/// The gutters between the columns and the rows, and the frames at each edge of the drawing.
+struct Gutters {
+    xgap: Vec<i32>,
+    xout: Vec<bool>,
+    ygap: Vec<i32>,
+    yout: Vec<bool>,
+    /// The frames at the left, top, right and bottom edges (one at least).
+    edges: (i32, i32, i32, i32),
+    /// The frames each column and each row of cells is nested in at most (one at least).
+    deep: (Vec<i32>, Vec<i32>),
+    /// A pile of frames ends on the last column, on the last row (a step more each, D-114).
+    piles: (i32, i32),
+}
+
+/// The gutters of `tiling`: between two groups, a padding for each level of frames on either side
+/// each side) and the channel; inside a group, the group's gap; above a row of other groups, a
+/// title for each frame opening there.
+fn gutters(inp: &Input, tiling: &Tiling, gaps: Gaps, extra: &Extra, zone_head: i32) -> Gutters {
+    let (cols, rows) = (tiling.cols, tiling.rows);
+    let owner = owners(tiling);
+    let ex = |m: &BTreeMap<usize, i32>, k: usize| m.get(&k).copied().unwrap_or(0);
+    // the zones holding each cell, its own first (none for a hole or a card outside every zone)
+    let chains: Vec<Vec<usize>> = owner
+        .iter()
+        .map(|&o| {
+            if o == usize::MAX {
+                Vec::new()
+            } else {
+                inp.chain(o)
+            }
+        })
+        .collect();
+    // two cells of different groups: in different zones, or outside every zone (two blocks of one
+    // zone, a stack's layers or a `wrap` zone's children, keep the zone's own gap)
+    let apart = |a: usize, b: usize| {
+        owner[a] != owner[b] && (chains[a] != chains[b] || chains[a].is_empty())
+    };
+    // the frames a column (a row) of cells is nested in at most, one at least: each frame keeps
+    // one padding (one title above) of the gutter for its level, so that the frames of one level
+    // line up along a column or a row (S3), whatever they hold
+    let cols_deep: Vec<i32> = (0..cols)
+        .map(|c| {
+            (0..rows)
+                .map(|r| chains[r * cols + c].len() as i32)
+                .max()
+                .unwrap_or(0)
+                .max(1)
+        })
+        .collect();
+    let rows_deep: Vec<i32> = (0..rows)
+        .map(|r| {
+            (0..cols)
+                .map(|c| chains[r * cols + c].len() as i32)
+                .max()
+                .unwrap_or(0)
+                .max(1)
+        })
+        .collect();
+    // a gutter between two groups holds a padding for each frame it crosses (at least one on
+    // each side) and the channel; one inside a group, the group's gap; above a row of other
+    // groups, a title for each frame opening there
+    // a pile of frames (`zones`, D-114): a step more after its last column and its last row
+    let (mut pile_x, mut pile_y) = (vec![0; cols], vec![0; rows]);
+    for (p, c) in frame_cells(inp, tiling).into_iter().enumerate() {
+        if let Some((_, _, x1, y1)) = c.filter(|_| inp.panels[p].pile_step() > 0) {
+            pile_x[x1] = 1;
+            pile_y[y1] = 1;
+        }
+    }
+    let mut xout = Vec::new();
+    let mut xgap = Vec::new();
+    for k in 1..cols {
+        let out = (0..rows).any(|r| apart(r * cols + k - 1, r * cols + k));
+        let g = if out {
+            PAD * (cols_deep[k - 1] + cols_deep[k]) + gaps.chan_x
+        } else {
+            gaps.gin_x
+        };
+        xout.push(out);
+        xgap.push(g + ex(&extra.x, k - 1) + pile_x[k - 1]);
+    }
+    let mut yout = Vec::new();
+    let mut ygap = Vec::new();
+    for k in 1..rows {
+        let out = (0..cols).any(|c| apart((k - 1) * cols + c, k * cols + c));
+        let g = if out {
+            PAD * rows_deep[k - 1] + zone_head * rows_deep[k] + gaps.chan_y
+        } else {
+            gaps.gin_y
+        };
+        yout.push(out);
+        ygap.push(g + ex(&extra.y, k - 1) + ex(&extra.head, k) + pile_y[k - 1]);
+    }
+    // round the drawing: a padding (a title above) for each frame at its edge
+    let (left, right) = (cols_deep[0], cols_deep[cols - 1]);
+    let (top, bottom) = (rows_deep[0], rows_deep[rows - 1]);
+    Gutters {
+        xgap,
+        xout,
+        ygap,
+        yout,
+        edges: (left, top, right, bottom),
+        deep: (cols_deep, rows_deep),
+        piles: (pile_x[cols - 1], pile_y[rows - 1]),
+    }
+}
+
+/// The cells panel `j`'s cards stand in, as one block (none when it holds no card).
+fn fitted(inp: &Input, tiling: &Tiling, j: usize) -> Option<(usize, usize, usize, usize)> {
+    let cells: Vec<(usize, usize)> = inp.panels[j].cards.iter().map(|&c| tiling.pos[c]).collect();
+    let x0 = cells.iter().map(|c| c.0).min()?;
+    let y0 = cells.iter().map(|c| c.1).min()?;
+    let x1 = cells.iter().map(|c| c.0).max()?;
+    let y1 = cells.iter().map(|c| c.1).max()?;
+    Some((x0, y0, x1 - x0 + 1, y1 - y0 + 1))
 }

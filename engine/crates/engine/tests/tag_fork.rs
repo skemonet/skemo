@@ -1,7 +1,9 @@
 //! A fork whose source's axis runs just past a zone's tag pill (D-057): the trunk goes straight
 //! up to the split, at the level of its neighbour's fork, instead of stepping round the pill.
 
-use skemo_engine::{Options, from_source};
+use skemo_engine::Options;
+mod elk;
+use elk::from_source;
 
 #[test]
 fn a_fork_beside_a_zone_tag_splits_on_its_axis_like_its_neighbour() {

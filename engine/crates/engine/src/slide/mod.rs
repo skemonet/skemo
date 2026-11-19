@@ -108,6 +108,37 @@ fn steps(px: f64) -> i32 {
 
 /// The model read as panels of cards, or `None` when the slide engine does not draw it.
 /// Each label wrapped at `[label-width]` (L6): its lines and its pill's size.
+/// A stack or a bare zone draws no frame, but the renderer reaches its children through its box:
+/// the box round them, the innermost first.
+fn unframed(model: &Model, boxes: &mut BTreeMap<String, Box2>) {
+    for z in model.nodes.iter().rev().filter(|n| n.kind == Kind::Zone) {
+        if boxes.contains_key(&z.id) {
+            continue;
+        }
+        let kids: Vec<Box2> = model
+            .children(Some(&z.id))
+            .filter_map(|c| boxes.get(&c.id).copied())
+            .collect();
+        let (Some(x0), Some(y0)) = (
+            kids.iter().map(|b| b.x).reduce(f64::min),
+            kids.iter().map(|b| b.y).reduce(f64::min),
+        ) else {
+            continue;
+        };
+        let x1 = kids.iter().map(Box2::right).fold(x0, f64::max);
+        let y1 = kids.iter().map(Box2::bottom).fold(y0, f64::max);
+        boxes.insert(
+            z.id.clone(),
+            Box2 {
+                x: x0,
+                y: y0,
+                w: x1 - x0,
+                h: y1 - y0,
+            },
+        );
+    }
+}
+
 /// What the slide engine hands to the renderer.
 #[derive(Clone)]
 pub(crate) struct Drawn {
@@ -214,12 +245,14 @@ fn arrange_inner(
             &Extra::default(),
             &walls,
         );
-        let out = Drawing::empty(l, inp.edges.len()).output(&inp);
+        let mut out = Drawing::empty(l, inp.edges.len()).output(&inp);
+        unframed(model, &mut out.boxes);
         CACHE.with(|c| remember(&mut c.borrow_mut(), key, out.clone()));
         return Some(out);
     }
     let best = engine.run()?;
     let mut out = best.output(&inp);
+    unframed(model, &mut out.boxes);
     for (id, (lines, sz)) in wraps {
         if lines.len() > 1 {
             out.label_lines.insert(id.clone(), lines);
@@ -281,7 +314,7 @@ impl Drawing {
         }
         for (i, p) in inp.panels.iter().enumerate() {
             if let (Some(z), Some(f)) = (&p.zone, self.l.frame[i]) {
-                boxes.insert(z.clone(), f.px());
+                boxes.insert(z.clone(), lattice::top_frame(inp, i, f));
             }
         }
         let mut routes = BTreeMap::new();
@@ -296,7 +329,12 @@ impl Drawing {
                 // step the lattice gave them
                 let e = &inp.edges[k];
                 let last = pts.len() - 1;
-                for (i, c) in [(0, e.from), (last, e.to)] {
+                let card_ends = [(0, e.from, e.ends.0), (last, e.to, e.ends.1)];
+                for (i, c) in card_ends
+                    .iter()
+                    .filter(|t| t.2.is_none())
+                    .map(|t| (t.0, t.1))
+                {
                     let (cell, b) = (self.l.card[c].px(), top(c));
                     let p = &mut pts[i];
                     if (p.0 - (cell.x + cell.w)).abs() < 0.5 {
@@ -306,9 +344,29 @@ impl Drawing {
                         p.1 = b.y + b.h;
                     }
                 }
+                // the same for a pile of frames (`zones`, D-114): its frames behind take less than
+                // the step when it has two
+                for (i, z) in [(0, e.ends.0), (last, e.ends.1)] {
+                    let Some((z, f)) = z.and_then(|z| self.l.frame[z].map(|f| (z, f))) else {
+                        continue;
+                    };
+                    let m = inp.panels[z].pile;
+                    if inp.panels[z].pile_step() == 0 {
+                        continue;
+                    }
+                    let (cell, b) = (f.px(), lattice::top_frame(inp, z, f));
+                    let p = &mut pts[i];
+                    if (p.0 - (cell.x + cell.w)).abs() < 0.5 {
+                        p.0 = b.x + b.w + m;
+                    }
+                    if (p.1 - (cell.y + cell.h)).abs() < 0.5 {
+                        p.1 = b.y + b.h + m;
+                    }
+                }
                 // a node's arrows end on its icon (D-087): the last stretch runs on to it
                 for (i, c, side) in [(0, e.from, r.sside), (last, e.to, r.tside)] {
-                    if let Some(icon) = inp.icon[c] {
+                    let card_end = if i == 0 { e.ends.0 } else { e.ends.1 }.is_none();
+                    if let Some(icon) = inp.icon[c].filter(|_| card_end) {
                         let b = top(c);
                         to_icon(&mut pts, i, side, icon.within(b), b);
                     }
@@ -376,11 +434,13 @@ impl<'a> Engine<'a> {
             .edges
             .iter()
             .map(|e| Arrow {
-                src: e.from,
-                dst: e.to,
+                // a zone end: an id of its own, past the cards'
+                src: e.ends.0.map_or(e.from, |z| inp.cards.len() + z),
+                dst: e.ends.1.map_or(e.to, |z| inp.cards.len() + z),
                 look: e.look.clone(),
                 label: e.label.clone(),
                 face: false,
+                join: e.join.clone(),
             })
             .collect();
         Engine {

@@ -17,7 +17,7 @@ avertissement[unknown-tag] : balise « boite » inconnue : ignorée avec son con
   │
 4 │   boite#x Inconnue
   │   ^^^^^
-  = aide : balises reconnues : diagram, title, card, cards, node, zone, stack, to ; une ligne commence par « | »
+  = aide : balises reconnues : diagram, title, card, cards, node, zone, zones, stack, to ; une ligne commence par « | »
 avertissement[draw-on-node] : l'effet « draw » ne s'applique qu'aux liens : « fade » est utilisé
   ┌─ avertissements.skemo:6:3
   │

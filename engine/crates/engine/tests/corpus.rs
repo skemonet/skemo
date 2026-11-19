@@ -5,6 +5,7 @@
 use skemo_engine::{Options, from_source};
 use skemo_lang::Kind;
 use std::path::Path;
+mod elk;
 
 fn corpus() -> Vec<(String, String, Vec<String>)> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -16,6 +17,12 @@ fn corpus() -> Vec<(String, String, Vec<String>)> {
             if p.extension().is_some_and(|x| x == ext) {
                 let name = p.file_stem().unwrap().to_str().unwrap().to_string();
                 let src = std::fs::read_to_string(&p).unwrap();
+                // cards pinned by hand on ELK's drawing: their places mean something there only
+                let src = if has_pins(&src) {
+                    elk::graph(&src)
+                } else {
+                    src
+                };
                 let css = std::fs::read_to_string(dir.join(format!("{name}.css")))
                     .into_iter()
                     .collect();
@@ -25,6 +32,16 @@ fn corpus() -> Vec<(String, String, Vec<String>)> {
     }
     found.sort_by(|a, b| a.0.cmp(&b.0));
     found
+}
+
+/// A card pinned at a point (`at="x,y"`), not docked on a side (`at="s"`).
+fn has_pins(src: &str) -> bool {
+    src.match_indices("at=\"").any(|(i, m)| {
+        src[i + m.len()..]
+            .chars()
+            .next()
+            .is_some_and(|c| c.is_ascii_digit() || c == '-')
+    })
 }
 
 #[test]
@@ -103,8 +120,18 @@ fn terraform() -> skemo_engine::Diagram {
 
 /// A drawing of `tests/data` and its stylesheet, laid out.
 fn data(name: &str) -> skemo_engine::Diagram {
+    data_with(name, str::to_string)
+}
+
+/// The same, drawn by ELK: the finishing passes of its routes (D-093, the steps flattened) are
+/// ELK's; the slide engine keeps the constitution's rules instead.
+fn data_elk(name: &str) -> skemo_engine::Diagram {
+    data_with(name, elk::graph)
+}
+
+fn data_with(name: &str, engine: fn(&str) -> String) -> skemo_engine::Diagram {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data");
-    let src = std::fs::read_to_string(root.join(format!("{name}.skemo"))).unwrap();
+    let src = engine(&std::fs::read_to_string(root.join(format!("{name}.skemo"))).unwrap());
     let css = vec![std::fs::read_to_string(root.join(format!("{name}.css"))).unwrap()];
     from_source(
         &src,
@@ -140,7 +167,7 @@ fn long_arrows_with_one_label_merge_and_say_it_once() {
 /// arrow to the api.
 #[test]
 fn a_lone_end_lands_in_the_middle_of_its_side() {
-    let d = terraform();
+    let d = data_elk("terraform-shop");
     let r = &d.routes["shop-prod->api"];
     let api = d.boxes["api"];
     let end = r.last().unwrap();
@@ -261,7 +288,7 @@ fn crossings_get_a_gap() {
 /// events went left, up 35 px, then left again (the platform as a Terraform importer writes it).
 #[test]
 fn a_step_in_the_middle_of_an_arrow_is_flattened() {
-    let d = data("terraform-import");
+    let d = data_elk("terraform-import");
     let r = &d.routes["nightly->order-events"];
     assert!(r.len() <= 4, "{r:?}");
 }

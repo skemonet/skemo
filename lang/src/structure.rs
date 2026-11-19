@@ -388,7 +388,7 @@ pub fn add_line(src: &str, id: &str, text: &str) -> Result<String, EditError> {
 /// name is rewritten. A stack has no title: a zone's title is kept in the text but ignored, with
 /// the parser's warning.
 pub fn set_tag(src: &str, id: &str, tag: &str) -> Result<String, EditError> {
-    if !matches!(tag, "card" | "cards" | "node" | "zone" | "stack") {
+    if !matches!(tag, "card" | "cards" | "node" | "zone" | "zones" | "stack") {
         return Err(EditError::BadValue(tr!(
             "unknown tag: `{tag}`",
             "balise inconnue : « {tag} »"

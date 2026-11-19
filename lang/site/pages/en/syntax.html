@@ -16,7 +16,7 @@ description: How a .skemo file is read: a Pug-like indented text with four tags,
   <tr><td><code>diagram(…)</code></td><td>optional first line: global options</td><td>everything else, indented below</td></tr>
   <tr><td><code>card#id.type</code></td><td>a card</td><td>text = title · <code>| …</code> = content lines · <code>to(…)</code> = arrows leaving it</td></tr>
   <tr><td><code>zone#id.type</code></td><td>a group</td><td>text = title · <code>| …</code> = description lines · indented cards and zones</td></tr>
-  <tr><td><code>to(target).type</code></td><td>an arrow, inside its source card</td><td>text = label (optional)</td></tr>
+  <tr><td><code>to(target).type</code></td><td>an arrow, inside its source card or zone</td><td>text = label (optional)</td></tr>
   <tr><td><code>| text</code></td><td>a line of the card, zone or title above it</td><td>Markdown emphasis; a line ending with <code>|</code> is a table row</td></tr>
 </table>
 <p><code>title</code>, <code>cards</code> and <code>stack</code> complete the set: see <a href="cards-and-zones.html">Cards and zones</a>.

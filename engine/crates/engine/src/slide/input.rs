@@ -1,6 +1,8 @@
-//! The diagram as the slide engine reads it: one panel per zone (a loose card is a panel of its
-//! own), the cards numbered in panel order, one module for every card, labels wrapped.
+//! The diagram as the slide engine reads it: one panel per zone, at any depth (a card outside every
+//! zone is a panel of its own), the cards numbered in panel order, one module for every card,
+//! labels wrapped.
 
+use super::grid::Side;
 use super::{STEP, labels, steps};
 use crate::measure::Sizes;
 use crate::scene::Scene;
@@ -9,7 +11,32 @@ use std::collections::BTreeMap;
 
 pub(crate) struct Panel {
     pub zone: Option<String>,
+    /// The group's id (a zone, a stack, a bare zone), none for a card's own panel.
+    pub id: Option<String>,
+    /// Its own cards (a zone's cards in its sub-zones are theirs).
     pub cards: Vec<usize>,
+    /// The zone (or stack) it sits in.
+    pub parent: Option<usize>,
+    /// A `stack` (D-050): no frame, its children one after the other in writing order along `dir`.
+    pub stack: bool,
+    /// A `.wide` card or zone: a row of its own across its group.
+    pub wide: bool,
+    /// `wrap="N"` on a zone: its children in writing order, at most N a row (a column across
+    /// `dir`).
+    pub wrap: Option<usize>,
+    /// Where it is written (its node's place in the model).
+    pub order: usize,
+    /// Where its first own card is written.
+    pub first: usize,
+    /// `zones` (D-114): the room its frames behind take beyond its frame, right and down (px).
+    pub pile: f64,
+}
+
+impl Panel {
+    /// The step a pile of frames takes beyond the frame, right and down (0 or 1).
+    pub(crate) fn pile_step(&self) -> i32 {
+        i32::from(self.pile > 0.0 && self.zone.is_some())
+    }
 }
 
 pub(crate) struct Edge {
@@ -21,6 +48,16 @@ pub(crate) struct Edge {
     pub lsize: (f64, f64),
     /// `constraint="false"`: drawn, but no part of the placement.
     pub constraint: bool,
+    /// `side="start-end"`: the sides it leaves and enters by, when written.
+    pub sides: (Option<Side>, Option<Side>),
+    /// `via="x,y …"`: the lattice nodes it runs through, in order.
+    pub via: Vec<(i32, i32)>,
+    /// `join="…"`: `trunk`, the arrows of one `to(…)` share their start; a name, the arrows
+    /// into one card carrying it share their end.
+    pub join: Option<String>,
+    /// The zone (panel) an end is, when it is one: `from` and `to` are then a card of it, for
+    /// the placement; the line leaves or enters the zone's frame.
+    pub ends: (Option<usize>, Option<usize>),
 }
 
 /// The diagram as the slide engine reads it.
@@ -37,6 +74,26 @@ pub(crate) struct Input {
     pub pile: Vec<f64>,
     /// A node's icon (D-087), where its arrows end: none for a card.
     pub icon: Vec<Option<Icon>>,
+    /// Each note (D-104) and the card it annotates.
+    pub notes: Vec<(usize, usize)>,
+    /// Columns (`.col-<name>`, D-051): per column, its members' cards (a card, or a zone's
+    /// cards), whose axes line up across `dir`.
+    pub cols: Vec<Vec<Vec<usize>>>,
+    /// The flow's direction (`dir`).
+    pub dir: Dir,
+    /// `zones="fit"`: each frame fitted to its cards, not stretched to its cells.
+    pub fit: bool,
+}
+
+/// The flow's direction (`dir`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct Dir {
+    /// Right or left: a stack lays its children side by side, a wide element is a column.
+    pub across: bool,
+    /// Up or left: a stack lays its children from the end.
+    pub reverse: bool,
+    /// Written: the flow goes that way, an arrow set aside across it pays.
+    pub written: bool,
 }
 
 /// A node's icon within its box, px: from the box's left edge, from its top and bottom edges to
@@ -90,6 +147,37 @@ impl Icon {
 }
 
 impl Input {
+    /// The zones holding card `c`, its own first, outwards (panel indices).
+    pub(crate) fn zones_of(&self, c: usize) -> Vec<usize> {
+        self.chain(self.card_panel[c])
+    }
+
+    /// Panel `p` if it is a zone, and the zones it sits in, outwards.
+    pub(crate) fn chain(&self, p: usize) -> Vec<usize> {
+        let mut out = Vec::new();
+        let mut at = Some(p);
+        while let Some(i) = at {
+            if self.panels[i].zone.is_some() {
+                out.push(i);
+            }
+            at = self.panels[i].parent;
+        }
+        out
+    }
+
+    /// Card `c` is a `.wide` one: a bar across its group.
+    pub(crate) fn wide(&self, c: usize) -> bool {
+        let p = &self.panels[self.card_panel[c]];
+        p.wide && p.zone.is_none()
+    }
+
+    /// The panels directly inside panel `p` (`None`: at the top), in writing order.
+    pub(crate) fn children(&self, p: Option<usize>) -> Vec<usize> {
+        (0..self.panels.len())
+            .filter(|&i| self.panels[i].parent == p)
+            .collect()
+    }
+
     /// What the drawing depends on, as text.
     pub(super) fn key(&self) -> String {
         let edges: Vec<_> = self
@@ -104,14 +192,29 @@ impl Input {
                     &e.look,
                     e.lsize,
                     e.constraint,
+                    e.sides,
+                    &e.via,
+                    &e.join,
+                    e.ends,
                 )
             })
             .collect();
-        let panels: Vec<_> = self.panels.iter().map(|p| (&p.zone, &p.cards)).collect();
+        let panels: Vec<_> = self
+            .panels
+            .iter()
+            .map(|p| {
+                (
+                    &p.zone, &p.cards, p.parent, p.stack, p.wide, p.wrap, p.order,
+                )
+            })
+            .collect();
         format!(
             "{:?}{panels:?}{edges:?}{}x{}+{}",
             self.cards, self.card_w, self.card_h, self.head_steps
-        ) + &format!("{:?}{:?}", self.pile, self.icon)
+        ) + &format!(
+            "{:?}{:?}{:?}{:?}{:?}",
+            self.pile, self.icon, self.dir, self.notes, self.cols
+        ) + &format!("{}", self.fit)
     }
 }
 
@@ -158,23 +261,15 @@ pub(super) fn wrapped(
     out
 }
 
-/// Does the slide engine read the whole drawing (its docked elements apart)? Not yet: nested
-/// zones, an empty zone, a pinned or invisible card, a zone placed or sized by hand, `wrap`,
-/// `stack`, a `.wide` element, an arrow to a zone, more than `MAX_ARROWS`
-/// arrows. Those keep the engine that drew them before the slide engine became the default.
+/// Does the slide engine read the whole drawing (its docked elements apart)? Not yet: an invisible
+/// card, more than `MAX_ARROWS` arrows. Those keep the engine that drew them before the slide
+/// engine became the default.
 pub(crate) fn reads(model: &Model) -> bool {
     let split = crate::dock::split(model);
     let m = split.as_ref().map_or(model, |s| &s.main);
     let node_ok = |n: &skemo_lang::Node| match n.kind {
-        Kind::Zone => {
-            n.parent.is_none()
-                && n.at.is_none()
-                && n.size.is_none()
-                && n.wrap.is_none()
-                && !n.stack
-                && !crate::layout::invisible(n)
-        }
-        Kind::Card => n.at.is_none() && !crate::layout::invisible(n),
+        Kind::Zone => true,
+        Kind::Card => !crate::layout::invisible(n),
     };
     let cards: std::collections::BTreeSet<&str> = m
         .nodes
@@ -182,25 +277,20 @@ pub(crate) fn reads(model: &Model) -> bool {
         .filter(|n| n.kind == Kind::Card)
         .map(|n| n.id.as_str())
         .collect();
-    let holds_a_card = |z: &skemo_lang::Node| {
-        m.nodes
-            .iter()
-            .any(|n| n.kind == Kind::Card && n.parent.as_deref() == Some(z.id.as_str()))
-    };
-    m.nodes.iter().all(|n| {
-        node_ok(n)
-            && !n.classes.iter().any(|c| c == "wide")
-            && (n.kind == Kind::Card || holds_a_card(n))
-    }) && m.edges.len() <= MAX_ARROWS
-        && m.edges
-            .iter()
-            .all(|e| cards.contains(e.from.as_str()) && cards.contains(e.to.as_str()))
+    m.nodes.iter().all(node_ok)
+        && m.edges.len() <= MAX_ARROWS
+        && m.edges.iter().all(|e| {
+            let known = |id: &str| cards.contains(id) || m.node(id).is_some();
+            known(&e.from) && known(&e.to)
+        })
 }
 
 /// The diagram as the slide engine reads it, or `None` when the grid engine draws it.
 pub(super) fn read(model: &Model, scene: &Scene, sizes: &Sizes, head: f64) -> Option<Input> {
     let (cards, panels, card_panel) = panels_of(model)?;
-    let edges = edges_of(model, &cards, sizes)?;
+    let cards_at = cards.clone();
+    let cols = columns(model, &cards, &panels);
+    let edges = edges_of(model, &cards, (&panels, &card_panel), sizes)?;
     let icon: Vec<Option<Icon>> = cards
         .iter()
         .map(|c| icon_of(model, scene, sizes, c))
@@ -228,6 +318,22 @@ pub(super) fn read(model: &Model, scene: &Scene, sizes: &Sizes, head: f64) -> Op
         head_steps: steps(head + desc + STEP),
         pile,
         icon,
+        cols,
+        notes: model
+            .edges
+            .iter()
+            .filter_map(|e| crate::tidy::notes::note_link(model, e))
+            .filter_map(|(n, t)| {
+                let at = |id: &str| cards_at.iter().position(|c| c == id);
+                Some((at(n)?, at(t)?))
+            })
+            .collect(),
+        dir: Dir {
+            across: matches!(model.option("dir"), Some("right" | "left")),
+            reverse: matches!(model.option("dir"), Some("up" | "left")),
+            written: model.option("dir").is_some(),
+        },
+        fit: model.option("zones") == Some("fit"),
     })
 }
 
@@ -252,41 +358,63 @@ fn icon_of(model: &Model, scene: &Scene, sizes: &Sizes, id: &str) -> Option<Icon
 /// The cards numbered in panel order, the panels in writing order, and each card's panel;
 /// `None` on nested zones, a pinned or an invisible card.
 fn panels_of(model: &Model) -> Option<(Vec<String>, Vec<Panel>, Vec<usize>)> {
-    // the panels in writing order: a zone, or a card outside every zone, where it is written
-    // (P3: sibling groups keep their writing order)
+    // the panels in writing order: a zone, at any depth, or a card outside every zone, where it is
+    // written (P3: sibling groups keep their writing order)
     let mut panels: Vec<Panel> = Vec::new();
     let mut zone_at: BTreeMap<&str, usize> = BTreeMap::new();
     let mut cards = Vec::new();
-    for n in &model.nodes {
+    let wide = |n: &skemo_lang::Node| n.classes.iter().any(|c| c == "wide");
+    for (order, n) in model.nodes.iter().enumerate() {
+        let parent = match &n.parent {
+            Some(p) => Some(*zone_at.get(p.as_str())?),
+            None => None,
+        };
         match n.kind {
-            Kind::Zone if n.parent.is_some() => return None,
             Kind::Zone => {
                 zone_at.insert(&n.id, panels.len());
                 panels.push(Panel {
-                    zone: Some(n.id.clone()),
+                    id: Some(n.id.clone()),
+                    // a stack or a bare zone draws no frame
+                    zone: (!crate::layout::invisible(n)).then(|| n.id.clone()),
                     cards: Vec::new(),
+                    parent,
+                    stack: n.stack,
+                    wide: wide(n),
+                    wrap: n.wrap.map(|w| w.max(1) as usize),
+                    order,
+                    first: usize::MAX,
+                    pile: crate::measure::deck_margin(n),
                 });
             }
             Kind::Card if n.at.is_some() || crate::layout::invisible(n) => return None,
-            Kind::Card if n.parent.is_none() => {
+            // a card of its own: outside every zone, in a stack or a `wrap` zone, or a wide one
+            Kind::Card
+                if parent.is_none_or(|p| panels[p].stack || panels[p].wrap.is_some())
+                    || wide(n) =>
+            {
                 panels.push(Panel {
+                    id: None,
                     zone: None,
                     cards: vec![cards.len()],
+                    parent,
+                    stack: false,
+                    wide: wide(n),
+                    wrap: None,
+                    order,
+                    first: order,
+                    pile: 0.0,
                 });
                 cards.push(n.id.clone());
             }
-            _ => {}
+            Kind::Card => {
+                let p = parent?;
+                panels[p].first = panels[p].first.min(order);
+                panels[p].cards.push(cards.len());
+                cards.push(n.id.clone());
+            }
         }
     }
-    for n in model.nodes.iter().filter(|n| n.kind == Kind::Card) {
-        if let Some(p) = &n.parent {
-            let i = *zone_at.get(p.as_str())?;
-            panels[i].cards.push(cards.len());
-            cards.push(n.id.clone());
-        }
-    }
-    panels.retain(|p| !p.cards.is_empty());
-    if cards.is_empty() {
+    if panels.is_empty() {
         return None;
     }
     let order: Vec<usize> = panels
@@ -312,16 +440,95 @@ fn panels_of(model: &Model) -> Option<(Vec<String>, Vec<Panel>, Vec<usize>)> {
     Some((cards, panels, card_panel))
 }
 
+/// The columns (`.col-<name>`): for each name, its members' cards, a card's own or a zone's
+/// (those of the zones inside it too).
+fn columns(model: &Model, cards: &[String], panels: &[Panel]) -> Vec<Vec<Vec<usize>>> {
+    let mut by: BTreeMap<&str, Vec<Vec<usize>>> = BTreeMap::new();
+    for n in &model.nodes {
+        let Some(name) = n.classes.iter().find_map(|c| c.strip_prefix("col-")) else {
+            continue;
+        };
+        let member: Vec<usize> = match n.kind {
+            Kind::Card => cards.iter().position(|c| *c == n.id).into_iter().collect(),
+            Kind::Zone => {
+                let Some(z) = panels.iter().position(|p| p.id.as_deref() == Some(&n.id)) else {
+                    continue;
+                };
+                let inside = |mut at: Option<usize>| {
+                    while let Some(q) = at {
+                        if q == z {
+                            return true;
+                        }
+                        at = panels[q].parent;
+                    }
+                    false
+                };
+                panels
+                    .iter()
+                    .enumerate()
+                    .filter(|(i, _)| inside(Some(*i)))
+                    .flat_map(|(_, p)| p.cards.iter().copied())
+                    .collect()
+            }
+        };
+        if !member.is_empty() {
+            by.entry(name).or_default().push(member);
+        }
+    }
+    by.into_values().filter(|m| m.len() > 1).collect()
+}
+
+/// `side="start-end"` read: either half may be empty.
+fn sides_of(side: Option<&str>) -> (Option<Side>, Option<Side>) {
+    let one = |s: &str| match s.trim() {
+        "top" => Some(Side::Top),
+        "bottom" => Some(Side::Bottom),
+        "left" => Some(Side::Left),
+        "right" => Some(Side::Right),
+        _ => None,
+    };
+    match side.and_then(|s| s.split_once('-')) {
+        Some((a, b)) => (one(a), one(b)),
+        None => (side.and_then(one), None),
+    }
+}
+
 /// The arrows between cards (a loop left out); `None` on an arrow to a zone or past
 /// `MAX_ARROWS`.
-fn edges_of(model: &Model, cards: &[String], sizes: &Sizes) -> Option<Vec<Edge>> {
-    let at = |id: &str| cards.iter().position(|c| c == id);
+fn edges_of(
+    model: &Model,
+    cards: &[String],
+    (panels, card_panel): (&[Panel], &[usize]),
+    sizes: &Sizes,
+) -> Option<Vec<Edge>> {
+    let card = |id: &str| cards.iter().position(|c| c == id);
+    // a zone: its panel, and its first card (one of a zone inside it), for the placement
+    let zone = |id: &str| -> Option<(usize, usize)> {
+        let z = panels.iter().position(|p| p.id.as_deref() == Some(id))?;
+        let inside = |c: usize| {
+            let mut at = Some(card_panel[c]);
+            while let Some(q) = at {
+                if q == z {
+                    return true;
+                }
+                at = panels[q].parent;
+            }
+            false
+        };
+        let first = (0..cards.len()).find(|&c| inside(c)).unwrap_or(0);
+        Some((z, first))
+    };
+    let end = |id: &str| -> Option<(usize, Option<usize>)> {
+        card(id)
+            .map(|c| (c, None))
+            .or_else(|| zone(id).map(|(z, c)| (c, Some(z))))
+    };
     let mut edges = Vec::new();
     for e in &model.edges {
-        let (Some(from), Some(to)) = (at(&e.from), at(&e.to)) else {
+        let (Some((from, fz)), Some((to, tz))) = (end(&e.from), end(&e.to)) else {
             return None;
         };
-        if from == to {
+        if from == to && fz == tz {
             continue;
         }
         let mut look = e.classes.clone();
@@ -335,7 +542,20 @@ fn edges_of(model: &Model, cards: &[String], sizes: &Sizes) -> Option<Vec<Edge>>
             label: label.filter(|_| lsize.0 > 0.0),
             look: look.join(" "),
             lsize,
+            // a note's link does not shape the placement: the note stands beside its card
             constraint: e.constraint,
+            ends: (fz, tz),
+            join: e
+                .join
+                .clone()
+                .filter(|j| !j.is_empty() && !crate::trace::off("slide-join")),
+            sides: sides_of(e.side.as_deref()),
+            via: e
+                .via
+                .iter()
+                .flatten()
+                .map(|p| ((p[0] / STEP).round() as i32, (p[1] / STEP).round() as i32))
+                .collect(),
         });
     }
     (edges.len() <= MAX_ARROWS).then_some(edges)

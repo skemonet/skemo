@@ -24,7 +24,7 @@ embedded, and the output is **identical from one machine to the next**.
 
 ## Installation
 
-The project is a pre-release (`0.1.0-rc.9`). Release binaries (Linux x86_64 and ARM, macOS ARM and Intel, Windows, with
+The project is a pre-release (`0.1.0-rc.10`). Release binaries (Linux x86_64 and ARM, macOS ARM and Intel, Windows, with
 SHA-256 checksums) are on the repository's [releases page](https://github.com/skemonet/skemo/releases).
 
 **From source** (recent Rust, edition 2024, i.e. 1.85 or later; [rustup.rs](https://rustup.rs)):
@@ -64,8 +64,9 @@ A `.skemo` file is **Pug** restricted to eight tags, with content lines written 
 | `cards#id.type Title` | a card drawn as a pile of several instances; `count="N"` adds a `×N` badge |
 | `node#id.type Title` | a thing drawn by its icon, its name and lines beside it, without a frame; mixes with cards whatever their look |
 | `zone#id.type Title` | a group containing cards or other zones (by indentation); its `\|` lines are description lines |
+| `zones#id.type Title` | a zone drawn as a pile of frames, for several instances of one group; `count="N"` adds a `×N` badge |
 | `stack` | an invisible group that lays its children one after the other |
-| `to(target).type Label` | an arrow, written inside its source card |
+| `to(target).type Label` | an arrow, written inside its source card or zone (a zone's leaves its frame) |
 | `title Text` | the diagram's title, under `diagram`; its `\|` lines are subtitle lines |
 | `diagram(dir="down")` | global options (direction, theme, `timeline`, `frieze` or `mindmap` layout) |
 

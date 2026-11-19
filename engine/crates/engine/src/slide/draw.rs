@@ -91,11 +91,12 @@ impl Engine<'_> {
         let g = Grid::new(inp, &l);
         trace("grid");
         for (k, e) in inp.edges.iter().enumerate() {
-            self.arrows[k].face = grid::facing(inp, &l, e.from, e.to);
+            self.arrows[k].face = grid::facing(inp, &l, e);
         }
         let (mut routes, start) = self.own_routes(&g, &l, from);
         trace("own routes");
         self.add_siblings(&g, &l, &mut routes);
+        let start = self.written(&g, &l, &mut routes, start);
         trace("routes");
         let mut cache = labels::SlotCache::new(&l);
         let (slots, valid) = slots_for(&mut cache, &l, &routes, inp);
@@ -146,7 +147,7 @@ impl Engine<'_> {
         let mut routes = Vec::new();
         let mut start = Vec::new();
         for (k, e) in inp.edges.iter().enumerate() {
-            let s = Search::new(g, inp, l, e.from, e.to);
+            let s = Search::of(g, inp, l, e);
             let carry = |r: &Route, ins: &[(usize, i32, i32)]| {
                 let nodes = grid::dense(&r.pts.iter().map(|&p| mapped(ins, p)).collect::<Vec<_>>());
                 s.route(nodes, r.sside, r.tside)
@@ -155,7 +156,7 @@ impl Engine<'_> {
             // they lie: its candidates are carried; otherwise searched again
             let near = match (from, &ins) {
                 (Some(d), Some(ins)) => {
-                    let (a, b) = (d.l.card[e.from], d.l.card[e.to]);
+                    let (a, b) = (d.l.end(inp, e, true), d.l.end(inp, e, false));
                     ins.iter().any(|&(ax, at, _)| {
                         let (lo, hi) = if ax == 0 {
                             (a.x.min(b.x), (a.x + a.w).max(b.x + b.w))
@@ -197,22 +198,61 @@ impl Engine<'_> {
         (routes, start)
     }
 
+    /// The arrows' written ways: an arrow with waypoints (`via`) takes the route through them,
+    /// alone; one with sides (`side`) keeps the routes on them, if any. The start routes follow.
+    fn written(
+        &self,
+        g: &Grid,
+        l: &Lattice,
+        routes: &mut [Vec<Route>],
+        start: Vec<Option<usize>>,
+    ) -> Vec<Option<usize>> {
+        let inp = self.inp;
+        let mut out = start;
+        for (k, e) in inp.edges.iter().enumerate() {
+            if e.via.is_empty() && e.sides == (None, None) {
+                continue;
+            }
+            let was = out[k]
+                .and_then(|i| routes[k].get(i))
+                .map(|r| r.nodes.clone());
+            if !e.via.is_empty()
+                && let Some(r) = Search::of(g, inp, l, e).through(&e.via, e.sides)
+            {
+                routes[k] = vec![r];
+            } else {
+                let keep: Vec<Route> = routes[k]
+                    .iter()
+                    .filter(|r| {
+                        e.sides.0.is_none_or(|s| s == r.sside)
+                            && e.sides.1.is_none_or(|t| t == r.tside)
+                    })
+                    .cloned()
+                    .collect();
+                if !keep.is_empty() {
+                    routes[k] = keep;
+                }
+            }
+            out[k] = was.and_then(|n| routes[k].iter().position(|r| r.nodes == n));
+        }
+        out
+    }
+
     /// Routes sharing a trunk with a sibling (a fork or a join drawn alike with one label).
     fn add_siblings(&self, g: &Grid, l: &Lattice, routes: &mut [Vec<Route>]) {
         let inp = self.inp;
         let mut sib: Vec<Vec<Route>> = vec![Vec::new(); inp.edges.len()];
         for (k, e) in inp.edges.iter().enumerate() {
-            let s = Search::new(g, inp, l, e.from, e.to);
+            let s = Search::of(g, inp, l, e);
             for join in [true, false] {
                 let mates: Vec<&Route> = inp
                     .edges
                     .iter()
                     .enumerate()
                     .filter(|&(j, f)| {
-                        j != k
-                            && e.look == f.look
-                            && e.label == f.label
-                            && if join { e.to == f.to } else { e.from == f.from }
+                        let alike = (e.look == f.look && e.label == f.label)
+                            || (e.join.is_some() && e.join == f.join);
+                        j != k && alike && if join { e.to == f.to } else { e.from == f.from }
                     })
                     .take(SIB_MATES)
                     .flat_map(|(j, _)| routes[j].iter().take(3))
@@ -292,7 +332,11 @@ impl Engine<'_> {
         let mut out = vec![Vec::new(); n];
         for k in 0..n {
             let e = &inp.edges[k];
-            let (s, t) = (l.card[e.from], l.card[e.to]);
+            // an arrow through waypoints keeps its one route
+            if !e.via.is_empty() {
+                continue;
+            }
+            let (s, t) = (l.end(inp, e, true), l.end(inp, e, false));
             let pays = match chosen[k] {
                 None => true,
                 Some(r) => {
@@ -332,7 +376,7 @@ impl Engine<'_> {
                     }
                 }
             }
-            let search = Search::new(g, inp, l, e.from, e.to);
+            let search = Search::of(g, inp, l, e);
             out[k] = search.candidates(3, 1, AWARE_KEEP, &|m| pen[m]);
         }
         out

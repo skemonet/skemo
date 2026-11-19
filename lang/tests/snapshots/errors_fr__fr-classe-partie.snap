@@ -1,5 +1,5 @@
 ---
-source: lang/tests/errors_fr.rs
+source: tests/errors_fr.rs
 expression: out
 ---
 avertissement[part-class] : « .head » est aussi la classe d'une partie que le moteur dessine : une règle sur « .head » style cette partie partout dans le dessin

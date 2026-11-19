@@ -1,7 +1,7 @@
 <!--
 title: Icônes et liens dans les diagrammes skemo
 nav: Icônes et liens
-description: Placez l’une des 1 866 icônes Lucide intégrées ou votre propre image sur une carte, et faites des cartes et des flèches des liens.
+description: Placez l’une des 2 091 icônes intégrées (Lucide et celles de skemo) ou votre propre image sur une carte, et faites des cartes et des flèches des liens.
 -->
 <h1>Icônes et liens</h1>
 <div class="warn"><p><strong>Préversion.</strong> Les icônes et les liens sont implémentés et peuvent encore changer avant la
@@ -11,8 +11,10 @@ description: Placez l’une des 1 866 icônes Lucide intégrées ou votre propre
 
 <h2>Icônes</h2>
 <p><code>icon="nom"</code> dessine une icône du jeu intégré avant le titre d’une carte ou d’une zone. Le jeu est
-  <a href="https://lucide.dev/">Lucide</a> (1 866 icônes), embarqué dans skemo : le rendu reste hors ligne et identique partout.
-  Cherchez-y depuis la ligne de commande :</p>
+  <a href="https://lucide.dev/">Lucide</a> (2 055 icônes, version 1.73 ; les noms des versions précédentes restent valables) plus 36 icônes propres à skemo pour l’infrastructure, nommées
+  <code>skemo-…</code> (<code>skemo-vm</code>, <code>skemo-hypervisor</code>, <code>skemo-rack</code>,
+  <code>skemo-load-balancer</code>, <code>skemo-pod</code>…), dessinées de la même façon pour se mêler aux autres. Le jeu est
+  embarqué dans skemo : le rendu reste hors ligne et identique partout. Cherchez-y depuis la ligne de commande :</p>
 <pre><code>skemo icons data        # database, database-backup, … (noms et mots-clés)</code></pre>
 <ul>
   <li>Un type peut porter une icône par défaut en CSS : <code>.store { --icon: "database"; }</code>. <code>icon="none"</code> la

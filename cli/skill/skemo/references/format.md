@@ -22,7 +22,7 @@ Complete reference of the `.skemo` language as implemented by `skemo` 0.1. The s
 
 ## 1. Syntax
 
-A file is a valid Pug document restricted to the tags `diagram`, `title`, `card`, `cards`, `node`, `zone`,
+A file is a valid Pug document restricted to the tags `diagram`, `title`, `card`, `cards`, `node`, `zone`, `zones`,
 `stack` and `to`, and lines written with Pug's text marker `|`, whose text follows Markdown (emphasis, tables).
 
 ```
@@ -116,7 +116,8 @@ diagram(dir="right")
 
 **Piles** (pre-release). `cards` instead of `card` draws a pile of cards (several instances: the tasks of a
 service, the machines of a group); it takes everything a card takes. `count="4"` draws up to three cards and a
-`×4` badge on the bottom-right corner; without it, three cards and no badge.
+`×4` badge on the bottom-right corner; without it, three cards and no badge. `zones` instead of `zone` draws a
+pile of frames the same way (the clusters of a fleet): what the zone holds is drawn once, in the frame on top.
 
 ```pug
 diagram(dir="right")
@@ -152,7 +153,8 @@ diagram(dir="down")
 
 ## 4. Arrows
 
-An arrow is written **inside its source card**: `to(target).classes Label`.
+An arrow is written **inside its source card**: `to(target).classes Label`. Written inside a zone, it leaves the
+zone's frame (one link between two sites, rather than one per card); its target may be a card or a zone.
 
 | Element | Meaning |
 |---|---|
@@ -357,7 +359,8 @@ card#db(icon="database" href="https://wiki.example.com/db") Orders
 zone#lan(href="#core") LAN
 ```
 
-- `icon="name"`: an icon of the built-in Lucide set (kebab-case). `skemo icons <word>` searches names and
+- `icon="name"`: an icon of the built-in set (kebab-case): Lucide, plus skemo's own infrastructure icons
+  named `skemo-…` (`skemo-vm`, `skemo-hypervisor`, `skemo-load-balancer`, `skemo-rack`, `skemo-pod`…). `skemo icons <word>` searches names and
   tags. (Pre-release) `icon="img/logo.svg"`: an image file (svg, png, jpg, webp), relative to the source
   and inside its folder; it keeps its colours and travels inside the rendered file. `icon="none"` removes the type's default icon. An unknown name draws nothing and warns with a
   suggestion. Icons are for cards and zones (ignored with a warning on `to`).

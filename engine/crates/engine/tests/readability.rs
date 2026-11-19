@@ -2,7 +2,9 @@
 //! by straight lines, `wrap` warns when it hides cards from their arrows, and `fit` never
 //! suggests a setting that does.
 
-use skemo_engine::{Options, from_source};
+use skemo_engine::Options;
+mod elk;
+use elk::from_source;
 
 fn build(src: &str) -> skemo_engine::Diagram {
     from_source(src, &Options::default()).unwrap().0

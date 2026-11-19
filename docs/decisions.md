@@ -49,3 +49,5 @@ taken in issues and pull requests.
 | D-070 | The order search of D-065 starts from a barycentre sweep and kicks out of local optima. |
 | D-087 | `node`: a thing drawn as its icon with its name and lines beside it, without a frame; it mixes with cards whatever their look. |
 | D-079 | Arrows in motion (`.flow`, `.pulse`): still images draw them solid; the SVG plays them only with `--motion`. |
+| D-114 | `zones`: a zone drawn as a pile of frames, with a `×N` badge. |
+| D-115 | skemo's own infrastructure icons (`skemo-*`) beside Lucide; the names Lucide changed keep working. |

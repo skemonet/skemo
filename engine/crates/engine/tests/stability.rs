@@ -1,9 +1,8 @@
 //! Stability (D-031): pinning a card in its place changes nothing else, and the drag preview is
 //! identical to the full computation after the drop (idempotence on reopening).
 
-use skemo_engine::diagram::Options;
+use skemo_engine::diagram::{Options, from_source};
 mod elk;
-use elk::from_source;
 use skemo_engine::session::Session;
 use std::path::Path;
 
@@ -37,11 +36,23 @@ fn close(a: f64, b: f64, tol: f64) -> bool {
 
 /// Pinning a card in its place (up to the pixel rounding): no zone nor other card moves, no arrow
 /// is routed again (it may slide by the half-pixel of rounding).
+/// Each test on the default engine (the slide engine, ELK where it does not read yet) and on ELK.
+fn engines() -> [fn(&str) -> String; 2] {
+    [|s: &str| s.to_string(), elk::graph]
+}
+
 #[test]
 fn pin_in_place_changes_nothing() {
+    for engine in engines() {
+        pin_in_place(engine);
+    }
+}
+
+fn pin_in_place(engine: fn(&str) -> String) {
     let mut failures = Vec::new();
     for (name, css) in CASES {
         let (src, opts) = load(name, *css);
+        let src = engine(&src);
         let (base, _) = from_source(&src, &opts).unwrap();
         for card in base
             .model
@@ -50,8 +61,7 @@ fn pin_in_place_changes_nothing() {
             .filter(|n| n.kind == skemo_lang::Kind::Card)
         {
             let b = base.boxes[&card.id];
-            let edited =
-                skemo_lang::edit::move_card(&elk::graph(&src), &card.id, b.x, b.y).unwrap();
+            let edited = skemo_lang::edit::move_card(&src, &card.id, b.x, b.y).unwrap();
             let (after, _) = from_source(&edited, &opts).unwrap();
             for (id, a) in &base.boxes {
                 let c = after.boxes[id];
@@ -79,9 +89,16 @@ fn pin_in_place_changes_nothing() {
 /// written and read again.
 #[test]
 fn drag_preview_equals_reload() {
+    for engine in engines() {
+        drag_preview(engine);
+    }
+}
+
+fn drag_preview(engine: fn(&str) -> String) {
     for (name, css) in CASES {
         let (src, opts) = load(name, *css);
-        let mut s = Session::new(&elk::graph(&src), opts.clone()).unwrap();
+        let src = engine(&src);
+        let mut s = Session::new(&src, opts.clone()).unwrap();
         let cards: Vec<String> = s
             .diagram
             .model

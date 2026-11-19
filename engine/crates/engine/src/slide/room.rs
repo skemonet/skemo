@@ -230,7 +230,7 @@ impl Engine<'_> {
             };
             // what the constitution calls a defect, not a line merely longer than it could be
             let e = &self.inp.edges[k];
-            let (s, t) = (d.l.card[e.from], d.l.card[e.to]);
+            let (s, t) = (d.l.end(self.inp, e, true), d.l.end(self.inp, e, false));
             let mut p = 0.0;
             let cr: usize = refs
                 .iter()

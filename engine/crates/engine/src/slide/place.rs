@@ -20,6 +20,8 @@ const ROUTE_LINKS: usize = 90;
 const KEEP_FULL: usize = 30;
 const KEEP_SUB5: usize = 16;
 const KEEP_ORDERED: usize = 12;
+/// The tilings of a zone inside another kept for the one around it.
+const KEEP_INNER: usize = 12;
 const TILE_W: f64 = 10.0;
 const W_CROSSING: f64 = 300.0;
 const NO_ROUTE: f64 = 2000.0;
@@ -27,6 +29,17 @@ const W_SHAPE: f64 = 800.0;
 /// Two sibling groups read in the other order than written (P3, D-086): more than two arrows
 /// climbing back, which is what breaking the order would save.
 const W_ZONE_ORDER: f64 = 20.0;
+/// A note on the other side of its card, or away from it (D-104): it reads as its card's, a
+/// preference below the lines' rules.
+/// A link between groups set aside across a written `dir`: the writer's direction outweighs
+/// the slide's shape (S4).
+const W_ASIDE: f64 = 100.0;
+/// A column's members a cell apart across `dir` (D-051).
+const W_COL: f64 = 200.0;
+/// An arrow set aside across a written `dir`.
+const SIDEWAYS: f64 = 15.0;
+const NOTE_SECOND: f64 = 2.0;
+const NOTE_AWAY: f64 = 6.0;
 /// Two cards of a group read in the other order than written (P5): less than a crossing (R4).
 const W_CARD_ORDER: f64 = 6.0;
 pub(crate) const ASPECT: f64 = 16.0 / 9.0;
@@ -128,11 +141,49 @@ fn panel_links(inp: &Input) -> Vec<((usize, usize), usize)> {
     v
 }
 
-/// S5 far apart, S7 groups in the way, S6 against the flow; `in_tree`: the panels laid out.
+/// Group `b` lies against the flow from group `a` (`dir`: down; along x with `across`;
+/// backwards with `reverse`): back along the flow, or behind across it while not past `a`.
+fn against(
+    (ax, ay, aw, ah): (usize, usize, usize, usize),
+    (bx, by, bw, bh): (usize, usize, usize, usize),
+    (across, reverse): (bool, bool),
+) -> bool {
+    // along the flow (start, length), then across it
+    let ((a0, al), (c0, _), (b0, bl), (d0, dl)) = if across {
+        ((ax, aw), (ay, ah), (bx, bw), (by, bh))
+    } else {
+        ((ay, ah), (ax, aw), (by, bh), (bx, bw))
+    };
+    let behind = d0 + dl <= c0;
+    if reverse {
+        b0 >= a0 + al || (behind && b0 + bl > a0)
+    } else {
+        b0 + bl <= a0 || (behind && b0 < a0 + al)
+    }
+}
+
+/// Group `b` stands beside group `a` across the flow, not after it along it (`across`: the flow
+/// along x).
+fn aside(
+    (ax, ay, aw, ah): (usize, usize, usize, usize),
+    (bx, by, bw, bh): (usize, usize, usize, usize),
+    across: bool,
+) -> bool {
+    let ((a0, al), (b0, bl)) = if across {
+        ((ax, aw), (bx, bw))
+    } else {
+        ((ay, ah), (by, bh))
+    };
+    b0 < a0 + al && a0 < b0 + bl
+}
+
+/// S5 far apart, S7 groups in the way, S6 against the flow (a written `dir`: beside it too);
+/// `in_tree`: the panels laid out.
 fn link_cost(
     r: &[(usize, usize, usize, usize)],
     links: &[((usize, usize), usize)],
     in_tree: &[bool],
+    dir: (bool, bool, bool),
 ) -> f64 {
     let mut cost = 0.0;
     for &((a, b), k) in links {
@@ -166,8 +217,11 @@ fn link_cost(
             }
         }
         cost += k * 6.0 * hit.iter().filter(|&&h| h).count() as f64;
-        if by + bh <= ay || (bx + bw <= ax && by < ay + ah) {
-            cost += k * 8.0;
+        if against(r[a], r[b], (dir.0, dir.1)) {
+            // back against a written `dir` weighs more than beside it
+            cost += k * if dir.2 { 2.0 * W_ASIDE } else { 8.0 };
+        } else if dir.2 && aside(r[a], r[b], dir.0) {
+            cost += k * W_ASIDE;
         }
     }
     cost + W_ZONE_ORDER * inversions(r, in_tree) as f64
@@ -177,7 +231,7 @@ fn link_cost(
 /// group before another when its top left cell comes first.
 fn inversions(r: &[(usize, usize, usize, usize)], in_tree: &[bool]) -> usize {
     let at: Vec<(usize, (usize, usize))> = (0..r.len())
-        .filter(|&p| in_tree[p])
+        .filter(|&p| in_tree[p] && r[p].2 > 0)
         .map(|p| (p, (r[p].1, r[p].0)))
         .collect();
     let mut n = 0;
@@ -203,11 +257,26 @@ impl Tiler<'_> {
         }
         let cards: usize = ps.iter().map(|&p| self.inp.panels[p].cards.len()).sum();
         let waste = (t.w() * t.h() - cards) as f64;
-        waste * 3.0 + link_cost(&rects(t, self.n), &self.links, &in_tree)
+        waste * 3.0
+            + link_cost(
+                &rects(t, self.n),
+                &self.links,
+                &in_tree,
+                (
+                    self.inp.dir.across,
+                    self.inp.dir.reverse,
+                    self.inp.dir.written,
+                ),
+            )
     }
 
     fn leaves(&self, p: usize) -> Vec<Rc<Tree>> {
         let k = self.inp.panels[p].cards.len();
+        // a wide zone: its cards on one row (one column across `dir`)
+        if self.inp.panels[p].wide && self.inp.panels[p].zone.is_some() {
+            let (w, h) = if self.inp.dir.across { (1, k) } else { (k, 1) };
+            return vec![Rc::new(Tree::Leaf { p, w, h })];
+        }
         (1..=k)
             .filter(|&c| c * k.div_ceil(c) - k < c)
             .map(|c| {
@@ -221,11 +290,11 @@ impl Tiler<'_> {
     }
 
     /// The trees of every (A, B) pair cut both ways: three per shape, `keep` in all.
-    fn best_of(&self, pairs: &[(Rc<Tree>, Rc<Tree>)], keep: usize) -> Vec<Rc<Tree>> {
+    fn best_of(&self, pairs: &[(Rc<Tree>, Rc<Tree>)], keep: usize, dirs: &[bool]) -> Vec<Rc<Tree>> {
         let mut by_shape: HashMap<(usize, usize), Vec<Scored>> = HashMap::new();
         let mut seq = 0;
         for (a, b) in pairs {
-            for across in [true, false] {
+            for &across in dirs {
                 let t = Tree::cut(across, a.clone(), b.clone());
                 let s = self.scored(&t);
                 by_shape
@@ -246,18 +315,28 @@ impl Tiler<'_> {
         out.into_iter().take(keep).map(|t| t.2).collect()
     }
 
-    fn full(&self, mask: usize, memo: &mut HashMap<usize, Vec<Rc<Tree>>>) -> Vec<Rc<Tree>> {
+    /// The best trees of the items of `mask`, every split tried (each item: its alternatives).
+    fn full(
+        &self,
+        items: &[Vec<Rc<Tree>>],
+        mask: usize,
+        memo: &mut HashMap<usize, Vec<Rc<Tree>>>,
+    ) -> Vec<Rc<Tree>> {
         if let Some(v) = memo.get(&mask) {
             return v.clone();
         }
-        let idx: Vec<usize> = (0..self.n).filter(|i| mask >> i & 1 == 1).collect();
+        let m = items.len();
+        let idx: Vec<usize> = (0..m).filter(|i| mask >> i & 1 == 1).collect();
         let out = if idx.len() == 1 {
-            self.leaves(idx[0])
+            items[idx[0]].clone()
         } else {
             let mut pairs = Vec::new();
             let mut sub = (mask - 1) & mask;
             while sub > 0 {
-                let (a, b) = (self.full(sub, memo), self.full(mask ^ sub, memo));
+                let (a, b) = (
+                    self.full(items, sub, memo),
+                    self.full(items, mask ^ sub, memo),
+                );
                 for x in &a {
                     for y in &b {
                         pairs.push((x.clone(), y.clone()));
@@ -265,22 +344,25 @@ impl Tiler<'_> {
                 }
                 sub = (sub - 1) & mask;
             }
-            let all = (1 << self.n) - 1;
+            let all = (1 << m) - 1;
             self.best_of(
                 &pairs,
-                if self.n <= 4 || mask == all {
+                if m <= 4 || mask == all {
                     KEEP_FULL
                 } else {
                     KEEP_SUB5
                 },
+                &[true, false],
             )
         };
         memo.insert(mask, out.clone());
         out
     }
 
+    /// The best trees of the items `lo..hi` in their writing order, split in two at each place.
     fn span(
         &self,
+        items: &[Vec<Rc<Tree>>],
         lo: usize,
         hi: usize,
         memo: &mut HashMap<(usize, usize), Vec<Rc<Tree>>>,
@@ -289,21 +371,110 @@ impl Tiler<'_> {
             return v.clone();
         }
         let out = if hi - lo == 1 {
-            self.leaves(lo)
+            items[lo].clone()
         } else {
             let mut pairs = Vec::new();
             for mid in lo + 1..hi {
-                let (a, b) = (self.span(lo, mid, memo), self.span(mid, hi, memo));
+                let (a, b) = (
+                    self.span(items, lo, mid, memo),
+                    self.span(items, mid, hi, memo),
+                );
                 for x in &a {
                     for y in &b {
                         pairs.push((x.clone(), y.clone()));
                     }
                 }
             }
-            self.best_of(&pairs, KEEP_ORDERED)
+            self.best_of(&pairs, KEEP_ORDERED, &[true, false])
         };
         memo.insert((lo, hi), out.clone());
         out
+    }
+
+    /// The tilings of what panel `p` holds (`None`: the whole slide): its own cards, a block, and
+    /// each zone inside it, tiled the same way first; up to five items every split is tried, past
+    /// that only the splits that keep their writing order (D-086). A stack lays its children one
+    /// after the other along `dir`; a wide card or zone is a row of its own (a column across
+    /// `dir`), where it is written.
+    fn tile(&self, p: Option<usize>) -> Vec<Rc<Tree>> {
+        let inp = self.inp;
+        let kids = inp.children(p);
+        let tiled = |c: usize| {
+            let mut alts = self.tile(Some(c));
+            alts.truncate(KEEP_INNER);
+            alts
+        };
+        if let Some(p) = p
+            && inp.panels[p].stack
+        {
+            let mut items: Vec<Vec<Rc<Tree>>> = kids.iter().map(|&c| tiled(c)).collect();
+            if inp.dir.reverse {
+                items.reverse();
+            }
+            return self.sequence(items, inp.dir.across);
+        }
+        // `wrap="N"`: the children in writing order, N a row (a column across `dir`)
+        if let Some(p) = p
+            && let Some(n) = inp.panels[p].wrap
+        {
+            let items: Vec<Vec<Rc<Tree>>> = kids.iter().map(|&c| tiled(c)).collect();
+            let lines: Vec<Vec<Rc<Tree>>> = items
+                .chunks(n)
+                .map(|row| self.sequence(row.to_vec(), !inp.dir.across))
+                .collect();
+            return self.sequence(lines, inp.dir.across);
+        }
+        let (wide, free): (Vec<usize>, Vec<usize>) =
+            kids.iter().partition(|&&c| inp.panels[c].wide);
+        let own = p.filter(|&p| !inp.panels[p].cards.is_empty());
+        let mut items: Vec<Vec<Rc<Tree>>> = Vec::new();
+        if let Some(p) = own {
+            items.push(self.leaves(p));
+        }
+        for &c in &free {
+            items.push(tiled(c));
+        }
+        let block = match items.len() {
+            // an empty zone: one cell, its frame and title shown (FORMAT: a default frame)
+            0 => p.map_or_else(Vec::new, |p| vec![Rc::new(Tree::Leaf { p, w: 1, h: 1 })]),
+            1 => items.pop().unwrap_or_default(),
+            n if n <= FULL_UPTO => self.full(&items, (1 << n) - 1, &mut HashMap::new()),
+            n => self.span(&items, 0, n, &mut HashMap::new()),
+        };
+        if wide.is_empty() {
+            return block;
+        }
+        // the rows in writing order: the block where its first card or zone is written
+        let block_at = own
+            .map(|p| inp.panels[p].first)
+            .into_iter()
+            .chain(free.iter().map(|&c| inp.panels[c].order))
+            .min();
+        let mut rows: Vec<(usize, Vec<Rc<Tree>>)> = wide
+            .iter()
+            .map(|&c| (inp.panels[c].order, tiled(c)))
+            .collect();
+        if let Some(at) = block_at {
+            rows.push((at, block));
+        }
+        rows.sort_by_key(|r| r.0);
+        self.sequence(rows.into_iter().map(|r| r.1).collect(), inp.dir.across)
+    }
+
+    /// The items one after the other, side by side when `across`, else one under the other.
+    fn sequence(&self, items: Vec<Vec<Rc<Tree>>>, across: bool) -> Vec<Rc<Tree>> {
+        let mut it = items.into_iter();
+        let Some(mut cur) = it.next() else {
+            return Vec::new();
+        };
+        for next in it {
+            let pairs: Vec<(Rc<Tree>, Rc<Tree>)> = cur
+                .iter()
+                .flat_map(|a| next.iter().map(move |b| (a.clone(), b.clone())))
+                .collect();
+            cur = self.best_of(&pairs, KEEP_FULL, &[across]);
+        }
+        cur
     }
 }
 
@@ -315,11 +486,7 @@ fn tilings(inp: &Input) -> Vec<(f64, Rc<Tree>)> {
         links: panel_links(inp),
         n,
     };
-    let top = if n <= FULL_UPTO {
-        t.full((1 << n) - 1, &mut HashMap::new())
-    } else {
-        t.span(0, n, &mut HashMap::new())
-    };
+    let top = t.tile(None);
     let mut out: Vec<(f64, Rc<Tree>)> = top
         .into_iter()
         .map(|tr| {
@@ -363,7 +530,11 @@ fn place_cards(inp: &Input, r: &[(usize, usize, usize, usize)]) -> Vec<(usize, u
         cells_of.push(cells);
     }
     let total = |pos: &[(usize, usize)], occ: &Cells| -> f64 {
-        let s = links_cost(inp, pos, occ) + crossings_cost(inp, pos) + order_cost(inp, pos);
+        let s = links_cost(inp, pos, occ)
+            + crossings_cost(inp, pos)
+            + order_cost(inp, pos)
+            + notes_cost(inp, pos)
+            + cols_cost(inp, pos);
         holes_cost(s, r, &cells_of, occ)
     };
     let mut cur = total(&pos, &occ);
@@ -392,7 +563,59 @@ fn place_cards(inp: &Input, r: &[(usize, usize, usize, usize)]) -> Vec<(usize, u
             break;
         }
     }
+    spread(inp, r, &mut pos);
     pos
+}
+
+/// A stack's layers (D-050) and a wide zone's row (D-051, D-092): their cards share the width
+/// evenly, each in the middle of its share, in their order; a card alone in its layer stands
+/// over (under) the card it links to when that one is within its width, else in the middle.
+fn spread(inp: &Input, r: &[(usize, usize, usize, usize)], pos: &mut [(usize, usize)]) {
+    for (i, p) in inp.panels.iter().enumerate() {
+        let layer = p.parent.is_some_and(|q| inp.panels[q].stack);
+        if p.cards.is_empty() || !(layer || (p.wide && p.zone.is_some())) {
+            continue;
+        }
+        let (x, y, w, h) = r[i];
+        // the cells along the row (a column across `dir`)
+        let (len, line) = if inp.dir.across { (h, w) } else { (w, h) };
+        let k = p.cards.len();
+        if line != 1 || len <= k {
+            continue;
+        }
+        let at = |j: usize| {
+            if inp.dir.across {
+                (x, y + j)
+            } else {
+                (x + j, y)
+            }
+        };
+        let along = |c: (usize, usize)| if inp.dir.across { c.1 } else { c.0 };
+        if k == 1 {
+            let c = p.cards[0];
+            let linked = inp.edges.iter().filter_map(|e| {
+                let other = if e.from == c {
+                    e.to
+                } else if e.to == c {
+                    e.from
+                } else {
+                    return None;
+                };
+                (inp.card_panel[other] != i).then(|| along(pos[other]))
+            });
+            let start = along(at(0));
+            let over = linked
+                .filter(|&a| a >= start && a < start + len)
+                .min_by_key(|&a| a.abs_diff(start + len / 2));
+            pos[c] = at(over.map_or((len - 1) / 2, |a| a - start));
+            continue;
+        }
+        let mut cards = p.cards.clone();
+        cards.sort_by_key(|&c| along(pos[c]));
+        for (n, &c) in cards.iter().enumerate() {
+            pos[c] = at((2 * n + 1) * len / (2 * k));
+        }
+    }
 }
 
 /// Card `a` moves from cell `from` to cell `to`; card `b`, if any, the other way.
@@ -421,6 +644,75 @@ fn cell(pos: &[(usize, usize)], c: usize) -> (i64, i64) {
     (pos[c].0 as i64, pos[c].1 as i64)
 }
 
+/// A move of `(dx, dy)` along the flow (`dir`: down by default) and across it.
+fn flow(inp: &Input, dx: i64, dy: i64) -> (i64, i64) {
+    let sign = if inp.dir.reverse { -1 } else { 1 };
+    if inp.dir.across {
+        (sign * dx, dy)
+    } else {
+        (sign * dy, dx)
+    }
+}
+
+/// Each note (D-104) beside its card: after it across the flow (its right with `dir` down or
+/// up), else before it (above with right or left); a note elsewhere pays by its distance.
+fn notes_cost(inp: &Input, pos: &[(usize, usize)]) -> f64 {
+    let mut s = 0.0;
+    if crate::trace::off("slide-notes") {
+        return s;
+    }
+    for &(n, t) in &inp.notes {
+        let (dx, dy) = (
+            pos[n].0 as i64 - pos[t].0 as i64,
+            pos[n].1 as i64 - pos[t].1 as i64,
+        );
+        // with right or left the first place is above the card, else on its right
+        let (first, second) = if inp.dir.across {
+            ((0, -1), (0, 1))
+        } else {
+            ((1, 0), (-1, 0))
+        };
+        s += if (dx, dy) == first {
+            0.0
+        } else if (dx, dy) == second {
+            NOTE_SECOND
+        } else {
+            NOTE_AWAY
+        };
+    }
+    s
+}
+
+/// Columns (`.col-<name>`, D-051): the members of one column share an axis across `dir`; each
+/// column pays the spread of its members' axes, in cells.
+fn cols_cost(inp: &Input, pos: &[(usize, usize)]) -> f64 {
+    let across = |c: usize| {
+        if inp.dir.across {
+            pos[c].1 as f64
+        } else {
+            pos[c].0 as f64
+        }
+    };
+    let mut s = 0.0;
+    for col in &inp.cols {
+        let axes: Vec<f64> = col
+            .iter()
+            .map(|m| {
+                let lo = m.iter().map(|&c| across(c)).fold(f64::INFINITY, f64::min);
+                let hi = m
+                    .iter()
+                    .map(|&c| across(c))
+                    .fold(f64::NEG_INFINITY, f64::max);
+                (lo + hi) / 2.0
+            })
+            .collect();
+        let lo = axes.iter().copied().fold(f64::INFINITY, f64::min);
+        let hi = axes.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+        s += W_COL * (hi - lo);
+    }
+    s
+}
+
 /// Each link: its length, a bend, the cards in its way, against the flow.
 fn links_cost(inp: &Input, pos: &[(usize, usize)], occ: &Cells) -> f64 {
     let mut s = 0.0;
@@ -443,10 +735,15 @@ fn links_cost(inp: &Input, pos: &[(usize, usize)], occ: &Cells) -> f64 {
                 .count();
             c += 14.0 * between as f64;
         }
-        if dy < 0 {
+        // against the flow (`dir`): back along it, or across it backwards
+        let (along, across) = flow(inp, dx, dy);
+        if along < 0 {
             c += 30.0;
-        } else if dy == 0 && dx < 0 {
+        } else if along == 0 && across < 0 {
             c += 25.0;
+        } else if along == 0 && inp.dir.written {
+            // `dir` written: the flow goes that way, an arrow set aside across it pays
+            c += SIDEWAYS;
         }
         s += c;
     }
@@ -457,10 +754,13 @@ fn links_cost(inp: &Input, pos: &[(usize, usize)], occ: &Cells) -> f64 {
 /// writing order.
 fn order_cost(inp: &Input, pos: &[(usize, usize)]) -> f64 {
     let mut n = 0;
+    // a note stands by its card, not in the writing order (D-104)
+    let note = |c: usize| inp.notes.iter().any(|&(nt, _)| nt == c);
     for p in &inp.panels {
-        for (i, &a) in p.cards.iter().enumerate() {
+        let cards: Vec<usize> = p.cards.iter().copied().filter(|&c| !note(c)).collect();
+        for (i, &a) in cards.iter().enumerate() {
             let ra = (pos[a].1, pos[a].0);
-            n += p.cards[i + 1..]
+            n += cards[i + 1..]
                 .iter()
                 .filter(|&&b| (pos[b].1, pos[b].0) < ra)
                 .count();
@@ -515,7 +815,7 @@ fn route_cost(inp: &Input, tiling: &Tiling, walls: &Walls) -> f64 {
     let mut best: Vec<Route> = Vec::new();
     let mut cost = 0.0;
     for e in inp.edges.iter().filter(|e| e.constraint) {
-        let s = Search::new(&g, inp, &l, e.from, e.to);
+        let s = Search::of(&g, inp, &l, e);
         match s.candidates(1, 1, 1, &|_| 0.0).into_iter().next() {
             Some(r) => {
                 cost += r.cost;
@@ -554,9 +854,15 @@ pub(crate) fn placement(inp: &Input, walls: &Walls) -> Tiling {
             pos,
         };
         let rc = route_cost(inp, &tiling, walls);
-        let own =
-            (t.w() * t.h() - inp.cards.len()) as f64 * 3.0 + link_cost(&r, &links, &vec![true; n]);
-        let c = rc + TILE_W * own;
+        let own = (t.w() * t.h() - inp.cards.len()) as f64 * 3.0
+            + link_cost(
+                &r,
+                &links,
+                &vec![true; n],
+                (inp.dir.across, inp.dir.reverse, inp.dir.written),
+            );
+        // the columns line up across groups only as the tiling allows: it counts too
+        let c = rc + TILE_W * (own + cols_cost(inp, &tiling.pos));
         if best.as_ref().is_none_or(|b| c < b.0 - 1e-9) {
             best = Some((c, tiling));
         }

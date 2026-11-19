@@ -73,6 +73,8 @@ pub(crate) struct Arrow {
     pub label: Option<String>,
     /// Two facing cards: a bend on their line costs (H2.23 "neighbours linked straight").
     pub face: bool,
+    /// `join="…"` (a trunk out, or a named trunk in).
+    pub join: Option<String>,
 }
 
 pub(crate) struct Problem<'a> {
@@ -185,6 +187,7 @@ impl<'a> Problem<'a> {
             src: a.src,
             dst: a.dst,
             label: a.label.as_deref(),
+            join: a.join.as_deref(),
         }
     }
 

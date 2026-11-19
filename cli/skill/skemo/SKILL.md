@@ -42,7 +42,7 @@ Warnings (unknown icon, unreachable mindmap card…) do not block; read them and
 
 ## 3. The language in one example
 
-A `.skemo` file is a subset of Pug: a few tags (`diagram`, `title`, `card`, `cards`, `node`, `zone`, `stack`, `to`)
+A `.skemo` file is a subset of Pug: a few tags (`diagram`, `title`, `card`, `cards`, `node`, `zone`, `zones`, `stack`, `to`)
 and lines written `| text` under a card or a zone. The text of lines follows Markdown.
 
 ```pug
@@ -80,7 +80,8 @@ diagram(dir="right" lang="en")
 | `cards#id.type(count="4") Title` | (pre-release) a card drawn as a pile, for several instances of one thing; `count` adds a `×4` badge |
 | `\| text` (under a card) | a content line; an IPv4/CIDR at its start is set in monospace; under a zone, a description line under its title |
 | `zone#id.type Title` | a group; cards and zones indented below are inside it |
-| `to(target).style Label` | an arrow **written inside its source card**, to the card `target` |
+| `zones#id.type(count="3") Title` | (pre-release) a zone drawn as a pile of frames, for several instances of one group; what it holds is drawn once |
+| `to(target).style Label` | an arrow **written inside its source card** (or zone: it leaves the frame), to the card or zone `target` |
 | `to(a b c)` | one arrow per target; to cards of the next row they fork from one trunk by themselves (pre-release); `join="trunk"` forces a trunk |
 | `to(a constraint="false")` | (pre-release) an arrow that does not shape the layout (cross links, service discovery) |
 | `diagram(dir="down")` | first line, optional: `dir` = `down` (default) `right` `up` `left` |
@@ -231,7 +232,8 @@ diagram(dir="right")
 
 ## 8. Icons and links (pre-release)
 
-`card#db(icon="database") Orders` draws a built-in Lucide icon; `skemo icons <word>` lists names.
+`card#db(icon="database") Orders` draws a built-in Lucide icon; `skemo-…` icons draw infrastructure
+(`skemo-vm`, `skemo-hypervisor`, `skemo-rack`); `skemo icons <word>` lists names.
 A file works too (pre-release): `icon="img/logo.svg"`, next to the source; never invent a logo file.
 `href="https://…"` makes a card, zone or arrow clickable in SVG and HTML. Only `http:`, `https:`,
 `mailto:`, relative paths and `#fragments` are accepted.

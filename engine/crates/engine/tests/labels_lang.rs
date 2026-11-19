@@ -4,6 +4,10 @@
 use skemo_engine::timeline::{ticks, ticks_in};
 use skemo_engine::{Options, from_source, svg};
 use skemo_lang::i18n::{Lang, set_language};
+use std::sync::Mutex;
+
+/// The language is global to the process and the tests run side by side: one at a time.
+static LANGUAGE: Mutex<()> = Mutex::new(());
 
 const FRIEZE: &str = "diagram(layout=\"frise\" scale=\"century\")\n  card#a(date=\"-0450\") Athènes\n  card#b(date=\"1789\") Révolution\n";
 const TIMELINE: &str = "diagram(layout=\"timeline\" scale=\"quarter\")\n  card#a(start=\"2026-01-10\" end=\"2026-09-30\") Projet\n";
@@ -15,6 +19,9 @@ fn labels(src: &str) -> String {
 
 #[test]
 fn month_and_quarter_labels() {
+    let _one = LANGUAGE
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     let en = ticks_in(Lang::En, "quarter", 20_454.0, 20_700.0);
     let fr = ticks_in(Lang::Fr, "quarter", 20_454.0, 20_700.0);
     assert!(en.iter().all(|t| t.1.starts_with('Q')), "{en:?}");
@@ -39,6 +46,9 @@ fn month_and_quarter_labels() {
 
 #[test]
 fn drawing_labels_follow_the_option_then_the_current_language() {
+    let _one = LANGUAGE
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     set_language(Lang::En);
     assert!(labels(FRIEZE).contains("BC"), "English by default");
     assert!(
@@ -59,6 +69,9 @@ fn drawing_labels_follow_the_option_then_the_current_language() {
 
 #[test]
 fn english_century_ordinals() {
+    let _one = LANGUAGE
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     set_language(Lang::En);
     // the default theme hides the century row (D-048): show it
     let labels = |src: &str| {

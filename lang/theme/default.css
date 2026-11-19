@@ -117,11 +117,12 @@ card.look-band > .head .tag { padding: 0 7px; border-radius: 999px; font-size: c
 card.look-band > ul { margin: 0; padding: 10px 14px 11px; }
 /* lines keep 20 px from frames in a graph (D-063); chronologies keep their tighter lanes */
 .stage.layout-timeline, .stage.layout-frieze, .stage.layout-frise { --zone-pad: 22px; }
-/* piles (`cards`): the ×N badge sits on the corner of the cards behind, in every look */
-card .count { display: inline-block; padding: 0 6px; border-radius: 999px; font-size: calc(10.5px * var(--font-scale, 1));
+/* piles (`cards`, `zones`): the ×N badge sits on the corner of the cards behind, in every look */
+card .count, zone > .count { display: inline-block; padding: 0 6px; border-radius: 999px; font-size: calc(10.5px * var(--font-scale, 1));
        font-weight: 700; line-height: 17px; background: var(--accent-fill, var(--c, #9AA3B2)); color: var(--on-c, #fff); }
 card.deck { overflow: visible; }
 card.deck > .count { position: absolute; right: calc(-1 * var(--deck-m, 0px)); bottom: 0; transform: translateY(50%); z-index: 3; }
+zone.deck > .count { position: absolute; right: calc(-1 * var(--deck-m, 0px)); bottom: 0; transform: translateY(50%); z-index: 3; }
 card.deck.look-band > .head, card.deck.look-header > .head { border-radius: 8.5px 8.5px 0 0; }
 card.look-band li { color: var(--ink-2); font-size: calc(13px * var(--font-scale, 1)); }
 
@@ -400,7 +401,7 @@ card li.ok mark, card td.ok mark, card mark.ok { color: var(--ok); background: c
 card li.warn mark, card td.warn mark, card mark.warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, var(--surface)); }
 card mark.error { color: var(--error); background: color-mix(in srgb, var(--error) 12%, var(--surface)); }
 card.ok { --icon: "circle-check"; outline: 2.5px solid var(--ok); outline-offset: 3px; }
-card.warn { --icon: "triangle-alert"; outline: 2.5px solid var(--warn); outline-offset: 3px; }
+card.warn { --icon: "triangle-exclamation-point"; outline: 2.5px solid var(--warn); outline-offset: 3px; }
 card.error { --icon: "circle-x"; outline: 2.5px solid var(--error); outline-offset: 3px; }
 
 /* tables: a Markdown table in a card (rows `| a | b |`) */

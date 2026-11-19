@@ -96,7 +96,7 @@ pub struct TableEl {
 pub fn state_icon(classes: &[String]) -> Option<&'static str> {
     classes.iter().find_map(|c| match c.as_str() {
         "ok" => Some("circle-check"),
-        "warn" => Some("triangle-alert"),
+        "warn" => Some("triangle-exclamation-point"),
         "error" => Some("circle-x"),
         _ => None,
     })
@@ -226,6 +226,8 @@ pub struct ZoneEl {
     pub tag_right: bool,
     /// Description lines under the title (`|`, FORMAT §3.2.3): `.title > .sub`, plain text.
     pub subs: Vec<(usize, String)>,
+    /// `zones` with a `count` (D-114): the `×N` badge (`zone > .count`) and its text.
+    pub count: Option<(usize, String)>,
 }
 
 /// The diagram's title (`title`, D-050): `.diagram-title > .text`, and one `li` per pill.
@@ -571,7 +573,8 @@ fn probe_styles(
 
 /// Content of a card: header or label, title, lines, pseudo-elements. `ps`: style of the probe
 /// (carries `--label` and `--look`).
-/// A pile (`cards`, D-062): its class, and the `×N` badge when it has a count above 1.
+/// A pile (`cards`, D-062; `zones`, D-114): its class, and the `×N` badge when it has a count
+/// above 1.
 fn add_deck(tree: &mut StyleTree, el: usize, n: &skemo_lang::Node) -> Option<(usize, String)> {
     if n.deck.is_some() {
         tree.add_class(el, "deck");
@@ -770,6 +773,7 @@ fn add_zone(
                 )
             })
             .collect();
+    let count = add_deck(tree, el, n);
     ZoneEl {
         el,
         title,
@@ -777,6 +781,7 @@ fn add_zone(
         tag,
         tag_right: tag_side(n) == 1,
         subs,
+        count,
     }
 }
 

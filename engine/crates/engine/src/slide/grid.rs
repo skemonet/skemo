@@ -8,6 +8,7 @@
 //! group that holds neither of its ends (H1.4), and reaches its target square over at least two
 //! steps (head and tail, H2.8).
 
+use super::input::Edge;
 use super::lattice::Lattice;
 use super::{Input, Pt, Rect, STEP};
 use std::collections::HashSet;
@@ -241,7 +242,7 @@ impl Plane {
                 }
             }
         }
-        if !frames.is_empty() && (0..inp.cards.len()).all(|c| l.zones_of(inp, c).is_some()) {
+        if !frames.is_empty() && (0..inp.cards.len()).all(|c| !l.zones_of(inp, c).is_empty()) {
             let l0 = frames.iter().map(|f| f.x).min().unwrap_or(0);
             let t0 = frames.iter().map(|f| f.y).min().unwrap_or(0);
             let r0 = frames.iter().map(|f| f.x + f.w).max().unwrap_or(0);
@@ -332,7 +333,11 @@ impl Plane {
                 fmask.push(None);
                 continue;
             };
-            let cards: Vec<Rect> = inp.panels[i].cards.iter().map(|&c| l.card[c]).collect();
+            // its cards, those of the zones inside it too
+            let cards: Vec<Rect> = (0..inp.cards.len())
+                .filter(|&c| inp.zones_of(c).contains(&i))
+                .map(|c| l.card[c])
+                .collect();
             let mut bad = vec![false; self.n()];
             let mut pay = vec![false; self.n()];
             for yy in (f.y + 1)..(f.y + f.h) {
@@ -479,7 +484,7 @@ impl Grid {
 
 /// The lattice points of a side where a line may land, with their cost: the middle half (P19)
 /// free, wider only when needed (it costs), never a corner.
-pub(crate) fn ports(r: Rect, side: Side, icon: Option<(i32, i32)>) -> Vec<(Pt, f64)> {
+pub(crate) fn ports(r: Rect, side: Side, icon: Option<(i32, i32)>, bar: bool) -> Vec<(Pt, f64)> {
     // a node (D-087): its arrows end on its icon, above, below or before it; on the side of its
     // text, level with the icon (they start after the text)
     if let Some((cx, cy)) = icon {
@@ -503,6 +508,16 @@ pub(crate) fn ports(r: Rect, side: Side, icon: Option<(i32, i32)>) -> Vec<(Pt, f
     (2..=n - 2)
         .map(|k| {
             let kf = f64::from(k);
+            // a bar (a wide card): every place alike, so that an arrow lands straight
+            if bar {
+                let p = match side {
+                    Side::Top => (r.x + k, r.y),
+                    Side::Bottom => (r.x + k, r.y + r.h),
+                    Side::Left => (r.x, r.y + k),
+                    Side::Right => (r.x + r.w, r.y + k),
+                };
+                return (p, 0.0);
+            }
             let mut c = (kf - nf / 2.0).abs();
             if kf < q1 {
                 c += 6.0 * (q1 - kf);
@@ -520,8 +535,8 @@ pub(crate) fn ports(r: Rect, side: Side, icon: Option<(i32, i32)>) -> Vec<(Pt, f
         .collect()
 }
 
-fn port_cost(r: Rect, side: Side, icon: Option<(i32, i32)>, p: Pt) -> Option<f64> {
-    ports(r, side, icon)
+fn port_cost(r: Rect, side: Side, end: (Option<(i32, i32)>, bool), p: Pt) -> Option<f64> {
+    ports(r, side, end.0, end.1)
         .into_iter()
         .find(|q| q.0 == p)
         .map(|q| q.1)
@@ -592,17 +607,32 @@ pub(crate) struct Arrow<'g> {
     /// A node's icon, where its arrows end (steps from its box's corner).
     si: Option<(i32, i32)>,
     ti: Option<(i32, i32)>,
+    /// A bar (a wide card) at either end.
+    sb: bool,
+    tb: bool,
+    /// The sides written (`side="start-end"`), if any.
+    pub want: (Option<Side>, Option<Side>),
     fr: std::rc::Rc<Vec<u8>>,
     region: (i32, i32, i32, i32),
 }
 
 impl<'g> Arrow<'g> {
-    pub(crate) fn new(g: &'g Grid, inp: &Input, l: &Lattice, from: usize, to: usize) -> Arrow<'g> {
-        let (s, t) = (l.card[from], l.card[to]);
-        let own: Vec<usize> = [l.zones_of(inp, from), l.zones_of(inp, to)]
-            .into_iter()
-            .flatten()
-            .collect();
+    /// The search for arrow `e`: from its source (a card, or a zone's frame) to its target.
+    pub(crate) fn of(g: &'g Grid, inp: &Input, l: &Lattice, e: &Edge) -> Arrow<'g> {
+        let (s, t) = (l.end(inp, e, true), l.end(inp, e, false));
+        // the zones it may cross freely: those holding its ends (a zone's own inside is not)
+        let held = |c: usize, z: Option<usize>| match z {
+            None => l.zones_of(inp, c),
+            Some(z) => inp.panels[z]
+                .parent
+                .map(|q| inp.chain(q))
+                .unwrap_or_default()
+                .into_iter()
+                .filter(|&q| l.frame[q].is_some())
+                .collect(),
+        };
+        let mut own = held(e.from, e.ends.0);
+        own.extend(held(e.to, e.ends.1));
         let pad = 30;
         let region = (
             (s.x.min(t.x) - pad).max(0),
@@ -610,13 +640,22 @@ impl<'g> Arrow<'g> {
             ((s.x + s.w).max(t.x + t.w) + pad).min(g.w - 1),
             ((s.y + s.h).max(t.y + t.h) + pad).min(g.h - 1),
         );
-        let icon = |c: usize| inp.icon[c].map(|i| i.port(l.card[c].h));
+        // a card's icon (a node) or bar (a wide card); a zone has neither
+        let icon = |c: usize, z: Option<usize>| {
+            z.is_none()
+                .then(|| inp.icon[c].map(|i| i.port(l.card[c].h)))
+                .flatten()
+        };
+        let bar = |c: usize, z: Option<usize>| z.is_none() && inp.wide(c);
         Arrow {
             g,
             s,
             t,
-            si: icon(from),
-            ti: icon(to),
+            si: icon(e.from, e.ends.0),
+            ti: icon(e.to, e.ends.1),
+            sb: bar(e.from, e.ends.0),
+            tb: bar(e.to, e.ends.1),
+            want: e.sides,
             fr: g.foreign_cached(own),
             region,
         }
@@ -632,7 +671,7 @@ impl<'g> Arrow<'g> {
         let g = self.g;
         let o = side.out();
         let mut starts = Vec::new();
-        for (p, pc) in ports(self.s, side, self.si) {
+        for (p, pc) in ports(self.s, side, self.si, self.sb) {
             let n1 = (p.0 + DIRS[o].0, p.1 + DIRS[o].1);
             if g.free(n1) {
                 starts.push((g.idx(n1) * 4 + o, 1.0 + 0.5 * pc));
@@ -659,7 +698,7 @@ impl<'g> Arrow<'g> {
         let mut arrive = vec![false; g.block.len()];
         for t in SIDES {
             let ot = t.out();
-            for (p, _) in ports(self.t, t, self.ti) {
+            for (p, _) in ports(self.t, t, self.ti, self.tb) {
                 let a2 = (p.0 + 2 * DIRS[ot].0, p.1 + 2 * DIRS[ot].1);
                 if g.inside(a2) {
                     arrive[g.idx(a2)] = true;
@@ -742,11 +781,12 @@ impl<'g> Arrow<'g> {
         let short = shortest(self.s, self.t);
         let mut found = Found::default();
         let mut used = vec![0.0f64; g.block.len()];
+        let (want_s, want_t) = self.want;
         for _ in 0..rounds {
-            for sside in SIDES {
+            for sside in SIDES.into_iter().filter(|s| want_s.is_none_or(|w| w == *s)) {
                 let pen = |m: usize| penal0(m) + used[m];
                 let tree = self.search(sside, &pen);
-                for tside in SIDES {
+                for tside in SIDES.into_iter().filter(|t| want_t.is_none_or(|w| w == *t)) {
                     self.arrivals((sside, tside), &tree, per_pair, &pen, short, &mut found);
                 }
             }
@@ -776,7 +816,7 @@ impl<'g> Arrow<'g> {
         let ot = tside.out();
         let inward = (ot + 2) % 4;
         let mut found = Vec::new();
-        for (q, qc) in ports(self.t, tside, self.ti) {
+        for (q, qc) in ports(self.t, tside, self.ti, self.tb) {
             let a1 = (q.0 + DIRS[ot].0, q.1 + DIRS[ot].1);
             let a2 = (q.0 + 2 * DIRS[ot].0, q.1 + 2 * DIRS[ot].1);
             if !g.free(a1) || !g.free(a2) {
@@ -926,7 +966,7 @@ impl<'g> Arrow<'g> {
             let (dist, parent) = self.run(&starts, &|_| 0.0);
             for tside in SIDES {
                 let ot = tside.out();
-                for (q, _) in ports(self.t, tside, self.ti) {
+                for (q, _) in ports(self.t, tside, self.ti, self.tb) {
                     let a1 = (q.0 + DIRS[ot].0, q.1 + DIRS[ot].1);
                     let a2 = (q.0 + 2 * DIRS[ot].0, q.1 + 2 * DIRS[ot].1);
                     if !g.free(a1) || !g.free(a2) {
@@ -961,8 +1001,8 @@ impl<'g> Arrow<'g> {
     /// route on this lattice (a route carried from another lattice, or slid along its side).
     pub(crate) fn cost_of(&self, nodes: &[Pt], sside: Side, tside: Side) -> Option<f64> {
         let g = self.g;
-        let pc = port_cost(self.s, sside, self.si, nodes[0])?;
-        let qc = port_cost(self.t, tside, self.ti, *nodes.last()?)?;
+        let pc = port_cost(self.s, sside, (self.si, self.sb), nodes[0])?;
+        let qc = port_cost(self.t, tside, (self.ti, self.tb), *nodes.last()?)?;
         if nodes.len() < 4 {
             return None;
         }
@@ -998,6 +1038,130 @@ impl<'g> Arrow<'g> {
         }
         let tail = if d == (ot + 2) % 4 { 0.0 } else { BEND };
         Some(c + tail + 2.0 + 0.5 * qc + extras(self.s, self.t, nodes, sside, tside))
+    }
+
+    /// The cheapest way from node `a`, reached going in direction `d`, to node `b` (its nodes
+    /// after `a`, `b` the last, and the direction it arrives in).
+    fn link(&self, a: Pt, d: usize, b: Pt) -> Option<(Vec<Pt>, usize)> {
+        use std::cmp::Reverse;
+        use std::collections::BinaryHeap;
+        let g = self.g;
+        if !g.inside(a) || !g.inside(b) {
+            return None;
+        }
+        let q = |c: f64| (c * 4.0).round() as u64;
+        let n = g.block.len() * 4;
+        let mut dist = vec![u64::MAX; n];
+        let mut parent = vec![u32::MAX; n];
+        let start = g.idx(a) * 4 + d;
+        dist[start] = 0;
+        let mut heap = BinaryHeap::new();
+        heap.push(Reverse((0u64, start)));
+        let mut end = None;
+        while let Some(Reverse((c, st))) = heap.pop() {
+            if c != dist[st] {
+                continue;
+            }
+            let (m0, d0) = (st / 4, st % 4);
+            let p = ((m0 as i32) % g.w, (m0 as i32) / g.w);
+            if p == b {
+                end = Some(st);
+                break;
+            }
+            for nd in [d0, (d0 + 1) % 4, (d0 + 3) % 4] {
+                let nq = (p.0 + DIRS[nd].0, p.1 + DIRS[nd].1);
+                if !g.free(nq) || !g.edge_ok(p, nd) {
+                    continue;
+                }
+                let m = g.idx(nq);
+                if self.fr[m] == 2 {
+                    continue;
+                }
+                let t = m * 4 + nd;
+                let cost = c + q(g.step_cost(m, d0, nd, &self.fr));
+                if cost < dist[t] {
+                    dist[t] = cost;
+                    parent[t] = st as u32;
+                    heap.push(Reverse((cost, t)));
+                }
+            }
+        }
+        let end = end?;
+        let mut seq = Vec::new();
+        let mut st = end as u32;
+        while st as usize != start {
+            let m = (st / 4) as i32;
+            seq.push((m % g.w, m / g.w));
+            st = parent[st as usize];
+            if st == u32::MAX {
+                return None;
+            }
+        }
+        seq.reverse();
+        Some((seq, end % 4))
+    }
+
+    /// The route through the waypoints `via`, in order (`via="…"`): from the port nearest the
+    /// first, between them the cheapest ways, to the port nearest the last; on the sides
+    /// written, if any.
+    pub(crate) fn through(
+        &self,
+        via: &[Pt],
+        (want_s, want_t): (Option<Side>, Option<Side>),
+    ) -> Option<Route> {
+        // a waypoint off the lattice or on a card: the nearest free node
+        let g = self.g;
+        let near = |p: Pt| -> Option<Pt> {
+            let p = (p.0.clamp(1, g.w - 2), p.1.clamp(1, g.h - 2));
+            (0..30).find_map(|r: i32| {
+                (-r..=r)
+                    .flat_map(|dx| (-r..=r).map(move |dy| (dx, dy)))
+                    .filter(|(dx, dy)| dx.abs().max(dy.abs()) == r)
+                    .map(|(dx, dy)| (p.0 + dx, p.1 + dy))
+                    .find(|&q| g.free(q) && self.fr[g.idx(q)] != 2)
+            })
+        };
+        let via: Vec<Pt> = via.iter().filter_map(|&p| near(p)).collect();
+        let (first, last) = (*via.first()?, *via.last()?);
+        let dist = |a: Pt, b: Pt| (a.0 - b.0).abs() + (a.1 - b.1).abs();
+        let pick = |r: Rect, icon, bar, want: Option<Side>, to: Pt| {
+            SIDES
+                .into_iter()
+                .filter(|s| want.is_none_or(|w| w == *s))
+                .flat_map(|side| {
+                    ports(r, side, icon, bar)
+                        .into_iter()
+                        .map(move |(p, c)| (side, p, c))
+                })
+                .filter(|(side, p, _)| {
+                    let o = side.out();
+                    self.g.free((p.0 + DIRS[o].0, p.1 + DIRS[o].1))
+                })
+                .min_by(|a, b| {
+                    let (da, db) = (dist(a.1, to), dist(b.1, to));
+                    da.cmp(&db).then(a.2.total_cmp(&b.2))
+                })
+        };
+        let (sside, sp, _) = pick(self.s, self.si, self.sb, want_s, first)?;
+        let (tside, tp, _) = pick(self.t, self.ti, self.tb, want_t, last)?;
+        let o = sside.out();
+        let ot = tside.out();
+        let n1 = (sp.0 + DIRS[o].0, sp.1 + DIRS[o].1);
+        let a1 = (tp.0 + DIRS[ot].0, tp.1 + DIRS[ot].1);
+        let mut nodes = vec![sp, n1];
+        let (mut at, mut d) = (n1, o);
+        for &w in via.iter().chain(std::iter::once(&a1)) {
+            if w == at {
+                continue;
+            }
+            let (seg, nd) = self.link(at, d, w)?;
+            nodes.extend(seg);
+            at = w;
+            d = nd;
+        }
+        nodes.push(tp);
+        let cost = nodes.len() as f64;
+        Some(Route::new(dense(&corners(&nodes)), sside, tside, cost))
     }
 
     /// A route from nodes, if valid here and keeping the rules a line keeps alone.
@@ -1120,8 +1284,9 @@ fn diverse(mut out: Vec<Route>, keep: usize) -> Vec<Route> {
 
 /// Cards `a` and `b` face each other: side by side or one above the other, their middle halves
 /// level (P19), nothing between them (no card, zone text, nor a frame holding neither).
-pub(crate) fn facing(inp: &Input, l: &Lattice, a: usize, b: usize) -> bool {
-    let (ra, rb) = (l.card[a], l.card[b]);
+pub(crate) fn facing(inp: &Input, l: &Lattice, e: &Edge) -> bool {
+    let (ra, rb) = (l.end(inp, e, true), l.end(inp, e, false));
+    let (a, b) = (e.from, e.to);
     let f = |v: i32| f64::from(v);
     for horiz in [true, false] {
         let (g0, g1, m0, m1) = if horiz {
@@ -1160,9 +1325,10 @@ pub(crate) fn facing(inp: &Input, l: &Lattice, a: usize, b: usize) -> bool {
             .iter()
             .flatten()
             .any(|t| hit(t.x / STEP, t.y / STEP, t.w / STEP, t.h / STEP));
-        let own = [l.zones_of(inp, a), l.zones_of(inp, b)];
+        let mut own = l.zones_of(inp, a);
+        own.extend(l.zones_of(inp, b));
         let frame_hit = l.frame.iter().enumerate().any(|(i, fr)| {
-            fr.is_some_and(|r| !own.contains(&Some(i)) && hit(f(r.x), f(r.y), f(r.w), f(r.h)))
+            fr.is_some_and(|r| !own.contains(&i) && hit(f(r.x), f(r.y), f(r.w), f(r.h)))
         });
         if !card_hit && !text_hit && !frame_hit {
             return true;

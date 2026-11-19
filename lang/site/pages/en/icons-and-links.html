@@ -1,7 +1,7 @@
 <!--
 title: Icons and links in skemo diagrams
 nav: Icons and links
-description: Put one of 1,866 built-in Lucide icons or your own image on a card, and turn cards and arrows into links.
+description: Put one of 2,091 built-in icons (Lucide and skemo's own) or your own image on a card, and turn cards and arrows into links.
 -->
 <h1>Icons and links</h1>
 <div class="warn"><p><strong>Preview.</strong> Icons and links are implemented and may still change before the first stable
@@ -11,8 +11,10 @@ description: Put one of 1,866 built-in Lucide icons or your own image on a card,
 
 <h2>Icons</h2>
 <p><code>icon="name"</code> draws an icon of the built-in set before the title of a card or a zone. The set is
-  <a href="https://lucide.dev/">Lucide</a> (1,866 icons), embedded in skemo: rendering stays offline and identical everywhere.
-  Search it from the command line:</p>
+  <a href="https://lucide.dev/">Lucide</a> (2,055 icons, release 1.73; the names of earlier releases still work) and 36 icons of skemo's own for infrastructure, named
+  <code>skemo-…</code> (<code>skemo-vm</code>, <code>skemo-hypervisor</code>, <code>skemo-rack</code>,
+  <code>skemo-load-balancer</code>, <code>skemo-pod</code>…), drawn the same way so that both mix. The set is embedded in
+  skemo: rendering stays offline and identical everywhere. Search it from the command line:</p>
 <pre><code>skemo icons data        # database, database-backup, … (names and tags)</code></pre>
 <ul>
   <li>A type can carry a default icon in CSS: <code>.store { --icon: "database"; }</code>. <code>icon="none"</code> removes it on

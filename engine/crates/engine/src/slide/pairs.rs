@@ -8,6 +8,8 @@ use super::grid::{Role, Route};
 pub(crate) const W_MERGE: f64 = 40.0;
 /// … and each step of it, four steps of length (as late as possible).
 pub(crate) const W_MERGE_STEP: f64 = 4.0;
+/// Two arrows joined (`join=`) that do not share their trunk.
+pub(crate) const W_JOIN: f64 = 300.0;
 
 /// What the pair checks need of an arrow beside its route.
 #[derive(Clone, Copy)]
@@ -16,6 +18,7 @@ pub(crate) struct Who<'a> {
     pub src: usize,
     pub dst: usize,
     pub label: Option<&'a str>,
+    pub join: Option<&'a str>,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -125,7 +128,16 @@ pub(crate) fn pair(a: &Route, wa: Who, b: &Route, wb: Who) -> PairRes {
     let Some((cross, k)) = check(a, wa, b, wb) else {
         return BAD;
     };
-    let merge = if k >= 2 && wa.label != wb.label {
+    // joined arrows (`join=`) share their trunk: out of one card for `trunk`, into one for a name
+    let joined = wa.join.is_some() && wa.join == wb.join;
+    let merge = if joined {
+        let apart = if wa.join == Some("trunk") {
+            wa.src == wb.src && a.src() != b.src()
+        } else {
+            wa.dst == wb.dst && a.dst() != b.dst()
+        };
+        if apart { W_JOIN } else { 0.0 }
+    } else if k >= 2 && wa.label != wb.label {
         W_MERGE + W_MERGE_STEP * (k - 1) as f64
     } else {
         0.0
@@ -143,7 +155,8 @@ fn check(a: &Route, wa: Who, b: &Route, wb: Who) -> Option<(u32, usize)> {
     if ba.2 + 2 < bb.0 || bb.2 + 2 < ba.0 || ba.3 + 2 < bb.1 || bb.3 + 2 < ba.1 {
         return Some((0, 0));
     }
-    let same = wa.look == wb.look;
+    // drawn alike, or joined (`join=`): their lines may share a trunk
+    let same = wa.look == wb.look || (wa.join.is_some() && wa.join == wb.join);
     let rel_s = same && wa.src == wb.src && a.src() == b.src();
     let rel_d = same && wa.dst == wb.dst && a.dst() == b.dst();
     let rel = rel_s || rel_d;

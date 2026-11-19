@@ -3,8 +3,18 @@
 //! along its row brings its pods with it.
 
 use skemo_engine::{Options, from_source};
+mod elk;
 
 fn build(name: &str) -> skemo_engine::Diagram {
+    build_with(name, str::to_string)
+}
+
+/// Drawn by ELK: the exact mirror round the ingress is its centring.
+fn build_elk(name: &str) -> skemo_engine::Diagram {
+    build_with(name, elk::graph)
+}
+
+fn build_with(name: &str, engine: fn(&str) -> String) -> skemo_engine::Diagram {
     let (src, css) = match name {
         "ingress" => (
             include_str!("data/ingress.skemo"),
@@ -19,7 +29,7 @@ fn build(name: &str) -> skemo_engine::Diagram {
         css: vec![css.to_string()],
         ..Options::default()
     };
-    from_source(src, &opts).unwrap().0
+    from_source(&engine(src), &opts).unwrap().0
 }
 
 #[test]
@@ -58,7 +68,7 @@ fn services_sit_in_the_middle_of_their_pods() {
 
 #[test]
 fn two_sites_stand_in_mirror_round_their_ingress() {
-    let d = build("ingress-rows");
+    let d = build_elk("ingress-rows");
     let mid = |id: &str| d.boxes[id].x + d.boxes[id].w / 2.0;
     let axis = mid("ic");
     for (a, b) in [

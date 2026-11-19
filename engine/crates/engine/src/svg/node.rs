@@ -567,7 +567,7 @@ fn sample(ctx: &mut Ctx, s: crate::scene::Sample, (x, my, w, h): (f64, f64, f64,
     }
 }
 
-/// The cards behind a pile (`cards`), furthest first; behind a see-through top card they only
+/// The cards (frames) behind a pile (`cards`, `zones`), furthest first; behind a see-through top card they only
 /// show around it (as in HTML, where they are shadows of the card).
 fn pile(ctx: &mut Ctx, c: &Computed, (x, y, w, h): (f64, f64, f64, f64), m: f64) {
     let (fw, fh) = (w - m, h - m);
@@ -817,6 +817,9 @@ pub(super) fn zone(ctx: &mut Ctx, id: &str) {
         presence_attrs(pr, x + b.w / 2.0, y + b.h / 2.0)
     );
     let c = d.scene.style(el.el).clone();
+    // a pile (`zones`, D-114): the frames behind stand outside the box, right and down
+    let m = node.map_or(0.0, crate::measure::deck_margin);
+    pile(ctx, &c, (x, y, b.w + m, b.h + m), m);
     decorated_box(ctx, &c, x, y, b.w, b.h);
     tl_lines(ctx, y, y + b.h);
     let title = node.map(|n| n.title.clone()).unwrap_or_default();
@@ -850,6 +853,12 @@ pub(super) fn zone(ctx: &mut Ctx, id: &str) {
             Kind::Zone => zone(ctx, &k),
             Kind::Card => card(ctx, &k),
         }
+    }
+    if let Some((cel, text)) = &el.count {
+        pill(
+            ctx,
+            &geometry::count_pill(&d.scene, *cel, text, x + b.w + m, y + b.h),
+        );
     }
     ctx.out.push_str("</g>");
     link_close(ctx, node.and_then(|n| n.href.as_deref()));
